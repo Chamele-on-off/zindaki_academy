@@ -6,13 +6,17 @@ services:
     ports:
       - "7001:7001"
     volumes:
-      - .:/app  # Монтируем всю папку проекта
+      - .:/app
       - ./uploads:/app/uploads
       - ./data:/app/data
     environment:
       - FLASK_APP=app.py
       - FLASK_ENV=production
-    restart: always
+      - SECRET_KEY=your-secret-key-here
+      - JITSI_DOMAIN=jitsi.zindaki-edu.ru
+    restart: unless-stopped
+    networks:
+      - zindaki-network
 
   nginx:
     image: nginx:alpine
@@ -25,4 +29,23 @@ services:
       - ./uploads:/app/uploads
     depends_on:
       - web
-    restart: always
+    restart: unless-stopped
+    networks:
+      - zindaki-network
+
+  jitsi-web:
+    image: jitsi/web:stable-8963-1
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./jitsi/config:/config
+    environment:
+      - ENABLE_AUTH=1
+      - PUBLIC_URL=https://jitsi.zindaki-edu.ru
+    restart: unless-stopped
+    networks:
+      - zindaki-network
+
+networks:
+  zindaki-network:
+    driver: bridge
