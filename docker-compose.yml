@@ -2,13 +2,29 @@ version: '3.8'
 
 services:
   web:
+    build: .
+    ports:
+      - "7001:7001"
+    volumes:
+      - ./app:/app
+      - ./uploads:/app/uploads
+      - ./data:/app/data
+    environment:
+      - SECRET_KEY=your-secret-key-here
+      - JITSI_DOMAIN=jitsi.zindaki-edu.ru
+    restart: always
+
+  nginx:
     image: nginx:alpine
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./app:/usr/share/nginx/html
       - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./app/static:/app/static
+      - ./uploads:/app/uploads
+    depends_on:
+      - web
     restart: always
 
   jitsi:
