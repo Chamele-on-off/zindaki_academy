@@ -1,0 +1,2059 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zindaki Academy - Инновационная семейная онлайн школа</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-light: #4895ef;
+            --primary-dark: #3a0ca3;
+            --secondary: #7209b7;
+            --accent: #f72585;
+            --success: #4cc9f0;
+            --dark: #1a1a2e;
+            --darker: #16213e;
+            --light: #f8f9fa;
+            --lighter: #ffffff;
+            --text: #2b2d42;
+            --text-light: #8d99ae;
+            --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            --gradient-accent: linear-gradient(135deg, var(--accent) 0%, #f72585 100%);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+            --shadow-xl: 0 20px 50px rgba(0,0,0,0.15);
+            --rounded-sm: 8px;
+            --rounded-md: 12px;
+            --rounded-lg: 16px;
+            --rounded-xl: 24px;
+            --rounded-full: 9999px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        body {
+            background-color: var(--light);
+            color: var(--text);
+            overflow-x: hidden;
+            line-height: 1.6;
+            font-weight: 400;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        /* Навигация */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+        }
+        
+        .navbar.scrolled {
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .logo-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: var(--gradient);
+            color: white;
+            border-radius: var(--rounded-md);
+            font-size: 1.2rem;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+        
+        .nav-links a {
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            color: var(--text);
+            padding: 0.5rem 0;
+        }
+        
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+        
+        .nav-links a:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--primary);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-links a:hover:after {
+            width: 100%;
+        }
+        
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--primary);
+            cursor: pointer;
+            z-index: 1001;
+        }
+        
+        /* Личный кабинет (плавающий) */
+        .user-panel {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            background: var(--lighter);
+            border-radius: var(--rounded-xl);
+            box-shadow: var(--shadow-xl);
+            padding: 1.5rem;
+            width: 320px;
+            z-index: 999;
+            transform: translateX(120%);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .user-panel.active {
+            transform: translateX(0);
+        }
+        
+        .user-panel-toggle {
+            position: fixed;
+            top: 100px;
+            right: 0;
+            background: var(--gradient);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50% 0 0 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+        }
+        
+        .user-panel-toggle:hover {
+            transform: translateX(-5px);
+        }
+        
+        .user-panel-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--light);
+            margin-right: 1rem;
+            overflow: hidden;
+            border: 3px solid var(--primary-light);
+        }
+        
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .user-info h4 {
+            font-size: 1.2rem;
+            margin-bottom: 0.3rem;
+            color: var(--text);
+        }
+        
+        .user-info p {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .user-menu {
+            list-style: none;
+        }
+        
+        .user-menu li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .user-menu a {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: var(--text);
+            padding: 0.8rem;
+            border-radius: var(--rounded-sm);
+            transition: all 0.3s ease;
+        }
+        
+        .user-menu a:hover {
+            background-color: rgba(67, 97, 238, 0.1);
+            color: var(--primary);
+            transform: translateX(5px);
+        }
+        
+        .user-menu i {
+            margin-right: 0.8rem;
+            width: 20px;
+            text-align: center;
+            color: var(--primary);
+        }
+        
+        /* Hero Section */
+        .hero {
+            height: 100vh;
+            min-height: 800px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            background: var(--gradient);
+            color: white;
+            padding-top: 80px;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==');
+            opacity: 0.3;
+        }
+        
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        .hero-content {
+            max-width: 900px;
+            padding: 0 2rem;
+            position: relative;
+            z-index: 2;
+        }
+        
+        h1 {
+            font-size: 4.5rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(45deg, #fff, #E1F0FF);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            line-height: 1.1;
+        }
+        
+        .hero p {
+            font-size: 1.5rem;
+            margin-bottom: 2.5rem;
+            color: rgba(255,255,255,0.9);
+            font-weight: 300;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .cta-buttons {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: var(--rounded-full);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            font-size: 1rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background-color: white;
+            color: var(--primary);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+            color: var(--primary-dark);
+        }
+        
+        .btn-secondary {
+            background-color: transparent;
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+            backdrop-filter: blur(5px);
+        }
+        
+        .btn-secondary:hover {
+            background-color: rgba(255,255,255,0.15);
+            border-color: white;
+            transform: translateY(-3px);
+        }
+        
+        .btn-accent {
+            background: var(--gradient-accent);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .btn-accent:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+            opacity: 0.9;
+        }
+        
+        /* Features Section */
+        .section {
+            padding: 8rem 2rem;
+            position: relative;
+        }
+        
+        .section-title {
+            text-align: center;
+            font-size: 2.8rem;
+            margin-bottom: 5rem;
+            width: 100%;
+            color: var(--text);
+            font-weight: 800;
+            position: relative;
+        }
+        
+        .section-title:after {
+            content: '';
+            display: block;
+            margin: 1.5rem auto 0;
+            width: 80px;
+            height: 5px;
+            background: var(--gradient);
+            border-radius: var(--rounded-full);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2.5rem;
+        }
+        
+        .feature-card {
+            background: var(--lighter);
+            border-radius: var(--rounded-xl);
+            padding: 2.5rem 2rem;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            border: 1px solid rgba(0,0,0,0.03);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: var(--gradient);
+        }
+        
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 70px;
+            height: 70px;
+            background: rgba(67, 97, 238, 0.1);
+            border-radius: var(--rounded-lg);
+        }
+        
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1.2rem;
+            color: var(--text);
+            font-weight: 700;
+        }
+        
+        .feature-card p {
+            color: var(--text-light);
+            font-size: 1.1rem;
+            line-height: 1.7;
+        }
+        
+        /* About Section */
+        .about-section {
+            background-color: var(--lighter);
+        }
+        
+        .about-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+        
+        .about-image {
+            position: relative;
+            border-radius: var(--rounded-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            height: 500px;
+        }
+        
+        .about-image::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--gradient);
+            opacity: 0.1;
+            z-index: 1;
+        }
+        
+        .about-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .about-content h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--text);
+            font-weight: 800;
+        }
+        
+        .about-content p {
+            color: var(--text-light);
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+            line-height: 1.8;
+        }
+        
+        /* Teachers Section */
+        .teachers-section {
+            background-color: var(--light);
+        }
+        
+        .teachers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2.5rem;
+        }
+        
+        .teacher-card {
+            background: var(--lighter);
+            border-radius: var(--rounded-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.4s ease;
+        }
+        
+        .teacher-card:hover {
+            transform: translateY(-10px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .teacher-image {
+            height: 320px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .teacher-image::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--gradient);
+            opacity: 0.1;
+            z-index: 1;
+        }
+        
+        .teacher-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+        
+        .teacher-card:hover .teacher-image img {
+            transform: scale(1.05);
+        }
+        
+        .teacher-info {
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .teacher-info h3 {
+            font-size: 1.4rem;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+        
+        .teacher-info p {
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        
+        .teacher-info .bio {
+            color: var(--text-light);
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+        
+        /* Programs Section */
+        .programs-section {
+            background-color: var(--lighter);
+        }
+        
+        .program-tabs {
+            display: inline-flex;
+            justify-content: center;
+            margin-bottom: 3rem;
+            position: relative;
+            flex-wrap: wrap;
+            background: var(--light);
+            border-radius: var(--rounded-full);
+            padding: 0.5rem;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .tab-btn {
+            padding: 0.8rem 2rem;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            position: relative;
+            color: var(--text-light);
+            transition: all 0.3s ease;
+            border-radius: var(--rounded-full);
+        }
+        
+        .tab-btn.active {
+            color: white;
+            background: var(--gradient);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .program-container {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .program-container.active {
+            display: block;
+        }
+        
+        .program-item {
+            background: var(--light);
+            border-radius: var(--rounded-xl);
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0,0,0,0.03);
+        }
+        
+        .program-item:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .program-item h3 {
+            font-size: 1.6rem;
+            margin-bottom: 1.2rem;
+            color: var(--primary);
+        }
+        
+        .program-item p {
+            color: var(--text-light);
+            margin-bottom: 1.5rem;
+            line-height: 1.8;
+            font-size: 1.1rem;
+        }
+        
+        .program-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .program-feature {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.8rem;
+        }
+        
+        .program-feature i {
+            color: var(--accent);
+            font-size: 1.2rem;
+            margin-top: 0.2rem;
+        }
+        
+        /* Testimonials Section */
+        .testimonials-section {
+            background: var(--gradient);
+            color: white;
+            padding: 8rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .testimonials-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==');
+            opacity: 0.3;
+        }
+        
+        .testimonials-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .testimonials-slider {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            margin: 0 -1rem;
+            padding: 1rem 0;
+            scrollbar-width: none;
+        }
+        
+        .testimonials-slider::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .testimonial {
+            flex: 0 0 calc(100% - 2rem);
+            scroll-snap-align: start;
+            padding: 0 1rem;
+        }
+        
+        .testimonial-content {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: var(--rounded-xl);
+            padding: 3rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .testimonial-content:hover {
+            transform: scale(1.02);
+            background: rgba(255,255,255,0.15);
+        }
+        
+        .testimonial-text {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            font-style: italic;
+            line-height: 1.8;
+            position: relative;
+        }
+        
+        .testimonial-text::before,
+        .testimonial-text::after {
+            content: '"';
+            font-size: 3rem;
+            color: rgba(255,255,255,0.3);
+            position: absolute;
+            line-height: 1;
+        }
+        
+        .testimonial-text::before {
+            top: -1rem;
+            left: -1.5rem;
+        }
+        
+        .testimonial-text::after {
+            bottom: -2rem;
+            right: -1.5rem;
+        }
+        
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .author-info h4 {
+            font-size: 1.3rem;
+            margin-bottom: 0.3rem;
+            text-align: left;
+        }
+        
+        .author-info p {
+            opacity: 0.8;
+            font-size: 0.95rem;
+            text-align: left;
+        }
+        
+        /* CTA Section */
+        .cta-section {
+            background: var(--gradient-accent);
+            color: white;
+            text-align: center;
+            padding: 8rem 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .cta-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: pulse 8s infinite alternate;
+        }
+        
+        .cta-container {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .cta-section h2 {
+            font-size: 2.8rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .cta-section p {
+            font-size: 1.3rem;
+            margin-bottom: 2.5rem;
+            opacity: 0.9;
+        }
+        
+        /* Contact Form */
+        .contact-section {
+            background-color: var(--lighter);
+            padding: 8rem 2rem;
+        }
+        
+        .contact-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+        }
+        
+        .contact-info h3 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: var(--text);
+        }
+        
+        .contact-info p {
+            color: var(--text-light);
+            margin-bottom: 2rem;
+            line-height: 1.8;
+            font-size: 1.1rem;
+        }
+        
+        .contact-details {
+            margin-bottom: 2rem;
+        }
+        
+        .contact-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.2rem;
+            color: var(--text);
+        }
+        
+        .contact-item i {
+            color: var(--primary);
+            font-size: 1.2rem;
+            margin-right: 1.2rem;
+            width: 24px;
+            text-align: center;
+        }
+        
+        .social-links {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .social-links a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background-color: var(--light);
+            color: var(--primary);
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+        }
+        
+        .social-links a:hover {
+            background-color: var(--primary);
+            color: white;
+            transform: translateY(-3px);
+        }
+        
+        .contact-form {
+            background-color: var(--lighter);
+            padding: 3rem;
+            border-radius: var(--rounded-xl);
+            box-shadow: var(--shadow-md);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .form-group {
+            margin-bottom: 1.8rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.8rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 1rem 1.2rem;
+            border: 1px solid #e0e0e0;
+            border-radius: var(--rounded-md);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background-color: var(--light);
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        }
+        
+        textarea.form-control {
+            min-height: 180px;
+            resize: vertical;
+        }
+        
+        /* Footer */
+        footer {
+            background: var(--dark);
+            color: white;
+            padding: 6rem 2rem 3rem;
+            position: relative;
+        }
+        
+        footer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==');
+        }
+        
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 3rem;
+            text-align: left;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .footer-column h3 {
+            font-size: 1.3rem;
+            margin-bottom: 1.8rem;
+            position: relative;
+            display: inline-block;
+            color: white;
+        }
+        
+        .footer-column h3:after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 50%;
+            height: 3px;
+            background: var(--gradient);
+            border-radius: var(--rounded-full);
+        }
+        
+        .footer-column ul {
+            list-style: none;
+        }
+        
+        .footer-column ul li {
+            margin-bottom: 0.8rem;
+        }
+        
+        .footer-column ul li a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+        
+        .footer-column ul li a:hover {
+            color: white;
+            transform: translateX(5px);
+        }
+        
+        .footer-social-links {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .footer-social-links a {
+            color: white;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+            opacity: 0.7;
+        }
+        
+        .footer-social-links a:hover {
+            color: var(--primary-light);
+            opacity: 1;
+            transform: translateY(-3px);
+        }
+        
+        .copyright {
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.9rem;
+            opacity: 0.7;
+            color: rgba(255,255,255,0.7);
+            position: relative;
+            z-index: 2;
+            text-align: center;
+        }
+        
+        .copyright a {
+            color: rgba(255,255,255,0.9);
+            text-decoration: underline;
+        }
+        
+        /* Модальное окно */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1002;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 2rem;
+            border-radius: var(--rounded-xl);
+            max-width: 400px;
+            position: relative;
+        }
+        
+        .close-modal {
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        /* Анимации */
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-15px);
+            }
+        }
+        
+        .floating {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: translate(-25%, -25%);
+            }
+            100% {
+                transform: translate(-75%, -75%);
+            }
+        }
+        
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .section {
+                padding: 6rem 2rem;
+            }
+        }
+        
+        @media (max-width: 992px) {
+            .about-container,
+            .contact-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .about-image {
+                height: 400px;
+                max-width: 600px;
+                margin: 0 auto 3rem;
+                order: -1;
+            }
+            
+            h1 {
+                font-size: 3.5rem;
+            }
+            
+            .hero p {
+                font-size: 1.3rem;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.8rem;
+            }
+            
+            .section-title {
+                font-size: 2.2rem;
+                margin-bottom: 3rem;
+            }
+            
+            .hero p,
+            .cta-section p {
+                font-size: 1.2rem;
+            }
+            
+            .nav-links {
+                position: fixed;
+                top: 80px;
+                left: 0;
+                width: 100%;
+                background-color: white;
+                flex-direction: column;
+                align-items: center;
+                padding: 2rem;
+                gap: 1.5rem;
+                box-shadow: var(--shadow-lg);
+                transform: translateY(-150%);
+                transition: transform 0.3s ease;
+            }
+            
+            .nav-links.active {
+                transform: translateY(0);
+            }
+            
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            .user-panel {
+                width: 90%;
+                right: 5%;
+                top: 80px;
+            }
+            
+            .testimonial-text {
+                font-size: 1.1rem;
+            }
+            
+            .teacher-card {
+                max-width: 350px;
+                margin: 0 auto;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .section {
+                padding: 5rem 1rem;
+            }
+            
+            .section-title {
+                font-size: 1.8rem;
+            }
+            
+            .hero {
+                min-height: 700px;
+            }
+            
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+                width: 100%;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+            
+            .program-tabs {
+                flex-direction: column;
+                background: none;
+                box-shadow: none;
+                padding: 0;
+                gap: 0.5rem;
+            }
+            
+            .tab-btn {
+                width: 100%;
+                border-radius: var(--rounded-md);
+            }
+            
+            .program-item {
+                padding: 1.5rem;
+            }
+            
+            .testimonial-content {
+                padding: 2rem 1.5rem;
+            }
+            
+            .testimonial-text::before,
+            .testimonial-text::after {
+                display: none;
+            }
+            
+            .testimonial-author {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .author-info h4,
+            .author-info p {
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar">
+        <a href="#home" class="logo">
+            <div class="logo-icon">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <span>Zindaki Academy</span>
+        </a>
+        <div class="nav-links">
+            <a href="#home">Главная</a>
+            <a href="#about">О нас</a>
+            <a href="#teachers">Преподаватели</a>
+            <a href="#programs">Программы</a>
+            <a href="#testimonials">Отзывы</a>
+            <a href="#contact">Контакты</a>
+            {% if not user %}
+            <a href="#" class="login-btn">Вход</a>
+            {% endif %}
+        </div>
+        <button class="mobile-menu-btn">
+            <i class="fas fa-bars"></i>
+        </button>
+    </nav>
+
+    <!-- Плавающий личный кабинет (динамический) -->
+    {% if user %}
+    <div class="user-panel-toggle" id="userPanelToggle">
+        <i class="fas fa-user"></i>
+    </div>
+    
+    <div class="user-panel" id="userPanel">
+        <div class="user-panel-header">
+            <div class="user-avatar">
+                <img src="{{ user.avatar }}" alt="User Avatar">
+            </div>
+            <div class="user-info">
+                <h4>{{ user.username }}</h4>
+                <p>{{ 'Преподаватель' if user.role == 'teacher' else 'Студент' }}</p>
+            </div>
+        </div>
+        <ul class="user-menu">
+            <li><a href="/dashboard"><i class="fas fa-book"></i> Мои курсы</a></li>
+            <li><a href="#"><i class="fas fa-calendar-alt"></i> Расписание</a></li>
+            <li><a href="#"><i class="fas fa-video"></i> Видеоуроки</a></li>
+            <li><a href="#"><i class="fas fa-cog"></i> Настройки</a></li>
+            <li><a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Выйти</a></li>
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Модальное окно входа -->
+    <div class="modal" id="loginModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Вход в личный кабинет</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginUsername">Логин</label>
+                    <input type="text" id="loginUsername" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Пароль</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Войти</button>
+                <p class="register-link">Нет аккаунта? <a href="#" id="showRegister">Зарегистрироваться</a></p>
+            </form>
+            <form id="registerForm" style="display: none;">
+                <div class="form-group">
+                    <label for="regUsername">Логин</label>
+                    <input type="text" id="regUsername" required>
+                </div>
+                <div class="form-group">
+                    <label for="regEmail">Email</label>
+                    <input type="email" id="regEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="regPassword">Пароль</label>
+                    <input type="password" id="regPassword" required>
+                </div>
+                <div class="form-group">
+                    <label for="regRole">Я</label>
+                    <select id="regRole" required>
+                        <option value="student">Ученик</option>
+                        <option value="teacher">Преподаватель</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
+                <p class="login-link">Уже есть аккаунт? <a href="#" id="showLogin">Войти</a></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="particles" id="particles-js"></div>
+        <div class="hero-content">
+            <h1>Zindaki Academy</h1>
+            <p>Инновационный подход к семейному образованию с использованием современных технологий</p>
+            <div class="cta-buttons">
+                <a href="#programs" class="btn btn-primary">Выбрать программу</a>
+                <a href="https://t.me/zindakiacademy_bot" class="btn btn-secondary">Telegram-бот <i class="fas fa-arrow-right"></i></a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">Наши преимущества</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-rocket"></i>
+                    </div>
+                    <h3>Инновационные методики</h3>
+                    <p>Используем современные технологии в обучении, включая разработки Московской Электронной Школы.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <h3>Семейный подход</h3>
+                    <p>Программы для всех возрастов - от дошкольников до взрослых. Семейные скидки и групповые занятия.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3>Специализированные программы</h3>
+                    <p>Особые методики для детей с аутизмом, синдромом Дауна и другими особенностями развития.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="section about-section" id="about">
+        <div class="container">
+            <div class="about-container">
+                <div class="about-image">
+                    <img src="/static/msu.jpg" alt="МГУ им. М.В. Ломоносова">
+                </div>
+                <div class="about-content">
+                    <h2>Образование нового поколения</h2>
+                    <p>Zindaki Academy - это уникальное сочетание семейного подхода и современных образовательных технологий. Наши преподаватели - выпускники и сотрудники ведущих вузов, включая МГУ им. М.В. Ломоносова.</p>
+                    <p>Мы разрабатываем инновационные методики обучения, которые делают процесс образования эффективным и увлекательным для студентов любого возраста.</p>
+                    <p>Наши выпускники поступают в лучшие вузы страны, а взрослые студенты достигают своих образовательных целей в комфортном темпе.</p>
+                    <a href="#teachers" class="btn btn-primary" style="margin-top: 1rem;">Наши преподаватели</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Teachers Section -->
+    <section class="section teachers-section" id="teachers">
+        <div class="container">
+            <h2 class="section-title">Наша команда</h2>
+            <div class="teachers-grid">
+                <div class="teacher-card">
+                    <div class="teacher-image">
+                        <img src="/static/teacher1.jpg" alt="Пискарев Матвей Дмитриевич">
+                    </div>
+                    <div class="teacher-info">
+                        <h3>Пискарев Матвей Дмитриевич</h3>
+                        <p>Преподаватель</p>
+                        <div class="bio">Руководитель проекта Искусственного интеллекта в сфере языкового образования, методист программ по гуманитарным наукам. Готовит к ЕГЭ и международным экзаменам (IELTS, DELF).</div>
+                        <a href="#contact" class="btn btn-secondary" style="width: 100%;">Записаться</a>
+                    </div>
+                </div>
+                <div class="teacher-card">
+                    <div class="teacher-image">
+                        <img src="/static/teacher2.jpg" alt="Пискарева Лана Игоревна">
+                    </div>
+                    <div class="teacher-info">
+                        <h3>Пискарева Лана Игоревна</h3>
+                        <p>Преподаватель</p>
+                        <div class="bio">Главный методист языковых программ. Готовит к ЕГЭ и международным экзаменам (IELTS, DELF).</div>
+                        <a href="#contact" class="btn btn-secondary" style="width: 100%;">Записаться</a>
+                    </div>
+                </div>
+                <div class="teacher-card">
+                    <div class="teacher-image">
+                        <img src="/static/teacher3.jpg" alt="Диаб Галина Петровна">
+                    </div>
+                    <div class="teacher-info">
+                        <h3>Диаб Галина Петровна</h3>
+                        <p>Преподаватель</p>
+                        <div class="bio">Логопед высшей категории с 45-летним стажем. Специализируется на сложных случаях (аутизм, синдром Дауна, ЗПР).</div>
+                        <a href="#contact" class="btn btn-secondary" style="width: 100%;">Записаться</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Programs Section -->
+    <section class="section programs-section" id="programs">
+        <div class="container">
+            <h2 class="section-title">Наши программы</h2>
+            <div class="program-tabs">
+                <button class="tab-btn active" data-tab="languages">Языковые курсы</button>
+                <button class="tab-btn" data-tab="school">Школьные предметы</button>
+                <button class="tab-btn" data-tab="special">Специальные программы</button>
+            </div>
+            
+            <div id="languages-program" class="program-container active">
+                <div class="program-item">
+                    <h3>Английский язык для детей</h3>
+                    <p>Игровая методика обучения для дошкольников и младших школьников. Развитие разговорных навыков, пополнение словарного запаса, основы грамматики.</p>
+                    <div class="program-features">
+                        <div class="program-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Возраст: 4-12 лет</span>
+                        </div>
+                        <div class="program-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Уровни: Beginner - Intermediate</span>
+                        </div>
+                        <div class="program-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Формат: индивидуально/группа</span>
+                        </div>
+                    </div>
+                    <a href="#contact" class="btn btn-primary">Записаться</a>
+                </div>
+                
+                <div class="program-item">
+                    <h3>Подготовка к IELTS/TOEFL</h3>
+                    <p>Комплексная подготовка к международным экзаменам. Разбор всех секций экзамена, пробные тестирования, стратегии выполнения заданий.</p>
+                    <div class="program-features">
+                        <div class="program-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Возраст: 14+ лет</span>
+                        </div>
+                        <div class="program-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Уровни: Intermediate - Advanced</span>
+                        </div>
+                        <div class="program-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Формат: индивидуально</span>
+                        </div>
+                    </div>
+                    <a href="#contact" class="btn btn-primary">Записаться</a>
+                </div>
+            </div>
+            
+            <div id="school-program" class="program-container">
+                <div class="program-item">
+                    <h3>Подготовка к школе</h3>
+                    <p>Комплексная программа для дошкольников: чтение, письмо, счет, развитие речи, логика. Индивидуальный подход к каждому ребенку.</p>
+                    <div class="program-features">
+                        <div class="program-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Возраст: 5-7 лет</span>
+                        </div>
+                        <div class="program-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Длительность: 6-12 месяцев</span>
+                        </div>
+                        <div class="program-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Формат: индивидуально/группа</span>
+                        </div>
+                    </div>
+                    <a href="#contact" class="btn btn-primary">Записаться</a>
+                </div>
+                
+                <div class="program-item">
+                    <h3>Подготовка к ЕГЭ/ОГЭ</h3>
+                    <p>Эффективная подготовка к экзаменам по английскому, французскому, истории и обществознанию. Разбор всех заданий, пробные тестирования.</p>
+                    <div class="program-features">
+                        <div class="program-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Предметы: 4 на выбор</span>
+                        </div>
+                        <div class="program-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Формат: индивидуально/группа</span>
+                        </div>
+                        <div class="program-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Результаты: 80+ баллов</span>
+                        </div>
+                    </div>
+                    <a href="#contact" class="btn btn-primary">Записаться</a>
+                </div>
+            </div>
+            
+            <div id="special-program" class="program-container">
+                <div class="program-item">
+                    <h3>Логопедические занятия</h3>
+                    <p>Коррекция речевых нарушений у детей и взрослых. Работа с дислалией, дизартрией, алалией, заиканием, ЗРР, ЗПР, аутизмом, синдромом Дауна.</p>
+                    <div class="program-features">
+                        <div class="program-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Возраст: 3+ лет</span>
+                        </div>
+                        <div class="program-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Формат: индивидуально</span>
+                        </div>
+                        <div class="program-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Опыт: 45+ лет</span>
+                        </div>
+                    </div>
+                    <a href="#contact" class="btn btn-primary">Записаться</a>
+                </div>
+                
+                <div class="program-item">
+                    <h3>Английский для взрослых</h3>
+                    <p>Программы для разных целей: бизнес-английский, для путешествий, для работы. Гибкий график, индивидуальный подход.</p>
+                    <div class="program-features">
+                        <div class="program-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Уровни: Beginner - Advanced</span>
+                        </div>
+                        <div class="program-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Формат: индивидуально/группа</span>
+                        </div>
+                        <div class="program-feature">
+                            <i class="fas fa-check"></i>
+                            <span>Гибкий график</span>
+                        </div>
+                    </div>
+                    <a href="#contact" class="btn btn-primary">Записаться</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials-section" id="testimonials">
+        <div class="container">
+            <h2 class="section-title">Отзывы наших учеников</h2>
+            <div class="testimonials-container">
+                <div class="testimonials-slider">
+                    {% for testimonial in testimonials %}
+                    <div class="testimonial">
+                        <div class="testimonial-content">
+                            <p class="testimonial-text">{{ testimonial.text }}</p>
+                            <div class="testimonial-author">
+                                <div class="author-info">
+                                    <h4>{{ testimonial.author }}</h4>
+                                    <p>{{ testimonial.role }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-container">
+                <h2>Попробуйте инновационный подход к обучению!</h2>
+                <p>Запишитесь на бесплатный пробный урок и оцените качество нашего преподавания</p>
+                <div class="cta-buttons">
+                    <a href="#contact" class="btn btn-accent">Записаться на урок</a>
+                    <a href="https://t.me/zindakiacademy_bot" class="btn btn-secondary">Telegram-бот <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="section contact-section" id="contact">
+        <div class="container">
+            <h2 class="section-title">Свяжитесь с нами</h2>
+            <div class="contact-container">
+                <div class="contact-info">
+                    <h3>Контакты</h3>
+                    <p>Остались вопросы? Хотите записаться на занятие? Напишите нам, и мы ответим в ближайшее время.</p>
+                    <div class="contact-details">
+                        <div class="contact-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>Москва</span>
+                        </div>
+                        <div class="contact-item">
+                            <i class="fas fa-phone"></i>
+                            <span>+7 (916) 520-29-16</span>
+                        </div>
+                        <div class="contact-item">
+                            <i class="fas fa-envelope"></i>
+                            <span>info@zindakiacademy.ru</span>
+                        </div>
+                    </div>
+                    <h3 style="margin-top: 2rem;">Мы в соцсетях</h3>
+                    <div class="social-links">
+                        <a href="https://t.me/zindakiequipe" target="_blank"><i class="fab fa-telegram"></i></a>
+                        <a href="https://instagram.com/zindakiequipe" target="_blank"><i class="fab fa-instagram"></i></a>
+                        <a href="https://vk.com/zindakiacademy" target="_blank"><i class="fab fa-vk"></i></a>
+                        <a href="https://wa.me/79991234567" target="_blank"><i class="fab fa-whatsapp"></i></a>
+                    </div>
+                </div>
+                <div class="contact-form">
+                    <form id="contactForm" action="/api/contact" method="POST">
+                        <div class="form-group">
+                            <label for="name">Ваше имя</label>
+                            <input type="text" id="name" name="name" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email или телефон</label>
+                            <input type="text" id="email" name="contact" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="message">Сообщение</label>
+                            <textarea id="message" name="message" class="form-control" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Отправить</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-column">
+                    <h3>Zindaki Academy</h3>
+                    <p>Инновационная семейная онлайн школа иностранных языков и гуманитарных предметов.</p>
+                    <div class="footer-social-links">
+                        <a href="https://t.me/zindakiequipe" target="_blank"><i class="fab fa-telegram"></i></a>
+                        <a href="https://instagram.com/zindakiequipe" target="_blank"><i class="fab fa-instagram"></i></a>
+                        <a href="https://vk.com/zindakiacademy" target="_blank"><i class="fab fa-vk"></i></a>
+                    </div>
+                </div>
+                <div class="footer-column">
+                    <h3>Программы</h3>
+                    <ul>
+                        <li><a href="#programs">Языковые курсы</a></li>
+                        <li><a href="#programs">Подготовка к школе</a></li>
+                        <li><a href="#programs">Подготовка к ЕГЭ/ОГЭ</a></li>
+                        <li><a href="#programs">Логопедические занятия</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h3>Преподаватели</h3>
+                    <ul>
+                        <li><a href="#teachers">Диаб Г.П.</a></li>
+                        <li><a href="#teachers">Пискарев М.Д.</a></li>
+                        <li><a href="#teachers">Пискарева Л.И.</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h3>Контакты</h3>
+                    <ul>
+                        <li><a href="tel:+79991234567">+7 (999) 123-45-67</a></li>
+                        <li><a href="mailto:info@zindakiacademy.ru">info@zindakiacademy.ru</a></li>
+                        <li><a href="https://t.me/zindakiacademy_bot">Telegram-бот</a></li>
+                        <li><a href="#contact">Форма обратной связи</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="copyright">
+                © 2023 Zindaki Academy. Все права защищены. <a href="/privacy">Политика конфиденциальности</a> | <a href="/terms">Условия использования</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script>
+        // Инициализация частиц
+        particlesJS("particles-js", {
+            "particles": {
+                "number": {
+                    "value": 80,
+                    "density": {
+                        "enable": true,
+                        "value_area": 800
+                    }
+                },
+                "color": {
+                    "value": "#ffffff"
+                },
+                "shape": {
+                    "type": "circle",
+                    "stroke": {
+                        "width": 0,
+                        "color": "#000000"
+                    }
+                },
+                "opacity": {
+                    "value": 0.7,
+                    "random": true,
+                    "anim": {
+                        "enable": false,
+                        "speed": 1,
+                        "opacity_min": 0.3,
+                        "sync": false
+                    }
+                },
+                "size": {
+                    "value": 3,
+                    "random": true,
+                    "anim": {
+                        "enable": false,
+                        "speed": 40,
+                        "size_min": 1,
+                        "sync": false
+                    }
+                },
+                "line_linked": {
+                    "enable": true,
+                    "distance": 150,
+                    "color": "#ffffff",
+                    "opacity": 0.4,
+                    "width": 1
+                },
+                "move": {
+                    "enable": true,
+                    "speed": 2,
+                    "direction": "none",
+                    "random": false,
+                    "straight": false,
+                    "out_mode": "out",
+                    "bounce": false,
+                    "attract": {
+                        "enable": false,
+                        "rotateX": 600,
+                        "rotateY": 1200
+                    }
+                }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": {
+                    "onhover": {
+                        "enable": true,
+                        "mode": "grab"
+                    },
+                    "onclick": {
+                        "enable": true,
+                        "mode": "push"
+                    },
+                    "resize": true
+                },
+                "modes": {
+                    "grab": {
+                        "distance": 140,
+                        "line_linked": {
+                            "opacity": 0.8
+                        }
+                    },
+                    "bubble": {
+                        "distance": 400,
+                        "size": 40,
+                        "duration": 2,
+                        "opacity": 8,
+                        "speed": 3
+                    },
+                    "repulse": {
+                        "distance": 200,
+                        "duration": 0.4
+                    },
+                    "push": {
+                        "particles_nb": 4
+                    },
+                    "remove": {
+                        "particles_nb": 2
+                    }
+                }
+            },
+            "retina_detect": true
+        });
+
+        // Мобильное меню
+        const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+        const navLinks = document.querySelector('.nav-links');
+        
+        mobileMenuBtn.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            mobileMenuBtn.innerHTML = navLinks.classList.contains('active') ? 
+                '<i class="fas fa-times"></i>' : '<i class="fas fa-bars"></i>';
+        });
+        
+        // Плавающий личный кабинет
+        const userPanelToggle = document.getElementById('userPanelToggle');
+        const userPanel = document.getElementById('userPanel');
+        
+        if (userPanelToggle && userPanel) {
+            userPanelToggle.addEventListener('click', () => {
+                userPanel.classList.toggle('active');
+            });
+        }
+        
+        // Плавная прокрутка
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    if (navLinks.classList.contains('active')) {
+                        navLinks.classList.remove('active');
+                        mobileMenuBtn.innerHTML = '<i class="fas fa-bars"></i>';
+                    }
+                    
+                    target.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+        
+        // Изменение навбара при скролле
+        window.addEventListener('scroll', () => {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+        
+        // Управление вкладками программ
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            
+            tabButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    tabButtons.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const tabId = this.getAttribute('data-tab');
+                    
+                    document.querySelectorAll('.program-container').forEach(container => {
+                        container.classList.remove('active');
+                    });
+                    
+                    document.getElementById(`${tabId}-program`).classList.add('active');
+                });
+            });
+        });
+        
+        // Анимация появления элементов при скролле
+        const animateOnScroll = function() {
+            const elements = document.querySelectorAll('.feature-card, .teacher-card, .section-title, .program-item, .testimonial');
+            
+            elements.forEach(element => {
+                const elementPosition = element.getBoundingClientRect().top;
+                const screenPosition = window.innerHeight / 1.3;
+                
+                if (elementPosition < screenPosition) {
+                    element.style.opacity = '1';
+                    element.style.transform = 'translateY(0)';
+                }
+            });
+        };
+
+        // Инициализация анимации
+        window.addEventListener('load', function() {
+            document.querySelectorAll('.feature-card, .teacher-card, .section-title, .program-item, .testimonial').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            });
+            
+            animateOnScroll();
+        });
+        
+        window.addEventListener('scroll', animateOnScroll);
+        
+        // Обработка формы
+        const contactForm = document.getElementById('contactForm');
+        if (contactForm) {
+            contactForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(contactForm);
+                
+                fetch('/api/contact', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(Object.fromEntries(formData))
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Спасибо! Ваша заявка отправлена. Мы свяжемся с вами в ближайшее время.');
+                        contactForm.reset();
+                    } else {
+                        alert('Произошла ошибка при отправке формы. Пожалуйста, попробуйте позже.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при отправке формы. Пожалуйста, попробуйте позже.');
+                });
+            });
+        }
+        
+        // Выход из системы
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                fetch('/api/logout', {
+                    method: 'GET'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    }
+                });
+            });
+        }
+
+        // Обработка модального окна
+        const loginModal = document.getElementById('loginModal');
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const showRegister = document.getElementById('showRegister');
+        const showLogin = document.getElementById('showLogin');
+        const closeModal = document.querySelector('.close-modal');
+
+        // Показать модальное окно при клике на кнопку входа
+        document.querySelectorAll('.login-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                loginModal.style.display = 'block';
+            });
+        });
+
+        // Закрыть модальное окно
+        closeModal.addEventListener('click', () => {
+            loginModal.style.display = 'none';
+        });
+
+        // Переключение между формами входа и регистрации
+        showRegister.addEventListener('click', (e) => {
+            e.preventDefault();
+            loginForm.style.display = 'none';
+            registerForm.style.display = 'block';
+        });
+
+        showLogin.addEventListener('click', (e) => {
+            e.preventDefault();
+            registerForm.style.display = 'none';
+            loginForm.style.display = 'block';
+        });
+
+        // Обработка формы входа
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            fetch('/api/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '/dashboard';
+                } else {
+                    alert('Ошибка входа: ' + (data.error || 'Неверные данные'));
+                }
+            });
+        });
+
+        // Обработка формы регистрации
+        registerForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('regUsername').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const role = document.getElementById('regRole').value;
+
+            fetch('/api/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, email, password, role })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Регистрация успешна! Теперь вы можете войти.');
+                    registerForm.style.display = 'none';
+                    loginForm.style.display = 'block';
+                } else {
+                    alert('Ошибка регистрации: ' + (data.error || 'Попробуйте другой логин'));
+                }
+            });
+        });
+    </script>
+</body>
+</html>

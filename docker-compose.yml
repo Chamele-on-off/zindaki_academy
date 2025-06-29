@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "7001:7001"
+    environment:
+      - FLASK_DEBUG=1
+      - SECRET_KEY=your-secret-key-here
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

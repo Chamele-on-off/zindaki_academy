@@ -1,0 +1,30 @@
+[
+  {
+    "username": "teacher1",
+    "email": "teacher@icloud.com",
+    "password": "pbkdf2:sha256:600000$fwaLTfjbF07HlUQX$221b8a19ab7a1bd4bf58f51b15b03ff2bd6cb8f973b32927505b96f0bf7b77d7",
+    "role": "teacher",
+    "created_at": "2025-06-22T21:16:14.699157",
+    "avatar": "https://i.pravatar.cc/150?u=tema",
+    "is_admin": true,
+    "is_active": true
+  },
+  {
+    "username": "tema",
+    "email": "tema@icloud.com",
+    "password": "pbkdf2:sha256:600000$fwaLTfjbF07HlUQX$221b8a19ab7a1bd4bf58f51b15b03ff2bd6cb8f973b32927505b96f0bf7b77d7",
+    "role": "student",
+    "created_at": "2025-06-22T21:16:14.699157",
+    "avatar": "https://i.pravatar.cc/150?u=tema",
+    "is_active": true
+  },
+  {
+    "username": "Artem",
+    "email": "artem@example.com",
+    "password": "pbkdf2:sha256:600000$wpM7A0gEWlKQHao4$901068010fc5c4b89a8846a3ff07b038090a279e6777913f01d33acfe02046db",
+    "role": "student",
+    "is_active": true,
+    "created_at": "2025-06-27T20:50:10.446609",
+    "avatar": "https://i.pravatar.cc/150?u=Artem"
+  }
+]

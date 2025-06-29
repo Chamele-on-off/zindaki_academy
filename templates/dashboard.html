@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет | Zindaki Academy</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-light: #4895ef;
+            --primary-dark: #3a0ca3;
+            --light: #f8f9fa;
+            --lighter: #ffffff;
+            --text: #2b2d42;
+            --text-light: #8d99ae;
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+            --rounded-md: 12px;
+            --rounded-lg: 16px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background-color: var(--light);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 80px auto 0;
+            padding: 2rem;
+        }
+        
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        
+        .user-greeting h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .user-greeting p {
+            color: var(--text-light);
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--rounded-md);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .btn-secondary {
+            background-color: var(--light);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+        
+        .btn-secondary:hover {
+            background-color: var(--primary-light);
+            color: white;
+        }
+        
+        .btn-danger {
+            background-color: #f72585;
+        }
+        
+        .btn-danger:hover {
+            background-color: #d1146e;
+        }
+        
+        .section {
+            margin-top: 3rem;
+            background: var(--lighter);
+            padding: 1.5rem;
+            border-radius: var(--rounded-lg);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--text);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .section-title .actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        /* Таблицы */
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        th {
+            background-color: var(--light);
+            font-weight: 600;
+        }
+        
+        tr:hover {
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+        
+        .status-active {
+            color: #4cc9f0;
+            font-weight: 600;
+        }
+        
+        .status-inactive {
+            color: var(--text-light);
+        }
+        
+        /* Формы */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #e0e0e0;
+            border-radius: var(--rounded-md);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        /* Модальные окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: var(--rounded-lg);
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        /* Видеоконференции */
+        .conference-info {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: var(--light);
+            border-radius: var(--rounded-md);
+        }
+        
+        .conference-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            word-break: break-all;
+        }
+        
+        .conference-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        /* Домашние задания */
+        .homework-status {
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--rounded-md);
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .homework-status-not-submitted {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        
+        .homework-status-submitted {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        /* Загрузка файлов */
+        .file-upload {
+            margin-top: 1rem;
+        }
+        
+        .file-upload-preview {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+        
+        /* Повторяющиеся занятия */
+        .recurring-options {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: var(--light);
+            border-radius: var(--rounded-md);
+        }
+        
+        .recurring-options label {
+            display: inline-block;
+            margin-right: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .dashboard-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+            
+            .section-title {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .section-title .actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+            
+            .conference-controls {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <div class="user-greeting">
+                <h1>Добро пожаловать, {{ user.username }}!</h1>
+                <p>{{ 'Преподаватель' if user.role == 'teacher' else 'Студент' }} Zindaki Academy</p>
+            </div>
+            <button class="btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i> Выйти
+            </button>
+        </div>
+
+        {% if is_teacher %}
+        <!-- Управление пользователями -->
+        <div class="section">
+            <h2 class="section-title">
+                Управление пользователями
+                <div class="actions">
+                    <button class="btn" id="addUserBtn">
+                        <i class="fas fa-plus"></i> Добавить пользователя
+                    </button>
+                </div>
+            </h2>
+            
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Имя пользователя</th>
+                            <th>Email</th>
+                            <th>Роль</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTable">
+                        <!-- Данные будут загружены через JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Расписание занятий -->
+        <div class="section">
+            <h2 class="section-title">
+                Расписание занятий
+                <div class="actions">
+                    <button class="btn" id="addLessonBtn">
+                        <i class="fas fa-plus"></i> Добавить занятие
+                    </button>
+                    <button class="btn" id="assignHomeworkBtn">
+                        <i class="fas fa-book"></i> Назначить ДЗ
+                    </button>
+                </div>
+            </h2>
+            
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Название</th>
+                            <th>Описание</th>
+                            <th>Дата/время</th>
+                            <th>Длительность</th>
+                            <th>Ученики</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lessonsTable">
+                        <!-- Данные будут загружены через JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Домашние задания (для учителя) -->
+        <div class="section">
+            <h2 class="section-title">Назначенные домашние задания</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Урок</th>
+                            <th>Задание</th>
+                            <th>Срок сдачи</th>
+                            <th>Ученики</th>
+                            <th>Статус</th>
+                        </tr>
+                    </thead>
+                    <tbody id="homeworksTable">
+                        <!-- Данные будут загружены через JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <!-- Для студентов -->
+        <div class="section">
+            <h2 class="section-title">Мои курсы</h2>
+            
+            {% if lessons %}
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Название</th>
+                            <th>Описание</th>
+                            <th>Дата/время</th>
+                            <th>Длительность</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lesson in lessons %}
+                        <tr>
+                            <td>{{ lesson.title }}</td>
+                            <td>{{ lesson.description }}</td>
+                            <td>{{ lesson.formatted_schedule }}</td>
+                            <td>{{ lesson.duration }} мин</td>
+                            <td>
+                                <a href="/api/lesson/{{ lesson.id }}/join" class="btn">
+                                    <i class="fas fa-video"></i> Присоединиться
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p>Вы пока не записаны ни на один курс</p>
+            {% endif %}
+        </div>
+
+        <!-- Домашние задания (для студента) -->
+        <div class="section">
+            <h2 class="section-title">Домашние задания</h2>
+            {% if homework %}
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Название</th>
+                            <th>Описание</th>
+                            <th>Срок сдачи</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentHomeworkTable">
+                        {% for hw in homework %}
+                        <tr>
+                            <td>{{ hw.title }}</td>
+                            <td>{{ hw.description }}</td>
+                            <td>{{ hw.deadline }}</td>
+                            <td>
+                                <span class="homework-status homework-status-{{ 'submitted' if hw.status == 'submitted' else 'not-submitted' }}">
+                                    {{ 'Сдано' if hw.status == 'submitted' else 'Не сдано' }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if hw.status != 'submitted' %}
+                                <button class="btn" onclick="openSubmitHomeworkModal('{{ hw.id }}', '{{ hw.title }}', '{{ hw.description }}', '{{ hw.deadline }}')">
+                                    <i class="fas fa-upload"></i> Сдать
+                                </button>
+                                {% else %}
+                                <button class="btn btn-secondary">
+                                    <i class="fas fa-check"></i> Проверено
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p>Нет активных заданий</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Видеоконференция -->
+        <div class="section">
+            <h2 class="section-title">Видеоконференция</h2>
+            
+            <div class="conference-info">
+                <p>Используйте наш сервер видеоконференций:</p>
+                <div class="conference-link">
+                    <i class="fas fa-link"></i>
+                    <span id="conferenceLink">Загрузка...</span>
+                    <button class="btn btn-secondary" onclick="copyConferenceLink()">
+                        <i class="fas fa-copy"></i> Копировать
+                    </button>
+                </div>
+            </div>
+            
+            <div id="jitsi-container" style="width: 100%; height: 500px; background: #f0f0f0;">
+                <!-- Контейнер для Jitsi -->
+            </div>
+            
+            {% if is_teacher %}
+            <div class="conference-controls">
+                <button class="btn" id="toggleVideo">
+                    <i class="fas fa-video"></i> Выключить камеру
+                </button>
+                <button class="btn" id="toggleAudio">
+                    <i class="fas fa-microphone"></i> Выключить микрофон
+                </button>
+                <button class="btn" id="shareScreen">
+                    <i class="fas fa-desktop"></i> Демонстрация экрана
+                </button>
+                <button class="btn btn-danger" id="endMeeting">
+                    <i class="fas fa-phone-slash"></i> Завершить конференцию
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Модальное окно добавления пользователя -->
+    <div class="modal" id="addUserModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Добавить нового пользователя</h2>
+            <form id="addUserForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newUsername">Имя пользователя</label>
+                        <input type="text" id="newUsername" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newEmail">Email</label>
+                        <input type="email" id="newEmail" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newPassword">Пароль</label>
+                        <input type="password" id="newPassword" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Подтвердите пароль</label>
+                        <input type="password" id="confirmPassword" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="userRole">Роль</label>
+                    <select id="userRole" class="form-control" required>
+                        <option value="student">Ученик</option>
+                        <option value="teacher">Преподаватель</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" style="margin-top: 2rem;">
+                    <button type="submit" class="btn">
+                        <i class="fas fa-save"></i> Сохранить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно добавления занятия -->
+    <div class="modal" id="addLessonModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Добавить новое занятие</h2>
+            <form id="addLessonForm">
+                <div class="form-group">
+                    <label for="lessonTitle">Название занятия</label>
+                    <input type="text" id="lessonTitle" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="lessonDescription">Описание</label>
+                    <textarea id="lessonDescription" class="form-control" rows="3"></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="lessonDate">Дата начала</label>
+                        <input type="date" id="lessonDate" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lessonTime">Время</label>
+                        <input type="time" id="lessonTime" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lessonDuration">Длительность (мин)</label>
+                        <input type="number" id="lessonDuration" class="form-control" value="60" min="30" step="15" required>
+                    </div>
+                </div>
+                
+                <!-- Опции повторения -->
+                <div class="recurring-options">
+                    <h4>Повторение занятия</h4>
+                    <div>
+                        <label><input type="radio" name="recurrence" value="none" checked> Без повторения</label>
+                        <label><input type="radio" name="recurrence" value="weekly"> Еженедельно</label>
+                        <label><input type="radio" name="recurrence" value="biweekly"> Раз в две недели</label>
+                    </div>
+                    
+                    <div id="weeklyOptions" style="display: none; margin-top: 1rem;">
+                        <label>Дни недели:</label><br>
+                        <label><input type="checkbox" name="weekdays" value="1"> Понедельник</label>
+                        <label><input type="checkbox" name="weekdays" value="2"> Вторник</label>
+                        <label><input type="checkbox" name="weekdays" value="3"> Среда</label>
+                        <label><input type="checkbox" name="weekdays" value="4"> Четверг</label>
+                        <label><input type="checkbox" name="weekdays" value="5"> Пятница</label>
+                        <label><input type="checkbox" name="weekdays" value="6"> Суббота</label>
+                        <label><input type="checkbox" name="weekdays" value="0"> Воскресенье</label>
+                    </div>
+                    
+                    <div id="recurrenceEndOptions" style="margin-top: 1rem; display: none;">
+                        <label>Окончание повторения:</label>
+                        <select id="recurrenceEndType" class="form-control">
+                            <option value="count">После N занятий</option>
+                            <option value="date">По дате</option>
+                        </select>
+                        <div id="recurrenceCount" style="margin-top: 0.5rem;">
+                            <input type="number" id="recurrenceCountValue" class="form-control" min="1" value="12" placeholder="Количество занятий">
+                        </div>
+                        <div id="recurrenceEndDate" style="margin-top: 0.5rem; display: none;">
+                            <input type="date" id="recurrenceEndDateValue" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="lessonStudents">Выберите учеников</label>
+                    <select id="lessonStudents" class="form-control" multiple style="height: 150px;">
+                        <!-- Список учеников будет загружен через JavaScript -->
+                    </select>
+                </div>
+                
+                <div class="form-group" style="margin-top: 2rem;">
+                    <button type="submit" class="btn">
+                        <i class="fas fa-save"></i> Сохранить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно назначения домашнего задания -->
+    <div class="modal" id="assignHomeworkModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Назначить домашнее задание</h2>
+            <form id="assignHomeworkForm">
+                <div class="form-group">
+                    <label for="homeworkLesson">Урок</label>
+                    <select id="homeworkLesson" class="form-control" required>
+                        <!-- Список уроков будет загружен через JavaScript -->
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkTitle">Название задания</label>
+                    <input type="text" id="homeworkTitle" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkDescription">Описание</label>
+                    <textarea id="homeworkDescription" class="form-control" rows="3" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkDeadline">Срок сдачи</label>
+                    <input type="date" id="homeworkDeadline" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkStudents">Ученики</label>
+                    <select id="homeworkStudents" class="form-control" multiple style="height: 150px;" required>
+                        <!-- Список учеников будет загружен через JavaScript -->
+                    </select>
+                </div>
+                
+                <div class="form-group file-upload">
+                    <label for="homeworkFiles">Прикрепленные файлы</label>
+                    <input type="file" id="homeworkFiles" class="form-control" multiple>
+                    <div class="file-upload-preview" id="homeworkFilesPreview"></div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 2rem;">
+                    <button type="submit" class="btn">
+                        <i class="fas fa-save"></i> Назначить задание
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно сдачи домашнего задания -->
+    <div class="modal" id="submitHomeworkModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Сдать домашнее задание</h2>
+            <form id="submitHomeworkForm">
+                <input type="hidden" id="homeworkId">
+                
+                <div class="form-group">
+                    <label for="homeworkSubmissionTitle">Название задания</label>
+                    <input type="text" id="homeworkSubmissionTitle" class="form-control" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkSubmissionDescription">Описание</label>
+                    <textarea id="homeworkSubmissionDescription" class="form-control" rows="3" readonly></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkSubmissionDeadline">Срок сдачи</label>
+                    <input type="text" id="homeworkSubmissionDeadline" class="form-control" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkSubmissionComment">Комментарий</label>
+                    <textarea id="homeworkSubmissionComment" class="form-control" rows="3"></textarea>
+                </div>
+                
+                <div class="form-group file-upload">
+                    <label for="homeworkSubmissionFiles">Прикрепите файлы</label>
+                    <input type="file" id="homeworkSubmissionFiles" class="form-control" multiple>
+                    <div class="file-upload-preview" id="homeworkSubmissionFilesPreview"></div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 2rem;">
+                    <button type="submit" class="btn">
+                        <i class="fas fa-upload"></i> Отправить задание
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://jitsi.zindaki-edu.ru/external_api.js"></script>
+    <script>
+        // Обработка выхода
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            fetch('/api/logout')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = '/';
+                    }
+                });
+        });
+
+        // Jitsi видеоконференция с собственным сервером
+        let jitsiApi = null;
+        let currentRoomName = '';
+        
+        function startConference(roomName) {
+            // Используем ваш домен для Jitsi
+            const domain = 'jitsi.zindaki-edu.ru';
+            
+            // Очищаем контейнер перед созданием новой конференции
+            const container = document.getElementById('jitsi-container');
+            container.innerHTML = '';
+            
+            const options = {
+                roomName: roomName,
+                width: '100%',
+                height: 500,
+                parentNode: container,
+                userInfo: {
+                    displayName: '{{ user.username }}',
+                    email: '{{ user.email }}'
+                },
+                configOverwrite: {
+                    startWithAudioMuted: false,
+                    startWithVideoMuted: false,
+                    enableWelcomePage: false,
+                    enableNoAudioDetection: true,
+                    enableNoisyMicDetection: true,
+                    prejoinPageEnabled: false,
+                    disableSimulcast: false,
+                    startAudioOnly: false,
+                    enableClosePage: false,
+                    disableBeforeUnloadHandlers: true,
+                    // Оптимизации для долгих конференций
+                    p2p: {
+                        enabled: false
+                    },
+                    analytics: {
+                        disabled: true
+                    },
+                    testing: {
+                        noAutoPlayVideo: false
+                    }
+                },
+                interfaceConfigOverwrite: {
+                    DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
+                    SHOW_JITSI_WATERMARK: false,
+                    SHOW_WATERMARK_FOR_GUESTS: false,
+                    TOOLBAR_BUTTONS: [
+                        'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
+                        'fodeviceselection', 'hangup', 'profile', 'info', 'chat', 'recording',
+                        'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
+                        'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
+                        'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
+                        'security'
+                    ]
+                }
+            };
+            
+            try {
+                jitsiApi = new JitsiMeetExternalAPI(domain, options);
+                
+                // Обновляем ссылку на конференцию
+                const conferenceUrl = `https://${domain}/${roomName}`;
+                document.getElementById('conferenceLink').textContent = conferenceUrl;
+                currentRoomName = roomName;
+                
+                // Обработчики событий
+                jitsiApi.addListener('readyToClose', () => {
+                    endConference();
+                });
+                
+                jitsiApi.addListener('participantRoleChanged', (event) => {
+                    if (event.role === 'moderator') {
+                        console.log('Вы стали модератором конференции');
+                    }
+                });
+                
+                // Для учителя добавляем обработчики управления
+                if ({% if is_teacher %}true{% else %}false{% endif %}) {
+                    setupConferenceControls();
+                }
+            } catch (error) {
+                console.error('Ошибка инициализации Jitsi:', error);
+                container.innerHTML = `
+                    <div style="padding: 20px; text-align: center;">
+                        <h3>Ошибка подключения к видеоконференции</h3>
+                        <p>${error.message}</p>
+                        <button class="btn" onclick="startConference('${roomName}')">
+                            <i class="fas fa-sync-alt"></i> Попробовать снова
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        function setupConferenceControls() {
+            // Управление камерой
+            document.getElementById('toggleVideo').addEventListener('click', () => {
+                jitsiApi.executeCommand('toggleVideo');
+                const icon = document.querySelector('#toggleVideo i');
+                if (icon.classList.contains('fa-video')) {
+                    icon.classList.remove('fa-video');
+                    icon.classList.add('fa-video-slash');
+                    document.getElementById('toggleVideo').innerHTML = '<i class="fas fa-video-slash"></i> Включить камеру';
+                } else {
+                    icon.classList.remove('fa-video-slash');
+                    icon.classList.add('fa-video');
+                    document.getElementById('toggleVideo').innerHTML = '<i class="fas fa-video"></i> Выключить камеру';
+                }
+            });
+            
+            // Управление микрофоном
+            document.getElementById('toggleAudio').addEventListener('click', () => {
+                jitsiApi.executeCommand('toggleAudio');
+                const icon = document.querySelector('#toggleAudio i');
+                if (icon.classList.contains('fa-microphone')) {
+                    icon.classList.remove('fa-microphone');
+                    icon.classList.add('fa-microphone-slash');
+                    document.getElementById('toggleAudio').innerHTML = '<i class="fas fa-microphone-slash"></i> Включить микрофон';
+                } else {
+                    icon.classList.remove('fa-microphone-slash');
+                    icon.classList.add('fa-microphone');
+                    document.getElementById('toggleAudio').innerHTML = '<i class="fas fa-microphone"></i> Выключить микрофон';
+                }
+            });
+            
+            // Демонстрация экрана
+            document.getElementById('shareScreen').addEventListener('click', () => {
+                jitsiApi.executeCommand('toggleShareScreen');
+            });
+            
+            // Завершение конференции
+            document.getElementById('endMeeting').addEventListener('click', () => {
+                if (confirm('Вы уверены, что хотите завершить конференцию для всех участников?')) {
+                    jitsiApi.executeCommand('endConference');
+                    endConference();
+                }
+            });
+        }
+        
+        function endConference() {
+            if (jitsiApi) {
+                jitsiApi.dispose();
+                jitsiApi = null;
+            }
+            document.getElementById('jitsi-container').innerHTML = `
+                <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                    <p>Конференция завершена</p>
+                </div>
+            `;
+            document.getElementById('conferenceLink').textContent = 'Конференция не активна';
+        }
+        
+        function copyConferenceLink() {
+            if (!currentRoomName) {
+                alert('Сначала создайте или присоединитесь к конференции');
+                return;
+            }
+            
+            const link = document.getElementById('conferenceLink').textContent;
+            navigator.clipboard.writeText(link)
+                .then(() => alert('Ссылка скопирована в буфер обмена!'))
+                .catch(err => console.error('Ошибка копирования: ', err));
+        }
+
+        // Загрузка данных для учителя
+        if ({% if is_teacher %}true{% else %}false{% endif %}) {
+            // Функция для добавления пользователя
+            function addUser(userData) {
+                fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(userData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loadUsers();
+                        document.getElementById('addUserModal').style.display = 'none';
+                        document.getElementById('addUserForm').reset();
+                    } else {
+                        alert(data.error || 'Ошибка при добавлении пользователя');
+                    }
+                });
+            }
+            
+            // Загрузка списка пользователей
+            function loadUsers() {
+                fetch('/api/users')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Ошибка загрузки пользователей');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const tableBody = document.getElementById('usersTable');
+                        tableBody.innerHTML = '';
+                        
+                        data.users.forEach(user => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${user.username}</td>
+                                <td>${user.email}</td>
+                                <td>${user.role === 'teacher' ? 'Преподаватель' : 'Ученик'}</td>
+                                <td class="${user.is_active ? 'status-active' : 'status-inactive'}">
+                                    ${user.is_active ? 'Активен' : 'Неактивен'}
+                                </td>
+                                <td>
+                                    <button class="btn btn-secondary" onclick="toggleUserStatus('${user.username}', ${!user.is_active})">
+                                        ${user.is_active ? 'Деактивировать' : 'Активировать'}
+                                    </button>
+                                    <button class="btn btn-danger" onclick="deleteUser('${user.username}')">
+                                        <i class="fas fa-trash"></i> Удалить
+                                    </button>
+                                </td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Ошибка загрузки пользователей');
+                    });
+            }
+            
+            // Загрузка списка занятий
+            function loadLessons() {
+                fetch('/api/lessons')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Ошибка загрузки занятий');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const tableBody = document.getElementById('lessonsTable');
+                        tableBody.innerHTML = '';
+                        
+                        // Группируем по дате
+                        const lessonsByDate = {};
+                        data.lessons.forEach(lesson => {
+                            const date = lesson.schedule.split('T')[0];
+                            if (!lessonsByDate[date]) lessonsByDate[date] = [];
+                            lessonsByDate[date].push(lesson);
+                        });
+                        
+                        // Сортируем даты
+                        const sortedDates = Object.keys(lessonsByDate).sort();
+                        
+                        // Отображаем
+                        sortedDates.forEach(date => {
+                            // Заголовок с датой
+                            const dateRow = document.createElement('tr');
+                            dateRow.innerHTML = `<td colspan="6" style="background: #f0f0f0; font-weight: bold;">
+                                ${new Date(date).toLocaleDateString('ru-RU', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                            </td>`;
+                            tableBody.appendChild(dateRow);
+                            
+                            // Занятия в этот день
+                            lessonsByDate[date].forEach(lesson => {
+                                const time = new Date(lesson.schedule).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                                
+                                const row = document.createElement('tr');
+                                row.innerHTML = `
+                                    <td>${lesson.title}</td>
+                                    <td>${lesson.description || '-'}</td>
+                                    <td>${time}</td>
+                                    <td>${lesson.duration} мин</td>
+                                    <td>${lesson.students?.join(', ') || 'нет'}</td>
+                                    <td>
+                                        <button class="btn btn-danger" onclick="deleteLesson('${lesson.id}')">
+                                            <i class="fas fa-trash"></i> Удалить
+                                        </button>
+                                    </td>
+                                `;
+                                tableBody.appendChild(row);
+                            });
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Ошибка загрузки занятий');
+                    });
+            }
+            
+            // Загрузка домашних заданий
+            function loadHomeworks() {
+                fetch('/api/homework')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Ошибка загрузки домашних заданий');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const tableBody = document.getElementById('homeworksTable');
+                        tableBody.innerHTML = '';
+                        
+                        data.homeworks.forEach(hw => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${hw.title}</td>
+                                <td>${hw.description}</td>
+                                <td>${hw.deadline}</td>
+                                <td>${hw.students.join(', ')}</td>
+                                <td>
+                                    <span class="homework-status homework-status-${hw.status || 'not-submitted'}">
+                                        ${hw.status === 'submitted' ? 'Сдано' : 'Не сдано'}
+                                    </span>
+                                </td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Ошибка загрузки домашних заданий');
+                    });
+            }
+            
+            // Загрузка списка учеников для выбора
+            function loadStudentsForSelect(selectId) {
+                fetch('/api/users?role=student')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Ошибка загрузки учеников');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const select = document.getElementById(selectId);
+                        select.innerHTML = '';
+                        
+                        data.users.forEach(student => {
+                            const option = document.createElement('option');
+                            option.value = student.username;
+                            option.textContent = student.username;
+                            select.appendChild(option);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Ошибка загрузки списка учеников');
+                    });
+            }
+            
+            // Загрузка уроков для назначения ДЗ
+            function loadLessonsForHomework() {
+                fetch('/api/lessons')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Ошибка загрузки уроков');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const select = document.getElementById('homeworkLesson');
+                        select.innerHTML = '';
+                        
+                        data.lessons.forEach(lesson => {
+                            const option = document.createElement('option');
+                            option.value = lesson.id;
+                            option.textContent = `${lesson.title} (${lesson.formatted_schedule || lesson.schedule})`;
+                            select.appendChild(option);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Ошибка загрузки списка уроков');
+                    });
+            }
+            
+            // Управление пользователями
+            function toggleUserStatus(username, activate) {
+                if (confirm(`Вы уверены, что хотите ${activate ? 'активировать' : 'деактивировать'} пользователя ${username}?`)) {
+                    fetch(`/api/users/${username}/status`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ is_active: activate })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            loadUsers();
+                        } else {
+                            alert(data.error || 'Ошибка обновления статуса');
+                        }
+                    });
+                }
+            }
+            
+            function deleteUser(username) {
+                if (confirm(`Вы уверены, что хотите удалить пользователя ${username}?`)) {
+                    fetch(`/api/users/${username}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            loadUsers();
+                        } else {
+                            alert(data.error || 'Ошибка удаления пользователя');
+                        }
+                    });
+                }
+            }
+            
+            // Управление занятиями
+            function addLesson(lessonData) {
+                fetch('/api/lessons', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(lessonData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loadLessons();
+                        document.getElementById('addLessonModal').style.display = 'none';
+                        document.getElementById('addLessonForm').reset();
+                    } else {
+                        alert(data.error || 'Ошибка создания занятия');
+                    }
+                });
+            }
+            
+            function deleteLesson(lessonId) {
+                if (confirm('Вы уверены, что хотите удалить это занятие?')) {
+                    fetch(`/api/lessons/${lessonId}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            loadLessons();
+                        } else {
+                            alert(data.error || 'Ошибка удаления занятия');
+                        }
+                    });
+                }
+            }
+            
+            // Назначение домашнего задания
+            function assignHomework(homeworkData) {
+                const formData = new FormData();
+                
+                // Добавляем данные
+                formData.append('lesson_id', homeworkData.lesson_id);
+                formData.append('title', homeworkData.title);
+                formData.append('description', homeworkData.description);
+                formData.append('deadline', homeworkData.deadline);
+                formData.append('students', JSON.stringify(homeworkData.students));
+                
+                // Добавляем файлы
+                for (let i = 0; i < homeworkData.files.length; i++) {
+                    formData.append('files', homeworkData.files[i]);
+                }
+                
+                fetch('/api/homework', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loadHomeworks();
+                        document.getElementById('assignHomeworkModal').style.display = 'none';
+                        document.getElementById('assignHomeworkForm').reset();
+                        document.getElementById('homeworkFilesPreview').innerHTML = '';
+                    } else {
+                        alert(data.error || 'Ошибка назначения домашнего задания');
+                    }
+                });
+            }
+            
+            // Модальные окна
+            document.getElementById('addUserBtn').addEventListener('click', () => {
+                document.getElementById('addUserModal').style.display = 'flex';
+            });
+            
+            document.getElementById('addLessonBtn').addEventListener('click', () => {
+                loadStudentsForSelect('lessonStudents');
+                document.getElementById('addLessonModal').style.display = 'flex';
+            });
+            
+            document.getElementById('assignHomeworkBtn').addEventListener('click', () => {
+                loadLessonsForHomework();
+                loadStudentsForSelect('homeworkStudents');
+                document.getElementById('assignHomeworkModal').style.display = 'flex';
+            });
+            
+            document.querySelectorAll('.close-modal').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.modal').forEach(modal => {
+                        modal.style.display = 'none';
+                    });
+                });
+            });
+            
+            // Форма добавления пользователя
+            document.getElementById('addUserForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const username = document.getElementById('newUsername').value;
+                const email = document.getElementById('newEmail').value;
+                const password = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                const role = document.getElementById('userRole').value;
+                
+                if (password !== confirmPassword) {
+                    alert('Пароли не совпадают!');
+                    return;
+                }
+                
+                addUser({ username, email, password, role });
+            });
+            
+            // Форма добавления занятия
+            document.getElementById('addLessonForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const title = document.getElementById('lessonTitle').value;
+                const description = document.getElementById('lessonDescription').value;
+                const date = document.getElementById('lessonDate').value;
+                const time = document.getElementById('lessonTime').value;
+                const duration = document.getElementById('lessonDuration').value;
+                
+                const studentsSelect = document.getElementById('lessonStudents');
+                const students = Array.from(studentsSelect.selectedOptions).map(option => option.value);
+                
+                // Получаем параметры повторения
+                const recurrenceType = document.querySelector('input[name="recurrence"]:checked').value;
+                const weekdays = Array.from(document.querySelectorAll('input[name="weekdays"]:checked')).map(el => el.value);
+                const endType = document.getElementById('recurrenceEndType').value;
+                const endValue = endType === 'count' 
+                    ? document.getElementById('recurrenceCountValue').value
+                    : document.getElementById('recurrenceEndDateValue').value;
+                
+                // Создаем массив всех занятий
+                const lessonsToCreate = [];
+                const startDate = new Date(`${date}T${time}:00`);
+                
+                if (recurrenceType === 'none') {
+                    // Одно занятие
+                    lessonsToCreate.push({
+                        title, description, duration, students,
+                        schedule: startDate.toISOString()
+                    });
+                } else {
+                    // Повторяющиеся занятия
+                    const interval = recurrenceType === 'weekly' ? 1 : 2;
+                    let currentDate = new Date(startDate);
+                    let createdCount = 0;
+                    const maxLessons = endType === 'count' ? parseInt(endValue) : Infinity;
+                    const endDate = endType === 'date' ? new Date(endValue) : null;
+                    
+                    while (createdCount < maxLessons && (!endDate || currentDate <= endDate)) {
+                        if (weekdays.length === 0 || weekdays.includes(currentDate.getDay().toString())) {
+                            lessonsToCreate.push({
+                                title, description, duration, students,
+                                schedule: new Date(currentDate).toISOString()
+                            });
+                            createdCount++;
+                        }
+                        
+                        currentDate.setDate(currentDate.getDate() + (interval * 7));
+                    }
+                }
+                
+                // Отправляем все занятия на сервер
+                Promise.all(lessonsToCreate.map(lesson => 
+                    fetch('/api/lessons', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(lesson)
+                    }).then(res => res.json())
+                )).then(results => {
+                    if (results.every(r => r.success)) {
+                        alert(`Успешно создано ${lessonsToCreate.length} занятий!`);
+                        loadLessons();
+                        document.getElementById('addLessonModal').style.display = 'none';
+                    } else {
+                        alert('Ошибка при создании некоторых занятий');
+                    }
+                });
+            });
+            
+            // Форма назначения домашнего задания
+            document.getElementById('assignHomeworkForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const lessonId = document.getElementById('homeworkLesson').value;
+                const title = document.getElementById('homeworkTitle').value;
+                const description = document.getElementById('homeworkDescription').value;
+                const deadline = document.getElementById('homeworkDeadline').value;
+                
+                const studentsSelect = document.getElementById('homeworkStudents');
+                const students = Array.from(studentsSelect.selectedOptions).map(option => option.value);
+                
+                const filesInput = document.getElementById('homeworkFiles');
+                const files = filesInput.files;
+                
+                assignHomework({
+                    lesson_id: lessonId,
+                    title,
+                    description,
+                    deadline,
+                    students,
+                    files
+                });
+            });
+            
+            // Превью загружаемых файлов (ДЗ)
+            document.getElementById('homeworkFiles').addEventListener('change', function() {
+                const preview = document.getElementById('homeworkFilesPreview');
+                preview.innerHTML = '';
+                
+                if (this.files.length > 0) {
+                    preview.innerHTML = `Выбрано файлов: ${this.files.length}<br>`;
+                    for (let i = 0; i < this.files.length; i++) {
+                        preview.innerHTML += `${i+1}. ${this.files[i].name}<br>`;
+                    }
+                }
+            });
+            
+            // Обработчики для формы повторяющихся занятий
+            document.querySelectorAll('input[name="recurrence"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    document.getElementById('weeklyOptions').style.display = 
+                        this.value === 'weekly' || this.value === 'biweekly' ? 'block' : 'none';
+                    document.getElementById('recurrenceEndOptions').style.display = 
+                        this.value !== 'none' ? 'block' : 'none';
+                });
+            });
+            
+            document.getElementById('recurrenceEndType').addEventListener('change', function() {
+                document.getElementById('recurrenceCount').style.display = 
+                    this.value === 'count' ? 'block' : 'none';
+                document.getElementById('recurrenceEndDate').style.display = 
+                    this.value === 'date' ? 'block' : 'none';
+            });
+            
+            // Загрузка начальных данных
+            loadUsers();
+            loadLessons();
+            loadHomeworks();
+            
+            // Автоматически запускаем конференцию для учителя
+            window.addEventListener('load', function() {
+                const roomName = `ZindakiRoom_{{ user.username }}_${Date.now()}`;
+                startConference(roomName);
+            });
+        } else {
+            // Для учеников
+            function openSubmitHomeworkModal(homeworkId, title, description, deadline) {
+                document.getElementById('homeworkId').value = homeworkId;
+                document.getElementById('homeworkSubmissionTitle').value = title;
+                document.getElementById('homeworkSubmissionDescription').value = description;
+                document.getElementById('homeworkSubmissionDeadline').value = deadline;
+                document.getElementById('submitHomeworkModal').style.display = 'flex';
+            }
+            
+            // Форма сдачи домашнего задания
+            document.getElementById('submitHomeworkForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const homeworkId = document.getElementById('homeworkId').value;
+                const comment = document.getElementById('homeworkSubmissionComment').value;
+                
+                const filesInput = document.getElementById('homeworkSubmissionFiles');
+                const files = filesInput.files;
+                
+                const formData = new FormData();
+                formData.append('homework_id', homeworkId);
+                formData.append('comment', comment);
+                
+                for (let i = 0; i < files.length; i++) {
+                    formData.append('files', files[i]);
+                }
+                
+                fetch('/api/homework/submit', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Домашнее задание успешно отправлено!');
+                        document.getElementById('submitHomeworkModal').style.display = 'none';
+                        document.getElementById('submitHomeworkForm').reset();
+                        document.getElementById('homeworkSubmissionFilesPreview').innerHTML = '';
+                        window.location.reload();
+                    } else {
+                        alert(data.error || 'Ошибка при отправке домашнего задания');
+                    }
+                });
+            });
+            
+            // Превью загружаемых файлов (сдача ДЗ)
+            document.getElementById('homeworkSubmissionFiles').addEventListener('change', function() {
+                const preview = document.getElementById('homeworkSubmissionFilesPreview');
+                preview.innerHTML = '';
+                
+                if (this.files.length > 0) {
+                    preview.innerHTML = `Выбрано файлов: ${this.files.length}<br>`;
+                    for (let i = 0; i < this.files.length; i++) {
+                        preview.innerHTML += `${i+1}. ${this.files[i].name}<br>`;
+                    }
+                }
+            });
+            
+            // Обновляем расписание при изменениях
+            function checkForUpdates() {
+                fetch('/api/lessons')
+                    .then(response => response.json())
+                    .then(data => {
+                        // Здесь можно добавить логику обновления интерфейса
+                    });
+                
+                setTimeout(checkForUpdates, 10000); // Проверка каждые 10 секунд
+            }
+            
+            checkForUpdates();
+        }
+
+        // Обработка присоединения к уроку
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.closest('a[href^="/api/lesson/"]')) {
+                e.preventDefault();
+                const lessonId = e.target.closest('a').href.split('/').slice(-2, -1)[0];
+                
+                fetch(`/api/lesson/${lessonId}/join`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            startConference(data.room_name);
+                        } else {
+                            alert(data.error || 'Ошибка подключения к конференции');
+                        }
+                    });
+            }
+        });
+    </script>
+</body>
+</html>
