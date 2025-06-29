@@ -1,11 +1,10 @@
 version: '3.8'
 
 services:
-  # Flask приложение
-  app:
+  web:
     build: .
     ports:
-      - "7001:7001"  # Только для отладки, можно убрать в production
+      - "7001:7001"
     volumes:
       - .:/app
       - ./uploads:/app/uploads
@@ -16,18 +15,14 @@ services:
       - SECRET_KEY=your-secret-key-here
     restart: unless-stopped
 
-  # Nginx прокси
   nginx:
     image: nginx:alpine
     ports:
       - "80:80"
-      - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - ./nginx/conf.d:/etc/nginx/conf.d
       - ./static:/app/static
       - ./uploads:/app/uploads
-      - ./certbot/conf:/etc/letsencrypt  # Только если используете Let's Encrypt
     depends_on:
-      - app
+      - web
     restart: unless-stopped
