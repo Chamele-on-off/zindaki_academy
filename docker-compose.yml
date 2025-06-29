@@ -12,7 +12,7 @@ services:
     restart: always
 
   jitsi:
-    image: jitsi/web
+    image: jitsi/web:stable-8963-1
     ports:
       - "8000:8000"
     volumes:
