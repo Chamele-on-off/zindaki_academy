@@ -2,12 +2,21 @@ version: '3.8'
 
 services:
   web:
-    build: .
+    image: nginx:alpine
     ports:
-      - "7001:7001"
-    environment:
-      - FLASK_DEBUG=1
-      - SECRET_KEY=your-secret-key-here
+      - "80:80"
+      - "443:443"
     volumes:
-      - ./data:/app/data
-    restart: unless-stopped
+      - ./app:/usr/share/nginx/html
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    restart: always
+
+  jitsi:
+    image: jitsi/web
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./jitsi/config:/config
+    environment:
+      - ENABLE_AUTH=1
+    restart: always
