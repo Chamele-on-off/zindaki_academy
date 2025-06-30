@@ -1,49 +1,23 @@
 version: '3.8'
 
 services:
-  # Основное Flask-приложение
   web:
     build: .
     ports:
-      - "7001:7001"
+      - "80:7001"   # HTTP
+      - "443:7001"  # HTTPS (если настроим SSL)
     volumes:
       - .:/app
       - ./uploads:/app/uploads
       - ./data:/app/data
+      - ./certbot/conf:/etc/letsencrypt  # Для SSL
+      - ./certbot/www:/var/www/certbot
     environment:
       - FLASK_APP=app.py
       - FLASK_ENV=production
       - SECRET_KEY=your-secret-key-here
       - JITSI_DOMAIN=jitsi.zindaki-edu.ru
     restart: unless-stopped
-    networks:
-      - zindaki-network
-
-  # Nginx прокси
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "8080:80"
-      - "443:443"
-    volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d
-      - ./static:/app/static
-      - ./uploads:/app/uploads
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
-    depends_on:
-      - web
-    restart: unless-stopped
-    networks:
-      - zindaki-network
-
-  # Certbot для SSL (опционально)
-  certbot:
-    image: certbot/certbot
-    volumes:
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
     networks:
       - zindaki-network
 
