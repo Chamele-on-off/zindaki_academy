@@ -4,23 +4,11 @@ services:
   web:
     build: .
     ports:
-      - "80:7001"   # HTTP
-      - "443:7001"  # HTTPS (если настроим SSL)
+      - "7001:7001"  # Теперь только внутренний порт (Nginx на хосте проксирует>
     volumes:
       - .:/app
       - ./uploads:/app/uploads
-      - ./data:/app/data
-      - ./certbot/conf:/etc/letsencrypt  # Для SSL
-      - ./certbot/www:/var/www/certbot
     environment:
       - FLASK_APP=app.py
       - FLASK_ENV=production
-      - SECRET_KEY=your-secret-key-here
-      - JITSI_DOMAIN=jitsi.zindaki-edu.ru
     restart: unless-stopped
-    networks:
-      - zindaki-network
-
-networks:
-  zindaki-network:
-    driver: bridge
