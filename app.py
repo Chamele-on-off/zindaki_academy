@@ -733,4 +733,8 @@ def api_contact():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=7001, debug=os.environ.get('FLASK_DEBUG', False))
+    socketio.run(app,
+                host='0.0.0.0',
+                port=7001,
+                certfile='/etc/letsencrypt/live/zindaki-edu.ru/fullchain.pem',
+                keyfile='/etc/letsencrypt/live/zindaki-edu.ru/privkey.pem')
