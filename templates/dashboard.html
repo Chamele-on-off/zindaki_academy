@@ -220,6 +220,80 @@
         }
         
         /* Видеоконференции */
+        #conference-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        #local-video-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        #local-video {
+            width: 100%;
+            background: #000;
+            border-radius: var(--rounded-md);
+        }
+        
+        .video-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            justify-content: center;
+        }
+        
+        #remote-videos-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .remote-video-item {
+            position: relative;
+            background: #000;
+            border-radius: var(--rounded-md);
+            overflow: hidden;
+        }
+        
+        .remote-video-item video {
+            width: 100%;
+            display: block;
+        }
+        
+        .video-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            padding: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .video-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            padding: 0.5rem;
+            background: rgba(0,0,0,0.5);
+        }
+        
+        .video-controls i {
+            color: white;
+            font-size: 1rem;
+        }
+        
         .conference-info {
             margin-bottom: 1.5rem;
             padding: 1rem;
@@ -233,12 +307,6 @@
             gap: 0.5rem;
             margin-top: 0.5rem;
             word-break: break-all;
-        }
-        
-        .conference-controls {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 1rem;
         }
         
         /* Домашние задания */
@@ -308,8 +376,8 @@
                 justify-content: flex-end;
             }
             
-            .conference-controls {
-                flex-direction: column;
+            #remote-videos-container {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -451,7 +519,7 @@
         <!-- Домашние задания (для студента) -->
         <div class="section">
             <h2 class="section-title">Домашние задания</h2>
-            {% if homework %}
+            {% if homeworks %}
             <div class="table-container">
                 <table>
                     <thead>
@@ -464,7 +532,7 @@
                         </tr>
                     </thead>
                     <tbody id="studentHomeworkTable">
-                        {% for hw in homework %}
+                        {% for hw in homeworks %}
                         <tr>
                             <td>{{ hw.title }}</td>
                             <td>{{ hw.description }}</td>
@@ -501,36 +569,41 @@
             <h2 class="section-title">Видеоконференция</h2>
             
             <div class="conference-info">
-                <p>Используйте наш сервер видеоконференций:</p>
+                <p>Используйте наш встроенный сервис видеоконференций:</p>
                 <div class="conference-link">
                     <i class="fas fa-link"></i>
-                    <span id="conferenceLink">Загрузка...</span>
+                    <span id="conferenceLink">Готово к подключению</span>
                     <button class="btn btn-secondary" onclick="copyConferenceLink()">
                         <i class="fas fa-copy"></i> Копировать
                     </button>
                 </div>
             </div>
             
-            <div id="jitsi-container" style="width: 100%; height: 500px; background: #f0f0f0;">
-                <!-- Контейнер для Jitsi -->
+            <div id="conference-container">
+                <div id="local-video-container">
+                    <video id="local-video" autoplay muted playsinline></video>
+                    <div class="video-controls">
+                        <button id="toggle-video-btn" class="btn">
+                            <i class="fas fa-video"></i> Выключить камеру
+                        </button>
+                        <button id="toggle-audio-btn" class="btn">
+                            <i class="fas fa-microphone"></i> Выключить микрофон
+                        </button>
+                        <button id="share-screen-btn" class="btn">
+                            <i class="fas fa-desktop"></i> Демонстрация экрана
+                        </button>
+                        {% if is_teacher %}
+                        <button id="end-meeting-btn" class="btn btn-danger">
+                            <i class="fas fa-phone-slash"></i> Завершить конференцию
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div id="remote-videos-container">
+                    <!-- Здесь будут отображаться видео других участников -->
+                </div>
             </div>
-            
-            {% if is_teacher %}
-            <div class="conference-controls">
-                <button class="btn" id="toggleVideo">
-                    <i class="fas fa-video"></i> Выключить камеру
-                </button>
-                <button class="btn" id="toggleAudio">
-                    <i class="fas fa-microphone"></i> Выключить микрофон
-                </button>
-                <button class="btn" id="shareScreen">
-                    <i class="fas fa-desktop"></i> Демонстрация экрана
-                </button>
-                <button class="btn btn-danger" id="endMeeting">
-                    <i class="fas fa-phone-slash"></i> Завершить конференцию
-                </button>
-            </div>
-            {% endif %}
         </div>
     </div>
 
@@ -754,8 +827,418 @@
         </div>
     </div>
 
-    <script src="https://jitsi.zindaki-edu.ru/external_api.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script>
+        // WebRTC и WebSocket реализация
+        let socket;
+        let localStream;
+        let screenStream;
+        let peerConnections = {};
+        let currentRoom = '';
+        let isTeacher = {% if is_teacher %}true{% else %}false{% endif %};
+        let username = '{{ user.username }}';
+        
+        // Инициализация конференции
+        function initConference(roomName) {
+            currentRoom = roomName;
+            document.getElementById('conferenceLink').textContent = `${window.location.origin}/conference/${roomName}`;
+            
+            // Подключение к WebSocket
+            socket = io();
+            
+            // Обработчики событий WebSocket
+            socket.on('connect', () => {
+                console.log('Connected to WebSocket server');
+                joinConference(roomName);
+            });
+            
+            socket.on('joined_conference', handleJoinedConference);
+            socket.on('participant_joined', handleParticipantJoined);
+            socket.on('participant_left', handleParticipantLeft);
+            socket.on('audio_toggled', handleAudioToggled);
+            socket.on('video_toggled', handleVideoToggled);
+            socket.on('screen_toggled', handleScreenToggled);
+            socket.on('offer', handleOffer);
+            socket.on('answer', handleAnswer);
+            socket.on('ice_candidate', handleIceCandidate);
+            socket.on('access_denied', handleAccessDenied);
+            
+            // Инициализация медиапотоков
+            initMediaStreams();
+            
+            // Настройка обработчиков кнопок
+            document.getElementById('toggle-video-btn').addEventListener('click', toggleVideo);
+            document.getElementById('toggle-audio-btn').addEventListener('click', toggleAudio);
+            document.getElementById('share-screen-btn').addEventListener('click', toggleScreenShare);
+            if (isTeacher) {
+                document.getElementById('end-meeting-btn').addEventListener('click', endConference);
+            }
+        }
+        
+        // Подключение к конференции
+        function joinConference(roomName) {
+            socket.emit('join_conference', {
+                room: roomName,
+                username: username,
+                is_teacher: isTeacher,
+                lesson_id: new URLSearchParams(window.location.search).get('lesson_id')
+            });
+        }
+        
+        // Инициализация медиапотоков
+        async function initMediaStreams() {
+            try {
+                // Проверка поддержки WebRTC
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    alert('Ваш браузер не поддерживает WebRTC или доступ к камере/микрофону');
+                    return;
+                }
+
+                // Получаем доступ к камере и микрофону
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 30 }
+                    },
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+                
+                const localVideo = document.getElementById('local-video');
+                localVideo.srcObject = localStream;
+                
+                console.log('Local media streams initialized');
+            } catch (error) {
+                console.error('Error accessing media devices:', error);
+                alert('Не удалось получить доступ к камере/микрофону. Пожалуйста, проверьте разрешения.');
+            }
+        }
+        
+        // Обработка успешного подключения к конференции
+        function handleJoinedConference(data) {
+            console.log('Joined conference:', data);
+            
+            // Устанавливаем соединения с существующими участниками
+            data.participants.forEach(participant => {
+                createPeerConnection(participant.sid, participant.username, false);
+            });
+        }
+        
+        // Обработка нового участника
+        function handleParticipantJoined(data) {
+            console.log('New participant joined:', data);
+            createPeerConnection(data.sid, data.username, true);
+        }
+        
+        // Создание RTCPeerConnection
+        function createPeerConnection(sid, remoteUsername, isOfferer) {
+            if (peerConnections[sid]) return;
+            
+            const configuration = {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' },
+                    { urls: 'stun:stun4.l.google.com:19302' }
+                ]
+            };
+            
+            const pc = new RTCPeerConnection(configuration);
+            peerConnections[sid] = { pc, username: remoteUsername };
+            
+            // Добавляем треки из локального потока
+            if (localStream) {
+                localStream.getTracks().forEach(track => {
+                    pc.addTrack(track, localStream);
+                });
+            }
+            
+            // Обработчики событий ICE
+            pc.onicecandidate = event => {
+                if (event.candidate) {
+                    socket.emit('ice_candidate', {
+                        room: currentRoom,
+                        candidate: event.candidate,
+                        targetSid: sid
+                    });
+                }
+            };
+            
+            // Обработчик добавления потока
+            pc.ontrack = event => {
+                const remoteVideosContainer = document.getElementById('remote-videos-container');
+                let videoElement = document.getElementById(`remote-video-${sid}`);
+                
+                if (!videoElement) {
+                    videoElement = document.createElement('video');
+                    videoElement.id = `remote-video-${sid}`;
+                    videoElement.autoplay = true;
+                    videoElement.playsInline = true;
+                    
+                    const videoContainer = document.createElement('div');
+                    videoContainer.className = 'remote-video-item';
+                    videoContainer.id = `remote-video-container-${sid}`;
+                    videoContainer.innerHTML = `
+                        <div class="video-info">${remoteUsername}</div>
+                        <div class="video-controls">
+                            <i class="fas fa-microphone audio-indicator"></i>
+                            <i class="fas fa-video video-indicator"></i>
+                        </div>
+                    `;
+                    videoContainer.prepend(videoElement);
+                    remoteVideosContainer.appendChild(videoContainer);
+                }
+                
+                videoElement.srcObject = event.streams[0];
+            };
+            
+            // Обработчик изменения состояния соединения
+            pc.onconnectionstatechange = () => {
+                console.log(`Connection state with ${sid}: ${pc.connectionState}`);
+                if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+                    // Попытка переподключения
+                    setTimeout(() => {
+                        if (pc.connectionState !== 'connected') {
+                            createPeerConnection(sid, remoteUsername, isOfferer);
+                        }
+                    }, 1000);
+                }
+            };
+            
+            // Создание offer, если мы инициатор
+            if (isOfferer) {
+                pc.createOffer({
+                    offerToReceiveAudio: true,
+                    offerToReceiveVideo: true
+                })
+                .then(offer => pc.setLocalDescription(offer))
+                .then(() => {
+                    socket.emit('offer', {
+                        room: currentRoom,
+                        offer: pc.localDescription,
+                        targetSid: sid
+                    });
+                })
+                .catch(error => console.error('Error creating offer:', error));
+            }
+        }
+        
+        // Обработка получения offer
+        function handleOffer(data) {
+            const pc = peerConnections[data.sid]?.pc;
+            if (!pc) return;
+            
+            pc.setRemoteDescription(new RTCSessionDescription(data.offer))
+                .then(() => pc.createAnswer({
+                    offerToReceiveAudio: true,
+                    offerToReceiveVideo: true
+                }))
+                .then(answer => pc.setLocalDescription(answer))
+                .then(() => {
+                    socket.emit('answer', {
+                        room: currentRoom,
+                        answer: pc.localDescription,
+                        targetSid: data.sid
+                    });
+                })
+                .catch(error => console.error('Error handling offer:', error));
+        }
+        
+        // Обработка получения answer
+        function handleAnswer(data) {
+            const pc = peerConnections[data.sid]?.pc;
+            if (!pc) return;
+            
+            pc.setRemoteDescription(new RTCSessionDescription(data.answer))
+                .catch(error => console.error('Error handling answer:', error));
+        }
+        
+        // Обработка ICE candidate
+        function handleIceCandidate(data) {
+            const pc = peerConnections[data.sid]?.pc;
+            if (!pc) return;
+            
+            pc.addIceCandidate(new RTCIceCandidate(data.candidate))
+                .catch(error => console.error('Error adding ICE candidate:', error));
+        }
+        
+        // Участник покинул конференцию
+        function handleParticipantLeft(data) {
+            const pcInfo = peerConnections[data.sid];
+            if (pcInfo) {
+                pcInfo.pc.close();
+                delete peerConnections[data.sid];
+                
+                const videoElement = document.getElementById(`remote-video-container-${data.sid}`);
+                if (videoElement) {
+                    videoElement.remove();
+                }
+            }
+        }
+        
+        // Переключение видео
+        function toggleVideo() {
+            if (!localStream) return;
+            
+            const videoTracks = localStream.getVideoTracks();
+            if (videoTracks.length > 0) {
+                const isEnabled = !videoTracks[0].enabled;
+                videoTracks[0].enabled = isEnabled;
+                
+                const icon = document.querySelector('#toggle-video-btn i');
+                if (isEnabled) {
+                    icon.classList.remove('fa-video-slash');
+                    icon.classList.add('fa-video');
+                    document.getElementById('toggle-video-btn').innerHTML = '<i class="fas fa-video"></i> Выключить камеру';
+                } else {
+                    icon.classList.remove('fa-video');
+                    icon.classList.add('fa-video-slash');
+                    document.getElementById('toggle-video-btn').innerHTML = '<i class="fas fa-video-slash"></i> Включить камеру';
+                }
+                
+                socket.emit('toggle_video', {
+                    room: currentRoom,
+                    status: isEnabled
+                });
+            }
+        }
+        
+        // Переключение аудио
+        function toggleAudio() {
+            if (!localStream) return;
+            
+            const audioTracks = localStream.getAudioTracks();
+            if (audioTracks.length > 0) {
+                const isEnabled = !audioTracks[0].enabled;
+                audioTracks[0].enabled = isEnabled;
+                
+                const icon = document.querySelector('#toggle-audio-btn i');
+                if (isEnabled) {
+                    icon.classList.remove('fa-microphone-slash');
+                    icon.classList.add('fa-microphone');
+                    document.getElementById('toggle-audio-btn').innerHTML = '<i class="fas fa-microphone"></i> Выключить микрофон';
+                } else {
+                    icon.classList.remove('fa-microphone');
+                    icon.classList.add('fa-microphone-slash');
+                    document.getElementById('toggle-audio-btn').innerHTML = '<i class="fas fa-microphone-slash"></i> Включить микрофон';
+                }
+                
+                socket.emit('toggle_audio', {
+                    room: currentRoom,
+                    status: isEnabled
+                });
+            }
+        }
+        
+        // Демонстрация экрана
+        async function toggleScreenShare() {
+            try {
+                if (screenStream) {
+                    // Остановка демонстрации экрана
+                    screenStream.getTracks().forEach(track => track.stop());
+                    screenStream = null;
+                    
+                    // Возвращаем видеопоток с камеры
+                    const videoTracks = localStream.getVideoTracks();
+                    if (videoTracks.length > 0) {
+                        Object.values(peerConnections).forEach(({ pc }) => {
+                            const sender = pc.getSenders().find(s => s.track.kind === 'video');
+                            if (sender && videoTracks[0]) {
+                                sender.replaceTrack(videoTracks[0]);
+                            }
+                        });
+                    }
+                    
+                    document.getElementById('share-screen-btn').innerHTML = '<i class="fas fa-desktop"></i> Демонстрация экрана';
+                    socket.emit('toggle_screen', {
+                        room: currentRoom,
+                        status: false
+                    });
+                } else {
+                    // Запуск демонстрации экрана
+                    screenStream = await navigator.mediaDevices.getDisplayMedia({
+                        video: {
+                            cursor: "always",
+                            displaySurface: "monitor"
+                        },
+                        audio: false
+                    });
+                    
+                    // Заменяем видеопоток на экран
+                    Object.values(peerConnections).forEach(({ pc }) => {
+                        const sender = pc.getSenders().find(s => s.track.kind === 'video');
+                        if (sender && screenStream.getVideoTracks()[0]) {
+                            sender.replaceTrack(screenStream.getVideoTracks()[0]);
+                        }
+                    });
+                    
+                    // Обработчик остановки демонстрации экрана пользователем
+                    screenStream.getVideoTracks()[0].onended = () => {
+                        toggleScreenShare();
+                    };
+                    
+                    document.getElementById('share-screen-btn').innerHTML = '<i class="fas fa-times"></i> Остановить демонстрацию';
+                    socket.emit('toggle_screen', {
+                        room: currentRoom,
+                        status: true
+                    });
+                }
+            } catch (error) {
+                console.error('Error toggling screen share:', error);
+                alert('Ошибка при демонстрации экрана: ' + error.message);
+            }
+        }
+        
+        // Завершение конференции
+        function endConference() {
+            if (confirm('Вы уверены, что хотите завершить конференцию?')) {
+                // Закрываем все соединения
+                Object.values(peerConnections).forEach(({ pc }) => {
+                    pc.close();
+                });
+                peerConnections = {};
+                
+                // Останавливаем медиапотоки
+                if (localStream) {
+                    localStream.getTracks().forEach(track => track.stop());
+                    localStream = null;
+                }
+                
+                if (screenStream) {
+                    screenStream.getTracks().forEach(track => track.stop());
+                    screenStream = null;
+                }
+                
+                // Уведомляем сервер
+                socket.emit('leave_conference', { room: currentRoom });
+                
+                // Очищаем интерфейс
+                document.getElementById('remote-videos-container').innerHTML = '';
+                document.getElementById('local-video').srcObject = null;
+                
+                alert('Конференция завершена');
+            }
+        }
+        
+        // Обработка запрета доступа
+        function handleAccessDenied(data) {
+            alert(data.message);
+            window.location.href = '/dashboard';
+        }
+        
+        // Копирование ссылки на конференцию
+        function copyConferenceLink() {
+            const link = document.getElementById('conferenceLink').textContent;
+            navigator.clipboard.writeText(link)
+                .then(() => alert('Ссылка скопирована в буфер обмена!'))
+                .catch(err => console.error('Ошибка копирования: ', err));
+        }
+        
         // Обработка выхода
         document.getElementById('logoutBtn').addEventListener('click', function() {
             fetch('/api/logout')
@@ -767,173 +1250,8 @@
                 });
         });
 
-        // Jitsi видеоконференция с собственным сервером
-        let jitsiApi = null;
-        let currentRoomName = '';
-        
-        function startConference(roomName) {
-            // Используем ваш домен для Jitsi
-            const domain = 'jitsi.zindaki-edu.ru';
-            
-            // Очищаем контейнер перед созданием новой конференции
-            const container = document.getElementById('jitsi-container');
-            container.innerHTML = '';
-            
-            const options = {
-                roomName: roomName,
-                width: '100%',
-                height: 500,
-                parentNode: container,
-                userInfo: {
-                    displayName: '{{ user.username }}',
-                    email: '{{ user.email }}'
-                },
-                configOverwrite: {
-                    startWithAudioMuted: false,
-                    startWithVideoMuted: false,
-                    enableWelcomePage: false,
-                    enableNoAudioDetection: true,
-                    enableNoisyMicDetection: true,
-                    prejoinPageEnabled: false,
-                    disableSimulcast: false,
-                    startAudioOnly: false,
-                    enableClosePage: false,
-                    disableBeforeUnloadHandlers: true,
-                    // Оптимизации для долгих конференций
-                    p2p: {
-                        enabled: false
-                    },
-                    analytics: {
-                        disabled: true
-                    },
-                    testing: {
-                        noAutoPlayVideo: false
-                    }
-                },
-                interfaceConfigOverwrite: {
-                    DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
-                    SHOW_JITSI_WATERMARK: false,
-                    SHOW_WATERMARK_FOR_GUESTS: false,
-                    TOOLBAR_BUTTONS: [
-                        'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-                        'fodeviceselection', 'hangup', 'profile', 'info', 'chat', 'recording',
-                        'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
-                        'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
-                        'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
-                        'security'
-                    ]
-                }
-            };
-            
-            try {
-                jitsiApi = new JitsiMeetExternalAPI(domain, options);
-                
-                // Обновляем ссылку на конференцию
-                const conferenceUrl = `https://${domain}/${roomName}`;
-                document.getElementById('conferenceLink').textContent = conferenceUrl;
-                currentRoomName = roomName;
-                
-                // Обработчики событий
-                jitsiApi.addListener('readyToClose', () => {
-                    endConference();
-                });
-                
-                jitsiApi.addListener('participantRoleChanged', (event) => {
-                    if (event.role === 'moderator') {
-                        console.log('Вы стали модератором конференции');
-                    }
-                });
-                
-                // Для учителя добавляем обработчики управления
-                if ({% if is_teacher %}true{% else %}false{% endif %}) {
-                    setupConferenceControls();
-                }
-            } catch (error) {
-                console.error('Ошибка инициализации Jitsi:', error);
-                container.innerHTML = `
-                    <div style="padding: 20px; text-align: center;">
-                        <h3>Ошибка подключения к видеоконференции</h3>
-                        <p>${error.message}</p>
-                        <button class="btn" onclick="startConference('${roomName}')">
-                            <i class="fas fa-sync-alt"></i> Попробовать снова
-                        </button>
-                    </div>
-                `;
-            }
-        }
-        
-        function setupConferenceControls() {
-            // Управление камерой
-            document.getElementById('toggleVideo').addEventListener('click', () => {
-                jitsiApi.executeCommand('toggleVideo');
-                const icon = document.querySelector('#toggleVideo i');
-                if (icon.classList.contains('fa-video')) {
-                    icon.classList.remove('fa-video');
-                    icon.classList.add('fa-video-slash');
-                    document.getElementById('toggleVideo').innerHTML = '<i class="fas fa-video-slash"></i> Включить камеру';
-                } else {
-                    icon.classList.remove('fa-video-slash');
-                    icon.classList.add('fa-video');
-                    document.getElementById('toggleVideo').innerHTML = '<i class="fas fa-video"></i> Выключить камеру';
-                }
-            });
-            
-            // Управление микрофоном
-            document.getElementById('toggleAudio').addEventListener('click', () => {
-                jitsiApi.executeCommand('toggleAudio');
-                const icon = document.querySelector('#toggleAudio i');
-                if (icon.classList.contains('fa-microphone')) {
-                    icon.classList.remove('fa-microphone');
-                    icon.classList.add('fa-microphone-slash');
-                    document.getElementById('toggleAudio').innerHTML = '<i class="fas fa-microphone-slash"></i> Включить микрофон';
-                } else {
-                    icon.classList.remove('fa-microphone-slash');
-                    icon.classList.add('fa-microphone');
-                    document.getElementById('toggleAudio').innerHTML = '<i class="fas fa-microphone"></i> Выключить микрофон';
-                }
-            });
-            
-            // Демонстрация экрана
-            document.getElementById('shareScreen').addEventListener('click', () => {
-                jitsiApi.executeCommand('toggleShareScreen');
-            });
-            
-            // Завершение конференции
-            document.getElementById('endMeeting').addEventListener('click', () => {
-                if (confirm('Вы уверены, что хотите завершить конференцию для всех участников?')) {
-                    jitsiApi.executeCommand('endConference');
-                    endConference();
-                }
-            });
-        }
-        
-        function endConference() {
-            if (jitsiApi) {
-                jitsiApi.dispose();
-                jitsiApi = null;
-            }
-            document.getElementById('jitsi-container').innerHTML = `
-                <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
-                    <p>Конференция завершена</p>
-                </div>
-            `;
-            document.getElementById('conferenceLink').textContent = 'Конференция не активна';
-        }
-        
-        function copyConferenceLink() {
-            if (!currentRoomName) {
-                alert('Сначала создайте или присоединитесь к конференции');
-                return;
-            }
-            
-            const link = document.getElementById('conferenceLink').textContent;
-            navigator.clipboard.writeText(link)
-                .then(() => alert('Ссылка скопирована в буфер обмена!'))
-                .catch(err => console.error('Ошибка копирования: ', err));
-        }
-
-        // Загрузка данных для учителя
-        if ({% if is_teacher %}true{% else %}false{% endif %}) {
+        // Для учителей
+        if (isTeacher) {
             // Функция для добавления пользователя
             function addUser(userData) {
                 fetch('/api/register', {
@@ -1302,53 +1620,22 @@
                     ? document.getElementById('recurrenceCountValue').value
                     : document.getElementById('recurrenceEndDateValue').value;
                 
-                // Создаем массив всех занятий
-                const lessonsToCreate = [];
-                const startDate = new Date(`${date}T${time}:00`);
+                // Создаем объект с данными урока
+                const lessonData = {
+                    title,
+                    description,
+                    schedule: new Date(`${date}T${time}:00`).toISOString(),
+                    duration,
+                    students,
+                    recurrence: recurrenceType !== 'none' ? {
+                        type: recurrenceType,
+                        weekdays,
+                        end_type: endType,
+                        end_value: endValue
+                    } : null
+                };
                 
-                if (recurrenceType === 'none') {
-                    // Одно занятие
-                    lessonsToCreate.push({
-                        title, description, duration, students,
-                        schedule: startDate.toISOString()
-                    });
-                } else {
-                    // Повторяющиеся занятия
-                    const interval = recurrenceType === 'weekly' ? 1 : 2;
-                    let currentDate = new Date(startDate);
-                    let createdCount = 0;
-                    const maxLessons = endType === 'count' ? parseInt(endValue) : Infinity;
-                    const endDate = endType === 'date' ? new Date(endValue) : null;
-                    
-                    while (createdCount < maxLessons && (!endDate || currentDate <= endDate)) {
-                        if (weekdays.length === 0 || weekdays.includes(currentDate.getDay().toString())) {
-                            lessonsToCreate.push({
-                                title, description, duration, students,
-                                schedule: new Date(currentDate).toISOString()
-                            });
-                            createdCount++;
-                        }
-                        
-                        currentDate.setDate(currentDate.getDate() + (interval * 7));
-                    }
-                }
-                
-                // Отправляем все занятия на сервер
-                Promise.all(lessonsToCreate.map(lesson => 
-                    fetch('/api/lessons', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(lesson)
-                    }).then(res => res.json())
-                )).then(results => {
-                    if (results.every(r => r.success)) {
-                        alert(`Успешно создано ${lessonsToCreate.length} занятий!`);
-                        loadLessons();
-                        document.getElementById('addLessonModal').style.display = 'none';
-                    } else {
-                        alert('Ошибка при создании некоторых занятий');
-                    }
-                });
+                addLesson(lessonData);
             });
             
             // Форма назначения домашнего задания
@@ -1414,10 +1701,10 @@
             // Автоматически запускаем конференцию для учителя
             window.addEventListener('load', function() {
                 const roomName = `ZindakiRoom_{{ user.username }}_${Date.now()}`;
-                startConference(roomName);
+                initConference(roomName);
             });
         } else {
-            // Для учеников
+            // Для студентов
             function openSubmitHomeworkModal(homeworkId, title, description, deadline) {
                 document.getElementById('homeworkId').value = homeworkId;
                 document.getElementById('homeworkSubmissionTitle').value = title;
@@ -1499,7 +1786,7 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            startConference(data.room_name);
+                            initConference(data.room_name);
                         } else {
                             alert(data.error || 'Ошибка подключения к конференции');
                         }
