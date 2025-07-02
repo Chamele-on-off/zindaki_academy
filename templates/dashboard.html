@@ -844,7 +844,13 @@
             document.getElementById('conferenceLink').textContent = `${window.location.origin}/conference/${roomName}`;
             
             // Подключение к WebSocket
-            socket = io();
+            const socket = io({
+              transports: ['websocket'],
+              upgrade: false,
+              secure: true,
+              reconnection: true,
+              rejectUnauthorized: false // Только для самоподписанных сертификатов
+            });
             
             // Обработчики событий WebSocket
             socket.on('connect', () => {
