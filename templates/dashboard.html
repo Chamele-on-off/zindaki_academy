@@ -1098,6 +1098,7 @@
         let screenInterval = null;
         let audioContext = null;
         let audioProcessor = null;
+        let remoteVideoStream = null;
 
         // Инициализация видеоконференции
         async function initConference(roomName) {
@@ -1322,6 +1323,12 @@
             const remoteVideoLabel = document.getElementById('remoteVideoLabel');
             const waitingMessage = document.getElementById('waitingMessage');
             
+            // Создаем новый MediaStream для удаленного видео
+            if (!remoteVideoStream) {
+                remoteVideoStream = new MediaStream();
+                remoteVideo.srcObject = remoteVideoStream;
+            }
+            
             // Создаем новый EventSource для получения видео
             const videoEventSource = new EventSource(videoFeedUrl);
             
@@ -1339,13 +1346,12 @@
                     remoteVideoContainer.style.display = 'block';
                     remoteVideoLabel.textContent = userId;
                     
-                    // Обновляем видео
+                    // Создаем Blob из полученных данных
                     const blob = base64ToBlob(frame, 'image/jpeg');
                     const url = URL.createObjectURL(blob);
                     
-                    // Создаем временное изображение для загрузки кадра
-                    const img = document.createElement('img');
-                    img.src = url;
+                    // Создаем изображение для загрузки кадра
+                    const img = new Image();
                     img.onload = function() {
                         // Создаем canvas для преобразования в видео поток
                         const canvas = document.createElement('canvas');
@@ -1354,14 +1360,23 @@
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0);
                         
-                        // Если видео еще не создано, создаем его
-                        if (!remoteVideo.srcObject) {
-                            const stream = canvas.captureStream(10); // 10 FPS
-                            remoteVideo.srcObject = stream;
+                        // Преобразуем canvas в видеопоток
+                        const stream = canvas.captureStream(10); // 10 FPS
+                        
+                        // Обновляем поток удаленного видео
+                        if (remoteVideoStream) {
+                            // Удаляем старые треки
+                            remoteVideoStream.getTracks().forEach(track => track.stop());
+                            
+                            // Добавляем новые треки
+                            stream.getTracks().forEach(track => {
+                                remoteVideoStream.addTrack(track);
+                            });
                         }
                         
                         URL.revokeObjectURL(url);
                     };
+                    img.src = url;
                     
                 } catch (error) {
                     console.error('Error processing video frame:', error);
@@ -1515,6 +1530,11 @@
             if (screenStream) {
                 screenStream.getTracks().forEach(track => track.stop());
                 screenStream = null;
+            }
+            
+            if (remoteVideoStream) {
+                remoteVideoStream.getTracks().forEach(track => track.stop());
+                remoteVideoStream = null;
             }
             
             // Останавливаем интервалы
