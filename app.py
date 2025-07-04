@@ -42,7 +42,6 @@ participants = defaultdict(set)
 room_settings = defaultdict(dict)
 active_conferences = defaultdict(dict)
 
-# Мини-модели для работы с JSON
 class DB:
     @staticmethod
     def _get_db(file):
@@ -119,7 +118,9 @@ class DB:
         return next((l for l in lessons if l['id'] == lesson_id), None)
 
     @staticmethod
-    def save_lesson(title, description, teacher, schedule, duration=60, program_type='languages', students=[], recurrence=None):
+    def save_lesson(title, description, teacher, schedule, duration=60, program_type='languages', students=None, recurrence=None):
+        if students is None:
+            students = []
         lessons = DB.get_lessons()
         lesson_id = max([l['id'] for l in lessons], default=0) + 1
         
@@ -142,7 +143,6 @@ class DB:
         lessons.append(lesson_data)
         DB._save_db('lessons', lessons)
         
-        # Если есть повторения - создаем дополнительные занятия
         if recurrence and recurrence.get('type') != 'none':
             created_lessons = [lesson_data]
             start_date = datetime.fromisoformat(schedule)
@@ -161,26 +161,20 @@ class DB:
             created_count = 1
             
             while True:
-                # Проверяем условия окончания
                 if end_type == 'count' and created_count >= end_value:
                     break
                 if end_type == 'date' and current_date > datetime.fromisoformat(end_value):
                     break
                 
-                # Добавляем неделю/две недели
                 current_date += timedelta(weeks=interval)
                 
-                # Для еженедельных занятий проверяем дни недели
                 if weekdays:
-                    # Находим следующий подходящий день недели
                     while str(current_date.weekday()) not in weekdays:
                         current_date += timedelta(days=1)
                 
-                # Проверяем не превысили ли максимальное количество занятий
                 if end_type == 'count' and created_count >= end_value:
                     break
                 
-                # Создаем копию урока с новой датой
                 new_lesson = lesson_data.copy()
                 new_lesson['id'] = max([l['id'] for l in lessons], default=0) + 1
                 new_lesson['schedule'] = current_date.isoformat()
@@ -215,10 +209,14 @@ class DB:
     @staticmethod
     def get_homework(homework_id):
         homeworks = DB.get_homeworks()
-        return next((h for h in homeworks if h['id'] == homework_id), None
+        return next((h for h in homeworks if h['id'] == homework_id), None)
 
     @staticmethod
-    def save_homework(lesson_id, title, description, deadline, teacher, students, files=[]):
+    def save_homework(lesson_id, title, description, deadline, teacher, students=None, files=None):
+        if students is None:
+            students = []
+        if files is None:
+            files = []
         homeworks = DB.get_homeworks()
         homework_id = max([h['id'] for h in homeworks], default=0) + 1
         
@@ -240,7 +238,9 @@ class DB:
         return homework
 
     @staticmethod
-    def submit_homework(homework_id, student_username, comment, files=[]):
+    def submit_homework(homework_id, student_username, comment, files=None):
+        if files is None:
+            files = []
         homeworks = DB.get_homeworks()
         for hw in homeworks:
             if hw['id'] == homework_id and student_username in hw['students']:
@@ -320,9 +320,8 @@ class DB:
         invites = DB.get_invites()
         return [i for i in invites if i['teacher'] == username]
 
-# Инициализация базы данных при первом запуске
+# Инициализация базы данных
 if not os.path.exists(f'{DB_FOLDER}/users.json'):
-    # Создаем тестовых пользователей
     initial_users = [
         {
             'username': 'admin',
@@ -395,13 +394,11 @@ def join_conference(room_name):
     user_id = session['user']['username']
     participants[room_name].add(user_id)
     
-    # Инициализация очередей для нового пользователя
     if user_id not in video_queues[room_name]:
         video_queues[room_name][user_id] = queue.Queue()
     if user_id not in audio_queues[room_name]:
         audio_queues[room_name][user_id] = queue.Queue()
     
-    # Инициализация настроек комнаты
     if not room_settings.get(room_name):
         room_settings[room_name] = {
             'screen_sharing': False,
@@ -424,12 +421,9 @@ def leave_conference(room_name):
     user_id = session['user']['username']
     if room_name in participants and user_id in participants[room_name]:
         participants[room_name].remove(user_id)
-        
-        # Очищаем очереди пользователя
         video_queues[room_name].pop(user_id, None)
         audio_queues[room_name].pop(user_id, None)
         
-        # Если комната пуста, очищаем все очереди
         if len(participants[room_name]) == 0:
             video_queues.pop(room_name, None)
             audio_queues.pop(room_name, None)
@@ -451,12 +445,10 @@ def receive_video_frame(room_name):
         return jsonify({'error': 'No frame data provided'}), 400
     
     try:
-        # Декодируем base64
         frame = base64.b64decode(frame_data.split(',')[1])
         
-        # Отправляем кадр всем другим участникам комнаты
         for participant in participants[room_name]:
-            if participant != user_id:  # Не отправляем себе
+            if participant != user_id:
                 try:
                     video_queues[room_name][participant].put({
                         'user_id': user_id,
@@ -483,12 +475,10 @@ def receive_audio_chunk(room_name):
         return jsonify({'error': 'No audio data provided'}), 400
     
     try:
-        # Декодируем base64
         audio = base64.b64decode(audio_data.split(',')[1])
         
-        # Отправляем аудио всем другим участникам комнаты
         for participant in participants[room_name]:
-            if participant != user_id:  # Не отправляем себе
+            if participant != user_id:
                 try:
                     audio_queues[room_name][participant].put({
                         'user_id': user_id,
@@ -519,7 +509,6 @@ def receive_screen_frame(room_name):
     try:
         frame = base64.b64decode(frame_data.split(',')[1])
         
-        # Отправляем кадр экрана всем участникам комнаты
         for participant in participants[room_name]:
             try:
                 screen_queues[room_name].put({
@@ -543,7 +532,6 @@ def update_conference_settings(room_name):
     if room_name not in room_settings:
         return jsonify({'error': 'Room not found'}), 404
     
-    # Только учитель может менять настройки
     if session['user']['role'] != 'teacher':
         return jsonify({'error': 'Only teacher can change settings'}), 403
     
@@ -560,7 +548,6 @@ def start_conference(room_name):
     if session['user']['role'] != 'teacher':
         return jsonify({'error': 'Only teacher can start conference'}), 403
     
-    # Помечаем конференцию как активную
     active_conferences[room_name] = {
         'teacher': session['user']['username'],
         'started_at': datetime.now().isoformat(),
@@ -595,12 +582,10 @@ def send_conference_invite():
     if not student_username or not room_name:
         return jsonify({'error': 'Missing required fields'}), 400
     
-    # Проверяем существование ученика
     student = DB.get_user(student_username)
     if not student or student['role'] != 'student':
         return jsonify({'error': 'Student not found'}), 404
     
-    # Создаем приглашение
     invite = DB.save_invite(
         teacher_username=session['user']['username'],
         student_username=student_username,
@@ -630,16 +615,14 @@ def respond_to_invite(invite_id):
         return jsonify({'error': 'Only student can respond to invites'}), 403
     
     data = request.json
-    action = data.get('action')  # 'accept' or 'decline'
+    action = data.get('action')
     
     if action not in ['accept', 'decline']:
         return jsonify({'error': 'Invalid action'}), 400
     
-    # Обновляем статус приглашения
     status = 'accepted' if action == 'accept' else 'declined'
     if DB.update_invite_status(invite_id, status):
         if action == 'accept':
-            # Получаем данные приглашения
             invites = DB.get_invites()
             invite = next((i for i in invites if i['id'] == invite_id), None)
             if invite:
@@ -658,12 +641,11 @@ def video_feed(room_name, user_id):
     def generate():
         while True:
             try:
-                # Получаем кадр из очереди
                 if user_id in video_queues.get(room_name, {}):
                     frame_data = video_queues[room_name][user_id].get()
                     yield (b'--frame\r\n'
                            b'Content-Type: image/jpeg\r\n\r\n' + frame_data['frame'] + b'\r\n')
-                time.sleep(0.05)  # 20 FPS
+                time.sleep(0.05)
             except Exception as e:
                 logger.error(f"Video feed error for {user_id}: {e}")
                 break
@@ -675,12 +657,11 @@ def audio_feed(room_name, user_id):
     def generate():
         while True:
             try:
-                # Получаем аудио из очереди
                 if user_id in audio_queues.get(room_name, {}):
                     audio_data = audio_queues[room_name][user_id].get()
                     yield (b'--frame\r\n'
                            b'Content-Type: audio/wav\r\n\r\n' + audio_data['data'] + b'\r\n')
-                time.sleep(0.02)  # 50 раз в секунду
+                time.sleep(0.02)
             except Exception as e:
                 logger.error(f"Audio feed error for {user_id}: {e}")
                 break
@@ -692,12 +673,11 @@ def screen_feed(room_name):
     def generate():
         while True:
             try:
-                # Получаем кадр экрана из очереди
                 if room_name in screen_queues:
                     frame_data = screen_queues[room_name].get()
                     yield (b'--frame\r\n'
                            b'Content-Type: image/jpeg\r\n\r\n' + frame_data['frame'] + b'\r\n')
-                time.sleep(0.1)  # 10 FPS
+                time.sleep(0.1)
             except Exception as e:
                 logger.error(f"Screen feed error: {e}")
                 break
@@ -768,7 +748,6 @@ def api_get_users():
     role = request.args.get('role')
     users = DB.get_users(role=role)
     
-    # Не возвращаем хеши паролей
     safe_users = []
     for user in users:
         safe_user = user.copy()
@@ -811,7 +790,6 @@ def api_lessons():
         if not all(field in data for field in required_fields):
             return jsonify({'error': 'Missing required fields'}), 400
         
-        # Обработка повторяющихся занятий
         recurrence = None
         if data.get('recurrence') and data['recurrence'].get('type') != 'none':
             recurrence = {
@@ -821,14 +799,12 @@ def api_lessons():
                 'end_value': data['recurrence'].get('end_value')
             }
             
-            # Преобразуем дату окончания в ISO формат, если она есть
             if recurrence['end_type'] == 'date' and recurrence['end_value']:
                 try:
                     recurrence['end_value'] = datetime.strptime(recurrence['end_value'], '%Y-%m-%d').isoformat()
                 except:
                     return jsonify({'error': 'Invalid end date format'}), 400
         
-        # Создаем урок(и)
         result = DB.save_lesson(
             data['title'],
             data.get('description', ''),
@@ -845,13 +821,11 @@ def api_lessons():
         else:
             return jsonify({'success': True, 'lesson_id': result['id']})
     
-    # GET запрос
     if session['user']['role'] == 'teacher':
         lessons = DB.get_lessons(teacher=session['user']['username'])
     else:
         lessons = [l for l in DB.get_lessons() if session['user']['username'] in l.get('students', [])]
     
-    # Форматируем дату для удобного отображения
     formatted_lessons = []
     for lesson in lessons:
         formatted_lesson = lesson.copy()
@@ -878,7 +852,6 @@ def api_delete_lesson(lesson_id):
     if session['user']['role'] != 'teacher' or lesson['teacher'] != session['user']['username']:
         return jsonify({'error': 'Access denied'}), 403
     
-    # Если это повторяющееся занятие - удаляем всю серию
     if lesson.get('recurrence_id'):
         if DB.delete_recurring_lessons(lesson['recurrence_id']):
             return jsonify({'success': True})
@@ -897,18 +870,14 @@ def api_join_lesson(lesson_id):
     if not lesson:
         return jsonify({'error': 'Lesson not found'}), 404
     
-    # Проверяем, имеет ли пользователь доступ к уроку
     if session['user']['role'] != 'teacher' and session['user']['username'] not in lesson.get('students', []):
         return jsonify({'error': 'Access denied'}), 403
     
-    # Для учителя - фиксированная комната по имени пользователя
     if session['user']['role'] == 'teacher':
         room_name = f"ZindakiRoom_{session['user']['username']}"
     else:
-        # Для ученика - комната учителя
         room_name = f"ZindakiRoom_{lesson['teacher']}"
     
-    # Добавляем ученика к уроку, если его там еще нет
     if session['user']['role'] == 'student' and session['user']['username'] not in lesson.get('students', []):
         DB.add_student_to_lesson(lesson_id, session['user']['username'])
     
@@ -925,12 +894,10 @@ def conference(room_name):
     if 'user' not in session:
         return redirect('/#login')
     
-    # Проверяем, имеет ли пользователь доступ к этой комнате
     if session['user']['role'] == 'teacher':
         if not room_name.endswith(session['user']['username']):
             return "Доступ запрещен", 403
     else:
-        # Для студентов проверяем, есть ли у них уроки с этим учителем
         teacher_username = room_name.replace('ZindakiRoom_', '')
         lessons = DB.get_lessons()
         has_access = any(
@@ -940,7 +907,6 @@ def conference(room_name):
         )
         
         if not has_access:
-            # Проверяем, есть ли приглашение
             invites = DB.get_user_invites(session['user']['username'])
             has_invite = any(invite['room_name'] == room_name for invite in invites)
             
@@ -962,7 +928,6 @@ def api_homework():
         if session['user']['role'] != 'teacher':
             return jsonify({'error': 'Only teachers can assign homework'}), 403
         
-        # Обработка загруженных файлов
         files = []
         if 'files' in request.files:
             for file in request.files.getlist('files'):
@@ -976,7 +941,6 @@ def api_homework():
                         'size': os.path.getsize(filepath)
                     })
         
-        # Получаем данные из формы
         lesson_id = request.form.get('lesson_id')
         title = request.form.get('title')
         description = request.form.get('description')
@@ -986,7 +950,6 @@ def api_homework():
         if not all([lesson_id, title, description, deadline, students]):
             return jsonify({'error': 'Missing required fields'}), 400
         
-        # Создаем домашнее задание
         homework = DB.save_homework(
             lesson_id=int(lesson_id),
             title=title,
@@ -999,7 +962,6 @@ def api_homework():
         
         return jsonify({'success': True, 'homework': homework})
     
-    # GET запрос
     if session['user']['role'] == 'teacher':
         homeworks = DB.get_teacher_homeworks(session['user']['username'])
     else:
@@ -1016,7 +978,6 @@ def api_get_homework(homework_id):
     if not homework:
         return jsonify({'error': 'Homework not found'}), 404
     
-    # Проверяем доступ
     if session['user']['role'] == 'student' and session['user']['username'] not in homework['students']:
         return jsonify({'error': 'Access denied'}), 403
     if session['user']['role'] == 'teacher' and homework['teacher'] != session['user']['username']:
@@ -1032,7 +993,6 @@ def api_submit_homework(homework_id):
     student_username = session['user']['username']
     comment = request.form.get('comment', '')
     
-    # Обработка загруженных файлов
     files = []
     if 'files' in request.files:
         for file in request.files.getlist('files'):
@@ -1068,7 +1028,6 @@ def dashboard():
         lessons = [l for l in DB.get_lessons() if session['user']['username'] in l.get('students', [])]
         homeworks = DB.get_student_homeworks(session['user']['username'])
     
-    # Форматируем даты для отображения
     formatted_lessons = []
     for lesson in lessons:
         formatted_lesson = lesson.copy()
@@ -1092,7 +1051,6 @@ def dashboard():
 def api_contact():
     try:
         data = request.json
-        # Здесь можно добавить логику обработки формы (отправка email и т.д.)
         return jsonify({'success': True, 'message': 'Ваше сообщение отправлено!'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
