@@ -1,27 +1,46 @@
-import os
-from flask import Flask, render_template, request, session, redirect, jsonify, send_from_directory
+from flask import Flask, render_template, request, session, redirect, jsonify, send_from_directory, Response
 from werkzeug.security import generate_password_hash, check_password_hash
 import json
+import os
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
-from flask_socketio import SocketIO, emit, join_room, leave_room
+import subprocess
+import threading
+import time
 import uuid
+import numpy as np
+import base64
+import queue
+import logging
+from collections import defaultdict
+from PIL import Image
+import io
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+
+# Настройка логирования
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Конфигурация
 UPLOAD_FOLDER = 'uploads'
 DB_FOLDER = 'data'
+INVITES_FOLDER = 'invites'
 os.makedirs(DB_FOLDER, exist_ok=True)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(INVITES_FOLDER, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
-# Хранилище активных конференций
-active_conferences = {}
+# Глобальные переменные для видеоконференций
+video_queues = defaultdict(queue.Queue)
+screen_queues = defaultdict(queue.Queue)
+audio_queues = defaultdict(queue.Queue)
+participants = defaultdict(set)
+room_settings = defaultdict(dict)
+active_conferences = defaultdict(dict)  # Для хранения активных конференций
 
 # Мини-модели для работы с JSON
 class DB:
@@ -122,14 +141,59 @@ class DB:
         
         lessons.append(lesson_data)
         DB._save_db('lessons', lessons)
+        
+        # Если есть повторения - создаем дополнительные занятия
+        if recurrence and recurrence.get('type') != 'none':
+            created_lessons = [lesson_data]
+            start_date = datetime.fromisoformat(schedule)
+            weekdays = recurrence.get('weekdays', [])
+            end_type = recurrence.get('end_type')
+            end_value = recurrence.get('end_value')
+            
+            if recurrence['type'] == 'weekly':
+                interval = 1
+            elif recurrence['type'] == 'biweekly':
+                interval = 2
+            else:
+                interval = 1
+            
+            current_date = start_date
+            created_count = 1
+            
+            while True:
+                # Проверяем условия окончания
+                if end_type == 'count' and created_count >= end_value:
+                    break
+                if end_type == 'date' and current_date > datetime.fromisoformat(end_value):
+                    break
+                
+                # Добавляем неделю/две недели
+                current_date += timedelta(weeks=interval)
+                
+                # Для еженедельных занятий проверяем дни недели
+                if weekdays:
+                    # Находим следующий подходящий день недели
+                    while str(current_date.weekday()) not in weekdays:
+                        current_date += timedelta(days=1)
+                
+                # Проверяем не превысили ли максимальное количество занятий
+                if end_type == 'count' and created_count >= end_value:
+                    break
+                
+                # Создаем копию урока с новой датой
+                new_lesson = lesson_data.copy()
+                new_lesson['id'] = max([l['id'] for l in lessons], default=0) + 1
+                new_lesson['schedule'] = current_date.isoformat()
+                new_lesson['recurrence_id'] = lesson_data['recurrence_id']
+                
+                lessons.append(new_lesson)
+                created_lessons.append(new_lesson)
+                created_count += 1
+            
+            DB._save_db('lessons', lessons)
+            return created_lessons
+        
         return [lesson_data]
-
-    @staticmethod
-    def delete_lesson(lesson_id):
-        lessons = DB.get_lessons()
-        lessons = [l for l in lessons if l['id'] != lesson_id]
-        DB._save_db('lessons', lessons)
-        return True
 
     @staticmethod
     def delete_recurring_lessons(recurrence_id):
@@ -139,15 +203,9 @@ class DB:
         return True
 
     @staticmethod
-    def add_student_to_lesson(lesson_id, username):
+    def get_lessons_by_recurrence(recurrence_id):
         lessons = DB.get_lessons()
-        for lesson in lessons:
-            if lesson['id'] == lesson_id:
-                if username not in lesson['students']:
-                    lesson['students'].append(username)
-                    DB._save_db('lessons', lessons)
-                return True
-        return False
+        return [l for l in lessons if l.get('recurrence_id') == recurrence_id]
 
     # Домашние задания
     @staticmethod
@@ -211,8 +269,60 @@ class DB:
     def get_testimonials():
         return DB._get_db('testimonials')
 
+    # Приглашения
+    @staticmethod
+    def get_invites():
+        try:
+            with open(f'{INVITES_FOLDER}/invites.json', 'r') as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return []
+
+    @staticmethod
+    def save_invite(teacher_username, student_username, room_name, status='pending'):
+        invites = DB.get_invites()
+        invite_id = max([i.get('id', 0) for i in invites], default=0) + 1
+        
+        invite = {
+            'id': invite_id,
+            'teacher': teacher_username,
+            'student': student_username,
+            'room_name': room_name,
+            'status': status,
+            'created_at': datetime.now().isoformat(),
+            'updated_at': datetime.now().isoformat()
+        }
+        
+        invites.append(invite)
+        with open(f'{INVITES_FOLDER}/invites.json', 'w') as f:
+            json.dump(invites, f, indent=2)
+        return invite
+
+    @staticmethod
+    def update_invite_status(invite_id, status):
+        invites = DB.get_invites()
+        for invite in invites:
+            if invite['id'] == invite_id:
+                invite['status'] = status
+                invite['updated_at'] = datetime.now().isoformat()
+                with open(f'{INVITES_FOLDER}/invites.json', 'w') as f:
+                    json.dump(invites, f, indent=2)
+                return True
+        return False
+
+    @staticmethod
+    def get_user_invites(username):
+        invites = DB.get_invites()
+        return [i for i in invites if i['student'] == username and i['status'] == 'pending']
+
+    @staticmethod
+    def get_teacher_invites(username):
+        invites = DB.get_invites()
+        return [i for i in invites if i['teacher'] == username]
+
 # Инициализация базы данных при первом запуске
 if not os.path.exists(f'{DB_FOLDER}/users.json'):
+    # Создаем тестовых пользователей
     initial_users = [
         {
             'username': 'admin',
@@ -272,129 +382,327 @@ if not os.path.exists(f'{DB_FOLDER}/users.json'):
     DB._save_db('homeworks', initial_homeworks)
     DB._save_db('testimonials', initial_testimonials)
 
-# WebSocket обработчики для видеоконференций
-@socketio.on('connect')
-def handle_connect():
-    print(f"Client connected: {request.sid}")
+if not os.path.exists(f'{INVITES_FOLDER}/invites.json'):
+    with open(f'{INVITES_FOLDER}/invites.json', 'w') as f:
+        json.dump([], f)
 
-@socketio.on('disconnect')
-def handle_disconnect():
-    print(f"Client disconnected: {request.sid}")
-    for room, participants in active_conferences.items():
-        if request.sid in participants:
-            username = participants[request.sid]['username']
-            participants.pop(request.sid)
-            emit('participant_left', {'sid': request.sid, 'username': username}, room=room)
-            if not participants:
-                active_conferences.pop(room)
+# Функции для видеоконференций
+def generate_video_frames(room_name, user_id):
+    """Генератор видео кадров для конкретного пользователя"""
+    while True:
+        try:
+            if not video_queues[room_name].empty():
+                frame = video_queues[room_name].get()
+                if frame['user_id'] != user_id:  # Не отправляем пользователю его же кадры
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + frame['frame'] + b'\r\n')
+            time.sleep(0.05)  # 20 FPS
+        except Exception as e:
+            logger.error(f"Error in video frames generator: {e}")
+            break
 
-@socketio.on('join_conference')
-def handle_join_conference(data):
-    room = data['room']
-    username = data['username']
-    is_teacher = data.get('is_teacher', False)
+def generate_screen_frames(room_name, user_id):
+    """Генератор кадров демонстрации экрана"""
+    while True:
+        try:
+            if not screen_queues[room_name].empty():
+                frame = screen_queues[room_name].get()
+                if frame['user_id'] != user_id:  # Не отправляем пользователю его же кадры
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + frame['frame'] + b'\r\n')
+            time.sleep(0.1)  # 10 FPS для экономии трафика
+        except Exception as e:
+            logger.error(f"Error in screen frames generator: {e}")
+            break
+
+def generate_audio_stream(room_name, user_id):
+    """Генератор аудио потока"""
+    while True:
+        try:
+            if not audio_queues[room_name].empty():
+                audio = audio_queues[room_name].get()
+                if audio['user_id'] != user_id:  # Не отправляем пользователю его же аудио
+                    yield (b'--frame\r\n'
+                           b'Content-Type: audio/wav\r\n\r\n' + audio['data'] + b'\r\n')
+            time.sleep(0.02)  # 50 раз в секунду
+        except Exception as e:
+            logger.error(f"Error in audio stream generator: {e}")
+            break
+
+def process_video_frame(room_name, user_id, frame_data):
+    """Обработка полученного видео кадра"""
+    try:
+        # Декодируем base64 и добавляем в очередь
+        frame = base64.b64decode(frame_data.split(',')[1])
+        video_queues[room_name].put({
+            'user_id': user_id,
+            'frame': frame,
+            'timestamp': time.time()
+        })
+        
+        # Очищаем старые кадры (чтобы не накапливались)
+        while video_queues[room_name].qsize() > 10:
+            video_queues[room_name].get()
+            
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error processing video frame: {e}")
+        return jsonify({'error': str(e)}), 500
+
+def process_screen_frame(room_name, user_id, frame_data):
+    """Обработка полученного кадра демонстрации экрана"""
+    try:
+        frame = base64.b64decode(frame_data.split(',')[1])
+        screen_queues[room_name].put({
+            'user_id': user_id,
+            'frame': frame,
+            'timestamp': time.time()
+        })
+        
+        # Очищаем старые кадры
+        while screen_queues[room_name].qsize() > 5:
+            screen_queues[room_name].get()
+            
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error processing screen frame: {e}")
+        return jsonify({'error': str(e)}), 500
+
+def process_audio_chunk(room_name, user_id, audio_data):
+    """Обработка полученного аудио фрагмента"""
+    try:
+        audio = base64.b64decode(audio_data.split(',')[1])
+        audio_queues[room_name].put({
+            'user_id': user_id,
+            'data': audio,
+            'timestamp': time.time()
+        })
+        
+        # Очищаем старые аудио данные
+        while audio_queues[room_name].qsize() > 20:
+            audio_queues[room_name].get()
+            
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error processing audio chunk: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# API для видеоконференций
+@app.route('/api/conference/<room_name>/join', methods=['POST'])
+def join_conference(room_name):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
     
-    # Проверка доступа
-    if not room.startswith(f"ZindakiRoom_{username}") and not is_teacher:
-        lesson = DB.get_lesson(data.get('lesson_id', 0))
-        if not lesson or username not in lesson.get('students', []):
-            emit('access_denied', {'message': 'У вас нет доступа к этой конференции'})
-            return
+    user_id = session['user']['username']
+    participants[room_name].add(user_id)
     
-    join_room(room)
+    # Инициализация настроек комнаты
+    if not room_settings.get(room_name):
+        room_settings[room_name] = {
+            'screen_sharing': False,
+            'active_speaker': None,
+            'created_at': time.time()
+        }
     
-    if room not in active_conferences:
-        active_conferences[room] = {}
+    return jsonify({
+        'success': True,
+        'room_name': room_name,
+        'participants': list(participants[room_name]),
+        'settings': room_settings[room_name]
+    })
+
+@app.route('/api/conference/<room_name>/leave', methods=['POST'])
+def leave_conference(room_name):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
     
-    active_conferences[room][request.sid] = {
-        'username': username,
-        'is_teacher': is_teacher,
-        'audio': True,
-        'video': True,
-        'screen': False
+    user_id = session['user']['username']
+    if room_name in participants and user_id in participants[room_name]:
+        participants[room_name].remove(user_id)
+        
+        # Если комната пуста, очищаем очереди
+        if len(participants[room_name]) == 0:
+            video_queues.pop(room_name, None)
+            screen_queues.pop(room_name, None)
+            audio_queues.pop(room_name, None)
+            room_settings.pop(room_name, None)
+            active_conferences.pop(room_name, None)
+    
+    return jsonify({'success': True})
+
+@app.route('/api/conference/<room_name>/video', methods=['POST'])
+def receive_video_frame(room_name):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    user_id = session['user']['username']
+    frame_data = request.json.get('frame')
+    
+    if not frame_data:
+        return jsonify({'error': 'No frame data provided'}), 400
+    
+    return process_video_frame(room_name, user_id, frame_data)
+
+@app.route('/api/conference/<room_name>/screen', methods=['POST'])
+def receive_screen_frame(room_name):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    user_id = session['user']['username']
+    frame_data = request.json.get('frame')
+    
+    if not frame_data:
+        return jsonify({'error': 'No frame data provided'}), 400
+    
+    return process_screen_frame(room_name, user_id, frame_data)
+
+@app.route('/api/conference/<room_name>/audio', methods=['POST'])
+def receive_audio_chunk(room_name):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    user_id = session['user']['username']
+    audio_data = request.json.get('audio')
+    
+    if not audio_data:
+        return jsonify({'error': 'No audio data provided'}), 400
+    
+    return process_audio_chunk(room_name, user_id, audio_data)
+
+@app.route('/api/conference/<room_name>/settings', methods=['POST'])
+def update_conference_settings(room_name):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if room_name not in room_settings:
+        return jsonify({'error': 'Room not found'}), 404
+    
+    # Только учитель может менять настройки
+    if session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Only teacher can change settings'}), 403
+    
+    settings = request.json.get('settings', {})
+    room_settings[room_name].update(settings)
+    
+    return jsonify({'success': True, 'settings': room_settings[room_name]})
+
+@app.route('/api/conference/<room_name>/start', methods=['POST'])
+def start_conference(room_name):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Only teacher can start conference'}), 403
+    
+    # Помечаем конференцию как активную
+    active_conferences[room_name] = {
+        'teacher': session['user']['username'],
+        'started_at': datetime.now().isoformat(),
+        'participants': []
     }
     
-    emit('joined_conference', {
-        'room': room,
-        'participants': [
-            {'sid': sid, 'username': info['username'], 'is_teacher': info['is_teacher'], 
-             'audio': info['audio'], 'video': info['video'], 'screen': info['screen']}
-            for sid, info in active_conferences[room].items() if sid != request.sid
-        ]
-    })
+    return jsonify({'success': True, 'room_name': room_name})
+
+@app.route('/api/conference/<room_name>/status', methods=['GET'])
+def get_conference_status(room_name):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
     
-    emit('participant_joined', {
-        'sid': request.sid,
-        'username': username,
-        'is_teacher': is_teacher,
-        'audio': True,
-        'video': True,
-        'screen': False
-    }, room=room, include_self=False)
+    return jsonify({
+        'success': True,
+        'is_active': room_name in active_conferences,
+        'conference': active_conferences.get(room_name)
+    })
 
-@socketio.on('leave_conference')
-def handle_leave_conference(data):
-    room = data['room']
-    if room in active_conferences and request.sid in active_conferences[room]:
-        username = active_conferences[room][request.sid]['username']
-        active_conferences[room].pop(request.sid)
-        leave_room(room)
-        emit('participant_left', {'sid': request.sid, 'username': username}, room=room)
-        if not active_conferences[room]:
-            active_conferences.pop(room)
+@app.route('/api/conference/invite', methods=['POST'])
+def send_conference_invite():
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Only teacher can send invites'}), 403
+    
+    data = request.json
+    student_username = data.get('student_username')
+    room_name = data.get('room_name')
+    
+    if not student_username or not room_name:
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    # Проверяем существование ученика
+    student = DB.get_user(student_username)
+    if not student or student['role'] != 'student':
+        return jsonify({'error': 'Student not found'}), 404
+    
+    # Создаем приглашение
+    invite = DB.save_invite(
+        teacher_username=session['user']['username'],
+        student_username=student_username,
+        room_name=room_name
+    )
+    
+    return jsonify({'success': True, 'invite': invite})
 
-@socketio.on('toggle_audio')
-def handle_toggle_audio(data):
-    room = data['room']
-    if room in active_conferences and request.sid in active_conferences[room]:
-        active_conferences[room][request.sid]['audio'] = not active_conferences[room][request.sid]['audio']
-        emit('audio_toggled', {
-            'sid': request.sid,
-            'status': active_conferences[room][request.sid]['audio']
-        }, room=room)
+@app.route('/api/conference/invites', methods=['GET'])
+def get_user_invites():
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if session['user']['role'] == 'student':
+        invites = DB.get_user_invites(session['user']['username'])
+    else:
+        invites = DB.get_teacher_invites(session['user']['username'])
+    
+    return jsonify({'success': True, 'invites': invites})
 
-@socketio.on('toggle_video')
-def handle_toggle_video(data):
-    room = data['room']
-    if room in active_conferences and request.sid in active_conferences[room]:
-        active_conferences[room][request.sid]['video'] = not active_conferences[room][request.sid]['video']
-        emit('video_toggled', {
-            'sid': request.sid,
-            'status': active_conferences[room][request.sid]['video']
-        }, room=room)
+@app.route('/api/conference/invite/<int:invite_id>/respond', methods=['POST'])
+def respond_to_invite(invite_id):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if session['user']['role'] != 'student':
+        return jsonify({'error': 'Only student can respond to invites'}), 403
+    
+    data = request.json
+    action = data.get('action')  # 'accept' or 'decline'
+    
+    if action not in ['accept', 'decline']:
+        return jsonify({'error': 'Invalid action'}), 400
+    
+    # Обновляем статус приглашения
+    status = 'accepted' if action == 'accept' else 'declined'
+    if DB.update_invite_status(invite_id, status):
+        if action == 'accept':
+            # Получаем данные приглашения
+            invites = DB.get_invites()
+            invite = next((i for i in invites if i['id'] == invite_id), None)
+            if invite:
+                return jsonify({
+                    'success': True,
+                    'conference_url': f'/conference/{invite["room_name"]}',
+                    'room_name': invite["room_name"]
+                })
+        return jsonify({'success': True})
+    
+    return jsonify({'error': 'Invite not found'}), 404
 
-@socketio.on('toggle_screen')
-def handle_toggle_screen(data):
-    room = data['room']
-    if room in active_conferences and request.sid in active_conferences[room]:
-        active_conferences[room][request.sid]['screen'] = not active_conferences[room][request.sid]['screen']
-        emit('screen_toggled', {
-            'sid': request.sid,
-            'status': active_conferences[room][request.sid]['screen']
-        }, room=room)
+# Потоки для видеоконференций
+@app.route('/video_feed/<room_name>/<user_id>')
+def video_feed(room_name, user_id):
+    return Response(generate_video_frames(room_name, user_id),
+                   mimetype='multipart/x-mixed-replace; boundary=frame')
 
-@socketio.on('ice_candidate')
-def handle_ice_candidate(data):
-    emit('ice_candidate', {
-        'candidate': data['candidate'],
-        'sid': request.sid
-    }, room=data['room'], include_self=False)
+@app.route('/screen_feed/<room_name>/<user_id>')
+def screen_feed(room_name, user_id):
+    return Response(generate_screen_frames(room_name, user_id),
+                   mimetype='multipart/x-mixed-replace; boundary=frame')
 
-@socketio.on('offer')
-def handle_offer(data):
-    emit('offer', {
-        'offer': data['offer'],
-        'sid': request.sid
-    }, room=data['room'], include_self=False)
+@app.route('/audio_feed/<room_name>/<user_id>')
+def audio_feed(room_name, user_id):
+    return Response(generate_audio_stream(room_name, user_id),
+                   mimetype='multipart/x-mixed-replace; boundary=frame')
 
-@socketio.on('answer')
-def handle_answer(data):
-    emit('answer', {
-        'answer': data['answer'],
-        'sid': request.sid
-    }, room=data['room'], include_self=False)
-
-# Маршруты Flask
+# Главная страница и все SPA-роуты
 @app.route('/')
 @app.route('/about')
 @app.route('/teachers')
@@ -409,6 +717,7 @@ def home():
                          testimonials=DB.get_testimonials(),
                          scroll_to=scroll_to)
 
+# API Endpoints
 @app.route('/api/register', methods=['POST'])
 def api_register():
     data = request.json
@@ -448,6 +757,7 @@ def api_logout():
     session.pop('user', None)
     return jsonify({'success': True})
 
+# Управление пользователями
 @app.route('/api/users', methods=['GET'])
 def api_get_users():
     if 'user' not in session or session['user']['role'] != 'teacher':
@@ -456,6 +766,7 @@ def api_get_users():
     role = request.args.get('role')
     users = DB.get_users(role=role)
     
+    # Не возвращаем хеши паролей
     safe_users = []
     for user in users:
         safe_user = user.copy()
@@ -483,6 +794,7 @@ def api_delete_user(username):
         return jsonify({'success': True})
     return jsonify({'error': 'User not found'}), 404
 
+# Управление уроками
 @app.route('/api/lessons', methods=['GET', 'POST'])
 def api_lessons():
     if 'user' not in session:
@@ -497,6 +809,24 @@ def api_lessons():
         if not all(field in data for field in required_fields):
             return jsonify({'error': 'Missing required fields'}), 400
         
+        # Обработка повторяющихся занятий
+        recurrence = None
+        if data.get('recurrence') and data['recurrence'].get('type') != 'none':
+            recurrence = {
+                'type': data['recurrence']['type'],
+                'weekdays': data['recurrence'].get('weekdays', []),
+                'end_type': data['recurrence'].get('end_type'),
+                'end_value': data['recurrence'].get('end_value')
+            }
+            
+            # Преобразуем дату окончания в ISO формат, если она есть
+            if recurrence['end_type'] == 'date' and recurrence['end_value']:
+                try:
+                    recurrence['end_value'] = datetime.strptime(recurrence['end_value'], '%Y-%m-%d').isoformat()
+                except:
+                    return jsonify({'error': 'Invalid end date format'}), 400
+        
+        # Создаем урок(и)
         result = DB.save_lesson(
             data['title'],
             data.get('description', ''),
@@ -505,16 +835,21 @@ def api_lessons():
             data.get('duration', 60),
             data.get('program_type', 'languages'),
             data.get('students', []),
-            data.get('recurrence')
+            recurrence
         )
         
-        return jsonify({'success': True, 'lesson_id': result[0]['id']})
+        if isinstance(result, list):
+            return jsonify({'success': True, 'lesson_ids': [l['id'] for l in result]})
+        else:
+            return jsonify({'success': True, 'lesson_id': result['id']})
     
+    # GET запрос
     if session['user']['role'] == 'teacher':
         lessons = DB.get_lessons(teacher=session['user']['username'])
     else:
         lessons = [l for l in DB.get_lessons() if session['user']['username'] in l.get('students', [])]
     
+    # Форматируем дату для удобного отображения
     formatted_lessons = []
     for lesson in lessons:
         formatted_lesson = lesson.copy()
@@ -541,8 +876,14 @@ def api_delete_lesson(lesson_id):
     if session['user']['role'] != 'teacher' or lesson['teacher'] != session['user']['username']:
         return jsonify({'error': 'Access denied'}), 403
     
-    if DB.delete_lesson(lesson_id):
-        return jsonify({'success': True})
+    # Если это повторяющееся занятие - удаляем всю серию
+    if lesson.get('recurrence_id'):
+        if DB.delete_recurring_lessons(lesson['recurrence_id']):
+            return jsonify({'success': True})
+    else:
+        if DB.delete_lesson(lesson_id):
+            return jsonify({'success': True})
+    
     return jsonify({'error': 'Failed to delete lesson'}), 500
 
 @app.route('/api/lesson/<int:lesson_id>/join')
@@ -554,13 +895,19 @@ def api_join_lesson(lesson_id):
     if not lesson:
         return jsonify({'error': 'Lesson not found'}), 404
     
+    # Проверяем, имеет ли пользователь доступ к уроку
     if session['user']['role'] != 'teacher' and session['user']['username'] not in lesson.get('students', []):
         return jsonify({'error': 'Access denied'}), 403
     
+    # Для учителя - фиксированная комната по имени пользователя
     if session['user']['role'] == 'teacher':
         room_name = f"ZindakiRoom_{session['user']['username']}"
     else:
+        # Для ученика - комната учителя
         room_name = f"ZindakiRoom_{lesson['teacher']}"
+    
+    # Добавляем ученика к уроку, если его там еще нет
+    if session['user']['role'] == 'student' and session['user']['username'] not in lesson.get('students', []):
         DB.add_student_to_lesson(lesson_id, session['user']['username'])
     
     return jsonify({
@@ -570,15 +917,18 @@ def api_join_lesson(lesson_id):
         'lesson': lesson
     })
 
+# Видеоконференции
 @app.route('/conference/<room_name>')
 def conference(room_name):
     if 'user' not in session:
         return redirect('/#login')
     
+    # Проверяем, имеет ли пользователь доступ к этой комнате
     if session['user']['role'] == 'teacher':
         if not room_name.endswith(session['user']['username']):
             return "Доступ запрещен", 403
     else:
+        # Для студентов проверяем, есть ли у них уроки с этим учителем
         teacher_username = room_name.replace('ZindakiRoom_', '')
         lessons = DB.get_lessons()
         has_access = any(
@@ -588,13 +938,19 @@ def conference(room_name):
         )
         
         if not has_access:
-            return "Доступ запрещен", 403
+            # Проверяем, есть ли приглашение
+            invites = DB.get_user_invites(session['user']['username'])
+            has_invite = any(invite['room_name'] == room_name for invite in invites)
+            
+            if not has_invite:
+                return "Доступ запрещен", 403
     
     return render_template('conference.html', 
                          room_name=room_name,
                          user=session['user'],
                          is_teacher=session['user']['role'] == 'teacher')
 
+# Домашние задания
 @app.route('/api/homework', methods=['GET', 'POST'])
 def api_homework():
     if 'user' not in session:
@@ -604,6 +960,7 @@ def api_homework():
         if session['user']['role'] != 'teacher':
             return jsonify({'error': 'Only teachers can assign homework'}), 403
         
+        # Обработка загруженных файлов
         files = []
         if 'files' in request.files:
             for file in request.files.getlist('files'):
@@ -617,6 +974,7 @@ def api_homework():
                         'size': os.path.getsize(filepath)
                     })
         
+        # Получаем данные из формы
         lesson_id = request.form.get('lesson_id')
         title = request.form.get('title')
         description = request.form.get('description')
@@ -626,6 +984,7 @@ def api_homework():
         if not all([lesson_id, title, description, deadline, students]):
             return jsonify({'error': 'Missing required fields'}), 400
         
+        # Создаем домашнее задание
         homework = DB.save_homework(
             lesson_id=int(lesson_id),
             title=title,
@@ -638,6 +997,7 @@ def api_homework():
         
         return jsonify({'success': True, 'homework': homework})
     
+    # GET запрос
     if session['user']['role'] == 'teacher':
         homeworks = DB.get_teacher_homeworks(session['user']['username'])
     else:
@@ -654,6 +1014,7 @@ def api_get_homework(homework_id):
     if not homework:
         return jsonify({'error': 'Homework not found'}), 404
     
+    # Проверяем доступ
     if session['user']['role'] == 'student' and session['user']['username'] not in homework['students']:
         return jsonify({'error': 'Access denied'}), 403
     if session['user']['role'] == 'teacher' and homework['teacher'] != session['user']['username']:
@@ -662,14 +1023,14 @@ def api_get_homework(homework_id):
     return jsonify({'homework': homework})
 
 @app.route('/api/homework/<int:homework_id>/submit', methods=['POST'])
-def api_submit_homework(homework_id):
+def api_submit_homework(homework_id, student_username):
     if 'user' not in session or session['user']['role'] != 'student':
         return jsonify({'error': 'Unauthorized'}), 401
     
-    homework = DB.get_homework(homework_id)
-    if not homework or session['user']['username'] not in homework['students']:
-        return jsonify({'error': 'Homework not found or access denied'}), 404
+    student_username = session['user']['username']
+    comment = request.form.get('comment', '')
     
+    # Обработка загруженных файлов
     files = []
     if 'files' in request.files:
         for file in request.files.getlist('files'):
@@ -683,17 +1044,16 @@ def api_submit_homework(homework_id):
                     'size': os.path.getsize(filepath)
                 })
     
-    comment = request.form.get('comment', '')
-    
-    if DB.submit_homework(homework_id, session['user']['username'], comment, files):
+    if DB.submit_homework(homework_id, student_username, comment, files):
         return jsonify({'success': True})
-    
-    return jsonify({'error': 'Failed to submit homework'}), 500
+    return jsonify({'error': 'Homework not found or access denied'}), 404
 
+# Загрузка файлов
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
+# Личный кабинет
 @app.route('/dashboard')
 def dashboard():
     if 'user' not in session:
@@ -706,12 +1066,13 @@ def dashboard():
         lessons = [l for l in DB.get_lessons() if session['user']['username'] in l.get('students', [])]
         homeworks = DB.get_student_homeworks(session['user']['username'])
     
+    # Форматируем даты для отображения
     formatted_lessons = []
     for lesson in lessons:
         formatted_lesson = lesson.copy()
         try:
             lesson_date = datetime.fromisoformat(lesson['schedule'])
-            formatted_lesson['schedule'] = lesson_date.strftime('%Y-%m-%dT%H:%M')
+            formatted_lesson['schedule'] = lesson_date.isoformat()
             formatted_lesson['formatted_schedule'] = lesson_date.strftime('%d.%m.%Y %H:%M')
         except:
             formatted_lesson['formatted_schedule'] = lesson['schedule']
@@ -724,13 +1085,15 @@ def dashboard():
                          homeworks=homeworks,
                          is_teacher=session['user']['role'] == 'teacher')
 
+# Обработка контактной формы
 @app.route('/api/contact', methods=['POST'])
 def api_contact():
     try:
         data = request.json
+        # Здесь можно добавить логику обработки формы (отправка email и т.д.)
         return jsonify({'success': True, 'message': 'Ваше сообщение отправлено!'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=7001, debug=True)
+    app.run(host='0.0.0.0', port=7001, debug=os.environ.get('FLASK_DEBUG', False))
