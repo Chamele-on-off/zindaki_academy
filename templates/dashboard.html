@@ -1031,6 +1031,8 @@
         let participantsVideos = {};
         let audioContext = null;
         let audioProcessor = null;
+        let remoteVideoElements = {};
+        let remoteAudioElements = {};
 
         // Инициализация видеоконференции
         async function initConference(roomName) {
@@ -1043,20 +1045,12 @@
                     throw new Error('Ваш браузер не поддерживает доступ к камере и микрофону');
                 }
 
-                // Запрашиваем разрешение на микрофон
-                const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                console.log('Audio stream obtained:', audioStream.getAudioTracks());
+                // Запрашиваем разрешение на микрофон и камеру
+                localStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: true, 
+                    audio: true 
+                });
                 
-                // Запрашиваем разрешение на камеру
-                const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
-                console.log('Video stream obtained:', videoStream.getVideoTracks());
-                
-                // Объединяем потоки
-                localStream = new MediaStream([
-                    ...audioStream.getAudioTracks(),
-                    ...videoStream.getVideoTracks()
-                ]);
-
                 // Отображаем локальное видео
                 const localVideo = document.getElementById('localVideo');
                 localVideo.srcObject = localStream;
@@ -1121,6 +1115,8 @@
             participantsList.innerHTML = '<h4>Участники:</h4>';
             
             participants.forEach(participant => {
+                if (participant === '{{ user.username }}') return;
+                
                 const participantItem = document.createElement('div');
                 participantItem.className = 'participant-item';
                 
@@ -1245,84 +1241,65 @@
             }
         }
 
-        // Вспомогательная функция для конвертации ArrayBuffer в base64
-        function arrayBufferToBase64(buffer) {
-            let binary = '';
-            const bytes = new Uint8Array(buffer);
-            for (let i = 0; i < bytes.byteLength; i++) {
-                binary += String.fromCharCode(bytes[i]);
-            }
-            return window.btoa(binary);
-        }
-
         // Получение видео других участников
         function startReceivingVideo(roomName) {
             const userId = '{{ user.username }}';
             const videoFeedUrl = `/video_feed/${roomName}/${userId}`;
             
-            const eventSource = new EventSource(videoFeedUrl);
-            eventSource.onmessage = function(e) {
+            // Создаем элемент для отображения видео других участников
+            const container = document.getElementById('conferenceContainer');
+            
+            // Удаляем старые элементы видео (кроме локального)
+            const videoContainers = container.querySelectorAll('.video-container');
+            videoContainers.forEach(vc => {
+                if (vc.querySelector('#localVideo') === null) {
+                    vc.remove();
+                }
+            });
+            
+            // Создаем новый EventSource для получения видео
+            const videoEventSource = new EventSource(videoFeedUrl);
+            
+            videoEventSource.onmessage = function(e) {
                 try {
                     const data = JSON.parse(e.data);
                     const frame = data.frame;
                     const userId = data.user_id;
                     
+                    // Пропускаем свои собственные кадры
+                    if (userId === '{{ user.username }}') return;
+                    
                     // Создаем или обновляем видео элемент для участника
-                    if (!participantsVideos[userId]) {
-                        createParticipantVideo(userId);
+                    if (!remoteVideoElements[userId]) {
+                        createRemoteVideoElement(userId);
                     }
                     
                     // Обновляем видео
-                    const videoElement = participantsVideos[userId].video;
-                    videoElement.src = 'data:image/jpeg;base64,' + frame;
+                    const imgElement = remoteVideoElements[userId];
+                    imgElement.src = 'data:image/jpeg;base64,' + frame;
                 } catch (error) {
                     console.error('Error processing video frame:', error);
                 }
             };
             
-            eventSource.onerror = function() {
+            videoEventSource.onerror = function() {
                 console.log('Video feed error, reconnecting...');
                 setTimeout(() => startReceivingVideo(roomName), 1000);
             };
         }
 
-        // Получение аудио других участников
-        function startReceivingAudio(roomName) {
-            const userId = '{{ user.username }}';
-            const audioFeedUrl = `/audio_feed/${roomName}/${userId}`;
-            
-            const eventSource = new EventSource(audioFeedUrl);
-            eventSource.onmessage = function(e) {
-                try {
-                    const data = JSON.parse(e.data);
-                    const audioData = data.data;
-                    const userId = data.user_id;
-                    
-                    // Воспроизводим аудио
-                    playAudio(audioData);
-                } catch (error) {
-                    console.error('Error processing audio chunk:', error);
-                }
-            };
-            
-            eventSource.onerror = function() {
-                console.log('Audio feed error, reconnecting...');
-                setTimeout(() => startReceivingAudio(roomName), 1000);
-            };
-        }
-
-        // Создание видео элемента для участника
-        function createParticipantVideo(userId) {
+        // Создание элемента для отображения видео другого участника
+        function createRemoteVideoElement(userId) {
             const container = document.getElementById('conferenceContainer');
             
             const videoContainer = document.createElement('div');
             videoContainer.className = 'video-container';
             
-            const video = document.createElement('img'); // Используем img вместо video для JPEG
-            video.id = `video-${userId}`;
-            video.style.width = '100%';
-            video.style.height = '100%';
-            video.style.objectFit = 'cover';
+            const img = document.createElement('img');
+            img.id = `remote-video-${userId}`;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
             
             const label = document.createElement('div');
             label.className = 'video-label';
@@ -1334,28 +1311,60 @@
             const fullscreenBtn = document.createElement('button');
             fullscreenBtn.className = 'video-control-btn';
             fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
-            fullscreenBtn.onclick = () => toggleFullscreen(`video-${userId}`);
+            fullscreenBtn.onclick = () => toggleFullscreen(`remote-video-${userId}`);
             
             controls.appendChild(fullscreenBtn);
             
-            videoContainer.appendChild(video);
+            videoContainer.appendChild(img);
             videoContainer.appendChild(label);
             videoContainer.appendChild(controls);
             container.appendChild(videoContainer);
             
-            participantsVideos[userId] = {
-                video: video,
-                container: videoContainer
+            remoteVideoElements[userId] = img;
+        }
+
+        // Получение аудио других участников
+        function startReceivingAudio(roomName) {
+            const userId = '{{ user.username }}';
+            const audioFeedUrl = `/audio_feed/${roomName}/${userId}`;
+            
+            // Создаем новый EventSource для получения аудио
+            const audioEventSource = new EventSource(audioFeedUrl);
+            
+            audioEventSource.onmessage = function(e) {
+                try {
+                    const data = JSON.parse(e.data);
+                    const audioData = data.data;
+                    const userId = data.user_id;
+                    
+                    // Пропускаем свои собственные аудио данные
+                    if (userId === '{{ user.username }}') return;
+                    
+                    // Воспроизводим аудио
+                    playRemoteAudio(userId, audioData);
+                } catch (error) {
+                    console.error('Error processing audio chunk:', error);
+                }
+            };
+            
+            audioEventSource.onerror = function() {
+                console.log('Audio feed error, reconnecting...');
+                setTimeout(() => startReceivingAudio(roomName), 1000);
             };
         }
 
-        // Воспроизведение аудио
-        function playAudio(audioData) {
+        // Воспроизведение аудио другого участника
+        function playRemoteAudio(userId, audioData) {
             try {
+                // Если уже есть элемент аудио для этого пользователя - используем его
+                if (!remoteAudioElements[userId]) {
+                    remoteAudioElements[userId] = new Audio();
+                }
+                
                 const audioBlob = base64ToBlob(audioData, 'audio/wav');
                 const audioUrl = URL.createObjectURL(audioBlob);
                 
-                const audio = new Audio();
+                const audio = remoteAudioElements[userId];
                 audio.src = audioUrl;
                 audio.play().catch(e => console.error('Error playing audio:', e));
             } catch (error) {
@@ -1463,6 +1472,17 @@
                 audioContext = null;
             }
             
+            // Удаляем все удаленные видео и аудио элементы
+            Object.keys(remoteVideoElements).forEach(userId => {
+                const element = document.getElementById(`remote-video-${userId}`);
+                if (element && element.parentNode) {
+                    element.parentNode.remove();
+                }
+            });
+            
+            remoteVideoElements = {};
+            remoteAudioElements = {};
+            
             // Уведомляем сервер о выходе
             if (currentRoom) {
                 await fetch(`/api/conference/${currentRoom}/leave`, {
@@ -1474,13 +1494,6 @@
                 
                 currentRoom = null;
             }
-            
-            // Очищаем видео участников
-            Object.values(participantsVideos).forEach(video => {
-                video.container.remove();
-            });
-            
-            participantsVideos = {};
             
             // Скрываем секцию конференции
             document.getElementById('conferenceSection').style.display = 'none';
@@ -1584,6 +1597,15 @@
             for (let i = 0; i < string.length; i++) {
                 view.setUint8(offset + i, string.charCodeAt(i));
             }
+        }
+
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
         }
 
         function base64ToBlob(base64, mimeType) {
