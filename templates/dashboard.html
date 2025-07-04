@@ -242,7 +242,7 @@
             cursor: pointer;
         }
         
-        /* Видеоконференции */
+        /* Видеоконференция */
         .conference-container {
             display: grid;
             grid-template-columns: 1fr;
@@ -1099,6 +1099,8 @@
         let audioContext = null;
         let audioProcessor = null;
         let remoteVideoStream = null;
+        let videoEventSource = null;
+        let audioEventSource = null;
 
         // Инициализация видеоконференции
         async function initConference(roomName) {
@@ -1329,8 +1331,13 @@
                 remoteVideo.srcObject = remoteVideoStream;
             }
             
+            // Закрываем предыдущий EventSource, если он существует
+            if (videoEventSource) {
+                videoEventSource.close();
+            }
+            
             // Создаем новый EventSource для получения видео
-            const videoEventSource = new EventSource(videoFeedUrl);
+            videoEventSource = new EventSource(videoFeedUrl);
             
             videoEventSource.onmessage = function(e) {
                 try {
@@ -1394,8 +1401,13 @@
             const userId = '{{ user.username }}';
             const audioFeedUrl = `/audio_feed/${roomName}/${userId}`;
             
+            // Закрываем предыдущий EventSource, если он существует
+            if (audioEventSource) {
+                audioEventSource.close();
+            }
+            
             // Создаем новый EventSource для получения аудио
-            const audioEventSource = new EventSource(audioFeedUrl);
+            audioEventSource = new EventSource(audioFeedUrl);
             
             audioEventSource.onmessage = function(e) {
                 try {
@@ -1551,6 +1563,17 @@
             if (audioContext) {
                 audioContext.close();
                 audioContext = null;
+            }
+            
+            // Закрываем EventSource соединения
+            if (videoEventSource) {
+                videoEventSource.close();
+                videoEventSource = null;
+            }
+            
+            if (audioEventSource) {
+                audioEventSource.close();
+                audioEventSource = null;
             }
             
             // Сбрасываем состояние отображения
