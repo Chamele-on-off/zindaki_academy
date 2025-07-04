@@ -35,12 +35,12 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
 # Глобальные переменные для видеоконференций
-video_queues = defaultdict(queue.Queue)
+video_queues = defaultdict(lambda: defaultdict(queue.Queue))  # room -> user -> queue
+audio_queues = defaultdict(lambda: defaultdict(queue.Queue))  # room -> user -> queue
 screen_queues = defaultdict(queue.Queue)
-audio_queues = defaultdict(queue.Queue)
 participants = defaultdict(set)
 room_settings = defaultdict(dict)
-active_conferences = defaultdict(dict)  # Для хранения активных конференций
+active_conferences = defaultdict(dict)
 
 # Мини-модели для работы с JSON
 class DB:
@@ -215,7 +215,7 @@ class DB:
     @staticmethod
     def get_homework(homework_id):
         homeworks = DB.get_homeworks()
-        return next((h for h in homeworks if h['id'] == homework_id), None)
+        return next((h for h in homeworks if h['id'] == homework_id), None
 
     @staticmethod
     def save_homework(lesson_id, title, description, deadline, teacher, students, files=[]):
@@ -386,107 +386,6 @@ if not os.path.exists(f'{INVITES_FOLDER}/invites.json'):
     with open(f'{INVITES_FOLDER}/invites.json', 'w') as f:
         json.dump([], f)
 
-# Функции для видеоконференций
-def generate_video_frames(room_name, user_id):
-    """Генератор видео кадров для конкретного пользователя"""
-    while True:
-        try:
-            if not video_queues[room_name].empty():
-                frame = video_queues[room_name].get()
-                if frame['user_id'] != user_id:  # Не отправляем пользователю его же кадры
-                    yield (b'--frame\r\n'
-                           b'Content-Type: image/jpeg\r\n\r\n' + frame['frame'] + b'\r\n')
-            time.sleep(0.05)  # 20 FPS
-        except Exception as e:
-            logger.error(f"Error in video frames generator: {e}")
-            break
-
-def generate_screen_frames(room_name, user_id):
-    """Генератор кадров демонстрации экрана"""
-    while True:
-        try:
-            if not screen_queues[room_name].empty():
-                frame = screen_queues[room_name].get()
-                if frame['user_id'] != user_id:  # Не отправляем пользователю его же кадры
-                    yield (b'--frame\r\n'
-                           b'Content-Type: image/jpeg\r\n\r\n' + frame['frame'] + b'\r\n')
-            time.sleep(0.1)  # 10 FPS для экономии трафика
-        except Exception as e:
-            logger.error(f"Error in screen frames generator: {e}")
-            break
-
-def generate_audio_stream(room_name, user_id):
-    """Генератор аудио потока"""
-    while True:
-        try:
-            if not audio_queues[room_name].empty():
-                audio = audio_queues[room_name].get()
-                if audio['user_id'] != user_id:  # Не отправляем пользователю его же аудио
-                    yield (b'--frame\r\n'
-                           b'Content-Type: audio/wav\r\n\r\n' + audio['data'] + b'\r\n')
-            time.sleep(0.02)  # 50 раз в секунду
-        except Exception as e:
-            logger.error(f"Error in audio stream generator: {e}")
-            break
-
-def process_video_frame(room_name, user_id, frame_data):
-    """Обработка полученного видео кадра"""
-    try:
-        # Декодируем base64 и добавляем в очередь
-        frame = base64.b64decode(frame_data.split(',')[1])
-        video_queues[room_name].put({
-            'user_id': user_id,
-            'frame': frame,
-            'timestamp': time.time()
-        })
-        
-        # Очищаем старые кадры (чтобы не накапливались)
-        while video_queues[room_name].qsize() > 10:
-            video_queues[room_name].get()
-            
-        return jsonify({'success': True})
-    except Exception as e:
-        logger.error(f"Error processing video frame: {e}")
-        return jsonify({'error': str(e)}), 500
-
-def process_screen_frame(room_name, user_id, frame_data):
-    """Обработка полученного кадра демонстрации экрана"""
-    try:
-        frame = base64.b64decode(frame_data.split(',')[1])
-        screen_queues[room_name].put({
-            'user_id': user_id,
-            'frame': frame,
-            'timestamp': time.time()
-        })
-        
-        # Очищаем старые кадры
-        while screen_queues[room_name].qsize() > 5:
-            screen_queues[room_name].get()
-            
-        return jsonify({'success': True})
-    except Exception as e:
-        logger.error(f"Error processing screen frame: {e}")
-        return jsonify({'error': str(e)}), 500
-
-def process_audio_chunk(room_name, user_id, audio_data):
-    """Обработка полученного аудио фрагмента"""
-    try:
-        audio = base64.b64decode(audio_data.split(',')[1])
-        audio_queues[room_name].put({
-            'user_id': user_id,
-            'data': audio,
-            'timestamp': time.time()
-        })
-        
-        # Очищаем старые аудио данные
-        while audio_queues[room_name].qsize() > 20:
-            audio_queues[room_name].get()
-            
-        return jsonify({'success': True})
-    except Exception as e:
-        logger.error(f"Error processing audio chunk: {e}")
-        return jsonify({'error': str(e)}), 500
-
 # API для видеоконференций
 @app.route('/api/conference/<room_name>/join', methods=['POST'])
 def join_conference(room_name):
@@ -495,6 +394,12 @@ def join_conference(room_name):
     
     user_id = session['user']['username']
     participants[room_name].add(user_id)
+    
+    # Инициализация очередей для нового пользователя
+    if user_id not in video_queues[room_name]:
+        video_queues[room_name][user_id] = queue.Queue()
+    if user_id not in audio_queues[room_name]:
+        audio_queues[room_name][user_id] = queue.Queue()
     
     # Инициализация настроек комнаты
     if not room_settings.get(room_name):
@@ -520,11 +425,15 @@ def leave_conference(room_name):
     if room_name in participants and user_id in participants[room_name]:
         participants[room_name].remove(user_id)
         
-        # Если комната пуста, очищаем очереди
+        # Очищаем очереди пользователя
+        video_queues[room_name].pop(user_id, None)
+        audio_queues[room_name].pop(user_id, None)
+        
+        # Если комната пуста, очищаем все очереди
         if len(participants[room_name]) == 0:
             video_queues.pop(room_name, None)
-            screen_queues.pop(room_name, None)
             audio_queues.pop(room_name, None)
+            screen_queues.pop(room_name, None)
             room_settings.pop(room_name, None)
             active_conferences.pop(room_name, None)
     
@@ -541,20 +450,26 @@ def receive_video_frame(room_name):
     if not frame_data:
         return jsonify({'error': 'No frame data provided'}), 400
     
-    return process_video_frame(room_name, user_id, frame_data)
-
-@app.route('/api/conference/<room_name>/screen', methods=['POST'])
-def receive_screen_frame(room_name):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    user_id = session['user']['username']
-    frame_data = request.json.get('frame')
-    
-    if not frame_data:
-        return jsonify({'error': 'No frame data provided'}), 400
-    
-    return process_screen_frame(room_name, user_id, frame_data)
+    try:
+        # Декодируем base64
+        frame = base64.b64decode(frame_data.split(',')[1])
+        
+        # Отправляем кадр всем другим участникам комнаты
+        for participant in participants[room_name]:
+            if participant != user_id:  # Не отправляем себе
+                try:
+                    video_queues[room_name][participant].put({
+                        'user_id': user_id,
+                        'frame': frame,
+                        'timestamp': time.time()
+                    })
+                except Exception as e:
+                    logger.error(f"Error sending video to {participant}: {e}")
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error processing video frame: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/conference/<room_name>/audio', methods=['POST'])
 def receive_audio_chunk(room_name):
@@ -567,7 +482,58 @@ def receive_audio_chunk(room_name):
     if not audio_data:
         return jsonify({'error': 'No audio data provided'}), 400
     
-    return process_audio_chunk(room_name, user_id, audio_data)
+    try:
+        # Декодируем base64
+        audio = base64.b64decode(audio_data.split(',')[1])
+        
+        # Отправляем аудио всем другим участникам комнаты
+        for participant in participants[room_name]:
+            if participant != user_id:  # Не отправляем себе
+                try:
+                    audio_queues[room_name][participant].put({
+                        'user_id': user_id,
+                        'data': audio,
+                        'timestamp': time.time()
+                    })
+                except Exception as e:
+                    logger.error(f"Error sending audio to {participant}: {e}")
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error processing audio chunk: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/conference/<room_name>/screen', methods=['POST'])
+def receive_screen_frame(room_name):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401    
+    if session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Only teacher can share screen'}), 403
+    
+    user_id = session['user']['username']
+    frame_data = request.json.get('frame')
+    
+    if not frame_data:
+        return jsonify({'error': 'No frame data provided'}), 400
+    
+    try:
+        frame = base64.b64decode(frame_data.split(',')[1])
+        
+        # Отправляем кадр экрана всем участникам комнаты
+        for participant in participants[room_name]:
+            try:
+                screen_queues[room_name].put({
+                    'user_id': user_id,
+                    'frame': frame,
+                    'timestamp': time.time()
+                })
+            except Exception as e:
+                logger.error(f"Error sending screen to {participant}: {e}")
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error processing screen frame: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/conference/<room_name>/settings', methods=['POST'])
 def update_conference_settings(room_name):
@@ -689,18 +655,54 @@ def respond_to_invite(invite_id):
 # Потоки для видеоконференций
 @app.route('/video_feed/<room_name>/<user_id>')
 def video_feed(room_name, user_id):
-    return Response(generate_video_frames(room_name, user_id),
-                   mimetype='multipart/x-mixed-replace; boundary=frame')
-
-@app.route('/screen_feed/<room_name>/<user_id>')
-def screen_feed(room_name, user_id):
-    return Response(generate_screen_frames(room_name, user_id),
-                   mimetype='multipart/x-mixed-replace; boundary=frame')
+    def generate():
+        while True:
+            try:
+                # Получаем кадр из очереди
+                if user_id in video_queues.get(room_name, {}):
+                    frame_data = video_queues[room_name][user_id].get()
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + frame_data['frame'] + b'\r\n')
+                time.sleep(0.05)  # 20 FPS
+            except Exception as e:
+                logger.error(f"Video feed error for {user_id}: {e}")
+                break
+    
+    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/audio_feed/<room_name>/<user_id>')
 def audio_feed(room_name, user_id):
-    return Response(generate_audio_stream(room_name, user_id),
-                   mimetype='multipart/x-mixed-replace; boundary=frame')
+    def generate():
+        while True:
+            try:
+                # Получаем аудио из очереди
+                if user_id in audio_queues.get(room_name, {}):
+                    audio_data = audio_queues[room_name][user_id].get()
+                    yield (b'--frame\r\n'
+                           b'Content-Type: audio/wav\r\n\r\n' + audio_data['data'] + b'\r\n')
+                time.sleep(0.02)  # 50 раз в секунду
+            except Exception as e:
+                logger.error(f"Audio feed error for {user_id}: {e}")
+                break
+    
+    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/screen_feed/<room_name>')
+def screen_feed(room_name):
+    def generate():
+        while True:
+            try:
+                # Получаем кадр экрана из очереди
+                if room_name in screen_queues:
+                    frame_data = screen_queues[room_name].get()
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + frame_data['frame'] + b'\r\n')
+                time.sleep(0.1)  # 10 FPS
+            except Exception as e:
+                logger.error(f"Screen feed error: {e}")
+                break
+    
+    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 # Главная страница и все SPA-роуты
 @app.route('/')
@@ -1023,7 +1025,7 @@ def api_get_homework(homework_id):
     return jsonify({'homework': homework})
 
 @app.route('/api/homework/<int:homework_id>/submit', methods=['POST'])
-def api_submit_homework(homework_id, student_username):
+def api_submit_homework(homework_id):
     if 'user' not in session or session['user']['role'] != 'student':
         return jsonify({'error': 'Unauthorized'}), 401
     
