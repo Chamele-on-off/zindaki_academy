@@ -57,7 +57,7 @@ class DB:
     @staticmethod
     def get_user(username):
         users = DB.get_users()
-        return next((u for u in users if u['username'] == username), None)
+        return next((u for u in users if u['username'] == username), None
 
     @staticmethod
     def save_user(username, email, password, role='student', is_active=True):
@@ -105,7 +105,7 @@ class DB:
     @staticmethod
     def get_lesson(lesson_id):
         lessons = DB.get_lessons()
-        return next((l for l in lessons if l['id'] == lesson_id), None)
+        return next((l for l in lessons if l['id'] == lesson_id), None
 
     @staticmethod
     def save_lesson(title, description, teacher, schedule, duration=60, program_type='languages', students=None, recurrence=None):
@@ -199,7 +199,7 @@ class DB:
     @staticmethod
     def get_homework(homework_id):
         homeworks = DB.get_homeworks()
-        return next((h for h in homeworks if h['id'] == homework_id), None)
+        return next((h for h in homeworks if h['id'] == homework_id), None
 
     @staticmethod
     def save_homework(lesson_id, title, description, deadline, teacher, students=None, files=None):
@@ -384,6 +384,10 @@ def join_conference(room_name):
     user_id = session['user']['username']
     participants[room_name].add(user_id)
     
+    # Обновляем список участников в активной конференции
+    if room_name in active_conferences:
+        active_conferences[room_name]['participants'] = list(participants[room_name])
+    
     return jsonify({
         'success': True,
         'room_name': room_name,
@@ -400,6 +404,10 @@ def leave_conference(room_name):
         participants[room_name].remove(user_id)
         if user_id in video_frames.get(room_name, {}):
             del video_frames[room_name][user_id]
+        
+        # Обновляем список участников в активной конференции
+        if room_name in active_conferences:
+            active_conferences[room_name]['participants'] = list(participants[room_name])
         
         if not participants[room_name]:
             if room_name in video_frames:
@@ -427,7 +435,8 @@ def receive_video_frame(room_name):
         
         video_frames[room_name][user_id] = {
             'frame': frame_data,
-            'timestamp': time.time()
+            'timestamp': time.time(),
+            'is_screen': False  # По умолчанию это не демонстрация экрана
         }
         
         return jsonify({'success': True})
@@ -443,10 +452,13 @@ def get_video_feed(room_name, user_id):
             # Проверяем, не устарели ли данные (больше 5 секунд)
             if time.time() - frame_data['timestamp'] > 5:
                 return jsonify({'error': 'Frame too old'}), 404
+            
+            # Оптимизированный ответ - только необходимые данные
             return jsonify({
                 'user_id': user_id,
                 'frame': frame_data['frame'],
-                'timestamp': frame_data['timestamp']
+                'timestamp': frame_data['timestamp'],
+                'is_screen': frame_data.get('is_screen', False)
             })
         return jsonify({'error': 'No video feed available'}), 404
     except Exception as e:
@@ -455,7 +467,8 @@ def get_video_feed(room_name, user_id):
 @app.route('/api/conference/<room_name>/screen', methods=['POST'])
 def receive_screen_frame(room_name):
     if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401    
+        return jsonify({'error': 'Unauthorized'}), 401
+    
     if session['user']['role'] != 'teacher':
         return jsonify({'error': 'Only teacher can share screen'}), 403
     
@@ -473,7 +486,7 @@ def receive_screen_frame(room_name):
         video_frames[room_name][user_id] = {
             'frame': frame_data,
             'timestamp': time.time(),
-            'is_screen': True
+            'is_screen': True  # Помечаем как демонстрацию экрана
         }
         
         return jsonify({'success': True})
