@@ -291,12 +291,6 @@
             object-fit: cover;
         }
         
-        .video-container img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
         .video-controls {
             position: absolute;
             bottom: 0;
@@ -1049,43 +1043,30 @@
 
         // Видеоконференция с Long Polling
         let localStream = null;
-        let screenStream = null;
         let currentRoom = null;
         let isVideoEnabled = true;
         let isAudioEnabled = true;
-        let isScreenSharing = false;
         let videoInterval = null;
         let audioInterval = null;
-        let screenInterval = null;
-        let audioContext = null;
-        let audioProcessor = null;
-        let remoteVideoStream = null;
-        let lastVideoTimestamp = 0;
-        let videoPollingActive = false;
-        let audioPollingActive = false;
 
         // Инициализация видеоконференции
         async function initConference(roomName) {
             console.log('Initializing conference...');
             currentRoom = roomName;
             
-            document.getElementById('waitingMessage').style.display = 'flex';
-            document.getElementById('remoteVideoContainer').style.display = 'none';
-            
             try {
-                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    throw new Error('Ваш браузер не поддерживает доступ к камере и микрофону');
-                }
-
+                // Получаем доступ к камере и микрофону
                 localStream = await navigator.mediaDevices.getUserMedia({ 
                     video: true, 
                     audio: true 
                 });
                 
+                // Отображаем локальное видео
                 const localVideo = document.getElementById('localVideo');
                 localVideo.srcObject = localStream;
                 document.getElementById('localVideoContainer').style.display = 'block';
                 
+                // Присоединяемся к комнате
                 const response = await fetch(`/api/conference/${roomName}/join`, {
                     method: 'POST',
                     headers: {
@@ -1095,15 +1076,10 @@
                 
                 const data = await response.json();
                 if (data.success) {
-                    updateParticipantsList(data.participants);
-                    
+                    // Начинаем отправку видео
                     startSendingVideo(roomName);
-                    startSendingAudio(roomName);
-                    
+                    // Начинаем получение видео других участников
                     startReceivingVideo(roomName);
-                    startReceivingAudio(roomName);
-                    
-                    setInterval(() => updateParticipants(roomName), 5000);
                     
                     document.getElementById('conferenceSection').style.display = 'block';
                     document.getElementById('conferenceSection').scrollIntoView({ behavior: 'smooth' });
@@ -1114,57 +1090,14 @@
             }
         }
 
-        // Обновление списка участников
-        async function updateParticipants(roomName) {
-            try {
-                const response = await fetch(`/api/conference/${roomName}/join`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    updateParticipantsList(data.participants);
-                }
-            } catch (error) {
-                console.error('Error updating participants:', error);
-            }
-        }
-
-        // Обновление отображения списка участников
-        function updateParticipantsList(participants) {
-            const participantsList = document.getElementById('participantsList');
-            participantsList.innerHTML = '<h4>Участники:</h4>';
-            
-            participants.forEach(participant => {
-                if (participant === '{{ user.username }}') return;
-                
-                const participantItem = document.createElement('div');
-                participantItem.className = 'participant-item';
-                
-                const avatar = document.createElement('div');
-                avatar.className = 'participant-avatar';
-                avatar.textContent = participant.charAt(0).toUpperCase();
-                
-                const name = document.createElement('span');
-                name.textContent = participant;
-                
-                participantItem.appendChild(avatar);
-                participantItem.appendChild(name);
-                participantsList.appendChild(participantItem);
-            });
-        }
-
         // Отправка видео
         function startSendingVideo(roomName) {
             const videoTrack = localStream.getVideoTracks()[0];
             if (!videoTrack) return;
             
+            const video = document.getElementById('localVideo');
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            const video = document.getElementById('localVideo');
             
             function updateCanvasSize() {
                 canvas.width = video.videoWidth;
@@ -1175,7 +1108,7 @@
             updateCanvasSize();
             
             videoInterval = setInterval(async () => {
-                if (!isVideoEnabled || isScreenSharing) return;
+                if (!isVideoEnabled) return;
                 
                 try {
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -1194,302 +1127,102 @@
                 } catch (error) {
                     console.error('Error sending video frame:', error);
                 }
-            }, 100); // 10 FPS
+            }, 200); // 5 FPS
         }
 
-        // Отправка аудио
-        function startSendingAudio(roomName) {
-            const audioTrack = localStream.getAudioTracks()[0];
-            if (!audioTrack) {
-                console.error('No audio track available');
-                return;
-            }
-
-            try {
-                if (!audioContext) {
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                }
-
-                if (audioProcessor) {
-                    audioProcessor.disconnect();
-                }
-
-                const mediaStreamSource = audioContext.createMediaStreamSource(localStream);
-                audioProcessor = audioContext.createScriptProcessor(4096, 1, 1);
-                
-                mediaStreamSource.connect(audioProcessor);
-                audioProcessor.connect(audioContext.destination);
-                
-                let lastSendTime = 0;
-                const minSendInterval = 100;
-                
-                audioProcessor.onaudioprocess = function(e) {
-                    if (!isAudioEnabled) return;
-                    
-                    const now = Date.now();
-                    if (now - lastSendTime < minSendInterval) return;
-                    
-                    try {
-                        const audioData = e.inputBuffer.getChannelData(0);
-                        const wavBuffer = encodeWAV(audioData, audioContext.sampleRate);
-                        const base64Audio = arrayBufferToBase64(wavBuffer);
-                        
-                        fetch(`/api/conference/${roomName}/audio`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                audio: 'data:audio/wav;base64,' + base64Audio,
-                                timestamp: now
-                            })
-                        }).catch(err => console.error('Audio send error:', err));
-                        
-                        lastSendTime = now;
-                    } catch (error) {
-                        console.error('Error processing audio:', error);
-                    }
-                };
-            } catch (error) {
-                console.error('Error initializing audio:', error);
-            }
-        }
-
-        // Получение видео с помощью Long Polling
+        // Получение видео
         function startReceivingVideo(roomName) {
             const userId = '{{ user.username }}';
             const remoteVideo = document.getElementById('remoteVideo');
             const remoteVideoContainer = document.getElementById('remoteVideoContainer');
-            const remoteVideoLabel = document.getElementById('remoteVideoLabel');
             const waitingMessage = document.getElementById('waitingMessage');
             
-            if (!remoteVideoStream) {
-                remoteVideoStream = new MediaStream();
-                remoteVideo.srcObject = remoteVideoStream;
-            }
+            // Создаем MediaStream для удаленного видео
+            const remoteStream = new MediaStream();
+            remoteVideo.srcObject = remoteStream;
             
-            // Функция для выполнения long polling запроса
-            function pollVideo() {
-                if (!videoPollingActive) return;
-                
-                fetch(`/api/conference/${roomName}/video/${userId}?last_timestamp=${lastVideoTimestamp}`)
-                    .then(response => {
-                        if (!response.ok) throw new Error('Network response was not ok');
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data && data.frame) {
-                            lastVideoTimestamp = data.timestamp;
+            // Функция для обновления видео других участников
+            async function updateRemoteVideo() {
+                try {
+                    // Получаем список участников
+                    const participantsResponse = await fetch(`/api/conference/${roomName}/join`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    const participantsData = await participantsResponse.json();
+                    
+                    if (participantsData.success) {
+                        // Для каждого участника (кроме себя) получаем видео
+                        for (const participant of participantsData.participants) {
+                            if (participant === userId) continue;
                             
-                            waitingMessage.style.display = 'none';
-                            remoteVideoContainer.style.display = 'block';
-                            remoteVideoLabel.textContent = data.user_id;
-                            
-                            const blob = base64ToBlob(data.frame, 'image/jpeg');
-                            const url = URL.createObjectURL(blob);
-                            
-                            const img = new Image();
-                            img.onload = function() {
-                                const canvas = document.createElement('canvas');
-                                canvas.width = img.width;
-                                canvas.height = img.height;
-                                const ctx = canvas.getContext('2d');
-                                ctx.drawImage(img, 0, 0);
+                            const videoResponse = await fetch(`/api/conference/${roomName}/video/${participant}`);
+                            if (videoResponse.ok) {
+                                const videoData = await videoResponse.json();
                                 
-                                const stream = canvas.captureStream(10);
-                                
-                                if (remoteVideoStream) {
-                                    remoteVideoStream.getTracks().forEach(track => track.stop());
-                                    stream.getTracks().forEach(track => {
-                                        remoteVideoStream.addTrack(track);
-                                    });
+                                if (videoData && videoData.frame) {
+                                    waitingMessage.style.display = 'none';
+                                    remoteVideoContainer.style.display = 'block';
+                                    
+                                    // Создаем изображение из полученных данных
+                                    const img = new Image();
+                                    img.onload = function() {
+                                        const tempCanvas = document.createElement('canvas');
+                                        tempCanvas.width = img.width;
+                                        tempCanvas.height = img.height;
+                                        const tempCtx = tempCanvas.getContext('2d');
+                                        tempCtx.drawImage(img, 0, 0);
+                                        
+                                        // Конвертируем в видео поток
+                                        const stream = tempCanvas.captureStream(5);
+                                        
+                                        // Обновляем удаленное видео
+                                        if (remoteVideo.srcObject) {
+                                            remoteVideo.srcObject.getVideoTracks().forEach(track => track.stop());
+                                        }
+                                        remoteVideo.srcObject = stream;
+                                    };
+                                    img.src = videoData.frame;
                                 }
-                                
-                                URL.revokeObjectURL(url);
-                            };
-                            img.src = url;
+                            }
                         }
-                        
-                        // Сразу начинаем следующий запрос
-                        pollVideo();
-                    })
-                    .catch(error => {
-                        console.error('Video polling error:', error);
-                        // Повторяем запрос через 1 секунду в случае ошибки
-                        setTimeout(pollVideo, 1000);
-                    });
-            }
-            
-            videoPollingActive = true;
-            pollVideo();
-        }
-
-        // Получение аудио с помощью Long Polling
-        function startReceivingAudio(roomName) {
-            const userId = '{{ user.username }}';
-            
-            // Функция для выполнения long polling запроса
-            function pollAudio() {
-                if (!audioPollingActive) return;
-                
-                fetch(`/api/conference/${roomName}/audio/${userId}`)
-                    .then(response => {
-                        if (!response.ok) throw new Error('Network response was not ok');
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data && data.audio) {
-                            playRemoteAudio(data.user_id, data.audio);
-                        }
-                        
-                        // Сразу начинаем следующий запрос
-                        pollAudio();
-                    })
-                    .catch(error => {
-                        console.error('Audio polling error:', error);
-                        // Повторяем запрос через 1 секунду в случае ошибки
-                        setTimeout(pollAudio, 1000);
-                    });
-            }
-            
-            audioPollingActive = true;
-            pollAudio();
-        }
-
-        // Воспроизведение аудио другого участника
-        function playRemoteAudio(userId, audioData) {
-            try {
-                const audio = new Audio();
-                const audioBlob = base64ToBlob(audioData, 'audio/wav');
-                const audioUrl = URL.createObjectURL(audioBlob);
-                
-                audio.src = audioUrl;
-                audio.play().catch(e => console.error('Error playing audio:', e));
-            } catch (error) {
-                console.error('Error playing audio:', error);
-            }
-        }
-
-        // Демонстрация экрана (только для учителя)
-        async function startScreenSharing() {
-            try {
-                if (videoInterval) {
-                    clearInterval(videoInterval);
-                    videoInterval = null;
-                }
-                
-                screenStream = await navigator.mediaDevices.getDisplayMedia({
-                    video: true,
-                    audio: false
-                });
-                
-                const screenVideo = document.getElementById('screenShare');
-                screenVideo.srcObject = screenStream;
-                
-                document.getElementById('screenContainer').style.display = 'block';
-                isScreenSharing = true;
-                
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                screenInterval = setInterval(async () => {
-                    try {
-                        canvas.width = screenVideo.videoWidth;
-                        canvas.height = screenVideo.videoHeight;
-                        ctx.drawImage(screenVideo, 0, 0, canvas.width, canvas.height);
-                        
-                        const frame = canvas.toDataURL('image/jpeg', 0.7);
-                        
-                        await fetch(`/api/conference/${currentRoom}/screen`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                frame: frame,
-                                timestamp: Date.now()
-                            })
-                        });
-                    } catch (error) {
-                        console.error('Error sending screen frame:', error);
                     }
-                }, 200);
-                
-                screenStream.getVideoTracks()[0].onended = () => {
-                    stopScreenSharing();
-                };
-            } catch (error) {
-                console.error('Error starting screen sharing:', error);
-            }
-        }
-
-        // Остановка демонстрации экрана
-        function stopScreenSharing() {
-            if (screenInterval) {
-                clearInterval(screenInterval);
-                screenInterval = null;
+                    
+                    // Повторяем запрос через 200 мс
+                    setTimeout(updateRemoteVideo, 200);
+                } catch (error) {
+                    console.error('Error updating remote video:', error);
+                    // Повторяем запрос через 1 секунду в случае ошибки
+                    setTimeout(updateRemoteVideo, 1000);
+                }
             }
             
-            if (screenStream) {
-                screenStream.getTracks().forEach(track => track.stop());
-                screenStream = null;
-            }
-            
-            document.getElementById('screenContainer').style.display = 'none';
-            isScreenSharing = false;
-            
-            if (localStream && currentRoom) {
-                startSendingVideo(currentRoom);
-            }
-            
-            if (document.getElementById('shareScreenBtn')) {
-                document.getElementById('shareScreenBtn').innerHTML = '<i class="fas fa-desktop"></i> Демонстрация экрана';
-            }
+            // Запускаем процесс обновления
+            updateRemoteVideo();
         }
 
         // Выход из конференции
         async function leaveConference() {
-            videoPollingActive = false;
-            audioPollingActive = false;
-            
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
                 localStream = null;
             }
             
-            if (screenStream) {
-                screenStream.getTracks().forEach(track => track.stop());
-                screenStream = null;
-            }
-            
-            if (remoteVideoStream) {
-                remoteVideoStream.getTracks().forEach(track => track.stop());
-                remoteVideoStream = null;
-            }
-            
             if (videoInterval) clearInterval(videoInterval);
             if (audioInterval) clearInterval(audioInterval);
-            if (screenInterval) clearInterval(screenInterval);
-            
-            if (audioProcessor) {
-                audioProcessor.disconnect();
-                audioProcessor = null;
-            }
-            
-            if (audioContext) {
-                audioContext.close();
-                audioContext = null;
-            }
-            
-            document.getElementById('waitingMessage').style.display = 'flex';
-            document.getElementById('remoteVideoContainer').style.display = 'none';
-            document.getElementById('localVideoContainer').style.display = 'none';
             
             const remoteVideo = document.getElementById('remoteVideo');
             if (remoteVideo.srcObject) {
                 remoteVideo.srcObject.getTracks().forEach(track => track.stop());
                 remoteVideo.srcObject = null;
             }
+            
+            document.getElementById('waitingMessage').style.display = 'flex';
+            document.getElementById('remoteVideoContainer').style.display = 'none';
+            document.getElementById('localVideoContainer').style.display = 'none';
             
             if (currentRoom) {
                 await fetch(`/api/conference/${currentRoom}/leave`, {
@@ -1498,15 +1231,10 @@
                         'Content-Type': 'application/json',
                     }
                 });
-                
                 currentRoom = null;
             }
             
             document.getElementById('conferenceSection').style.display = 'none';
-            
-            if ({% if is_teacher %}true{% else %}false{% endif %}) {
-                updateConferenceStatus();
-            }
         }
 
         // Полноэкранный режим
@@ -1568,61 +1296,6 @@
             }
         }
 
-        // Вспомогательные функции
-        function encodeWAV(samples, sampleRate) {
-            const buffer = new ArrayBuffer(44 + samples.length * 2);
-            const view = new DataView(buffer);
-            
-            writeString(view, 0, 'RIFF');
-            view.setUint32(4, 36 + samples.length * 2, true);
-            writeString(view, 8, 'WAVE');
-            writeString(view, 12, 'fmt ');
-            view.setUint32(16, 16, true);
-            view.setUint16(20, 1, true);
-            view.setUint16(22, 1, true);
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, sampleRate * 2, true);
-            view.setUint16(32, 2, true);
-            view.setUint16(34, 16, true);
-            writeString(view, 36, 'data');
-            view.setUint32(40, samples.length * 2, true);
-            
-            const volume = 1;
-            for (let i = 0; i < samples.length; i++) {
-                const sample = Math.max(-1, Math.min(1, samples[i] * volume));
-                view.setInt16(44 + i * 2, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-            }
-            
-            return buffer;
-        }
-
-        function writeString(view, offset, string) {
-            for (let i = 0; i < string.length; i++) {
-                view.setUint8(offset + i, string.charCodeAt(i));
-            }
-        }
-
-        function arrayBufferToBase64(buffer) {
-            let binary = '';
-            const bytes = new Uint8Array(buffer);
-            for (let i = 0; i < bytes.byteLength; i++) {
-                binary += String.fromCharCode(bytes[i]);
-            }
-            return window.btoa(binary);
-        }
-
-        function base64ToBlob(base64, mimeType) {
-            const byteCharacters = atob(base64.split(',')[1]);
-            const byteNumbers = new Array(byteCharacters.length);
-            
-            for (let i = 0; i < byteCharacters.length; i++) {
-                byteNumbers[i] = byteCharacters.charCodeAt(i);
-            }
-            
-            const byteArray = new Uint8Array(byteNumbers);
-            return new Blob([byteArray], { type: mimeType });
-        }
-
         // Обработчики кнопок
         document.getElementById('toggleVideoBtn').addEventListener('click', toggleVideo);
         document.getElementById('toggleAudioBtn').addEventListener('click', toggleAudio);
@@ -1637,19 +1310,58 @@
 
         // Для учителя: кнопка демонстрации экрана
         if ({% if is_teacher %}true{% else %}false{% endif %}) {
-            document.getElementById('shareScreenBtn').addEventListener('click', function() {
-                if (!isScreenSharing) {
-                    startScreenSharing();
-                    this.innerHTML = '<i class="fas fa-stop"></i> Остановить демонстрацию';
-                } else {
-                    stopScreenSharing();
-                    this.innerHTML = '<i class="fas fa-desktop"></i> Демонстрация экрана';
+            // Демонстрация экрана
+            async function startScreenSharing() {
+                try {
+                    const stream = await navigator.mediaDevices.getDisplayMedia({
+                        video: true,
+                        audio: false
+                    });
+                    
+                    const screenVideo = document.getElementById('screenShare');
+                    screenVideo.srcObject = stream;
+                    document.getElementById('screenContainer').style.display = 'block';
+                    
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    const interval = setInterval(async () => {
+                        try {
+                            canvas.width = screenVideo.videoWidth;
+                            canvas.height = screenVideo.videoHeight;
+                            ctx.drawImage(screenVideo, 0, 0, canvas.width, canvas.height);
+                            
+                            const frame = canvas.toDataURL('image/jpeg', 0.7);
+                            
+                            await fetch(`/api/conference/${currentRoom}/screen`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    frame: frame,
+                                    timestamp: Date.now()
+                                })
+                            });
+                        } catch (error) {
+                            console.error('Error sending screen frame:', error);
+                        }
+                    }, 200);
+                    
+                    stream.getVideoTracks()[0].onended = () => {
+                        clearInterval(interval);
+                        document.getElementById('screenContainer').style.display = 'none';
+                        document.getElementById('shareScreenBtn').innerHTML = '<i class="fas fa-desktop"></i> Демонстрация экрана';
+                    };
+                    
+                    document.getElementById('shareScreenBtn').innerHTML = '<i class="fas fa-stop"></i> Остановить демонстрацию';
+                } catch (error) {
+                    console.error('Error starting screen sharing:', error);
                 }
-            });
-        }
-
-        // Для учителя: управление конференциями
-        if ({% if is_teacher %}true{% else %}false{% endif %}) {
+            }
+            
+            document.getElementById('shareScreenBtn').addEventListener('click', startScreenSharing);
+            
             // Обновление статуса конференции
             async function updateConferenceStatus() {
                 const roomName = `ZindakiRoom_{{ user.username }}`;
@@ -1823,7 +1535,7 @@
             }
         };
 
-        // Загрузка данных для учителя
+        // Для учителя: загрузка данных
         if ({% if is_teacher %}true{% else %}false{% endif %}) {
             // Функция для добавления пользователя
             function addUser(userData) {
@@ -1895,40 +1607,21 @@
                         const tableBody = document.getElementById('lessonsTable');
                         tableBody.innerHTML = '';
                         
-                        const lessonsByDate = {};
                         data.lessons.forEach(lesson => {
-                            const date = lesson.schedule.split('T')[0];
-                            if (!lessonsByDate[date]) lessonsByDate[date] = [];
-                            lessonsByDate[date].push(lesson);
-                        });
-                        
-                        const sortedDates = Object.keys(lessonsByDate).sort();
-                        
-                        sortedDates.forEach(date => {
-                            const dateRow = document.createElement('tr');
-                            dateRow.innerHTML = `<td colspan="6" style="background: #f0f0f0; font-weight: bold;">
-                                ${new Date(date).toLocaleDateString('ru-RU', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                            </td>`;
-                            tableBody.appendChild(dateRow);
-                            
-                            lessonsByDate[date].forEach(lesson => {
-                                const time = new Date(lesson.schedule).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-                                
-                                const row = document.createElement('tr');
-                                row.innerHTML = `
-                                    <td>${lesson.title}</td>
-                                    <td>${lesson.description || '-'}</td>
-                                    <td>${time}</td>
-                                    <td>${lesson.duration} мин</td>
-                                    <td>${lesson.students?.join(', ') || 'нет'}</td>
-                                    <td>
-                                        <button class="btn btn-danger" onclick="deleteLesson('${lesson.id}')">
-                                            <i class="fas fa-trash"></i> Удалить
-                                        </button>
-                                    </td>
-                                `;
-                                tableBody.appendChild(row);
-                            });
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${lesson.title}</td>
+                                <td>${lesson.description || '-'}</td>
+                                <td>${lesson.formatted_schedule || lesson.schedule}</td>
+                                <td>${lesson.duration} мин</td>
+                                <td>${lesson.students?.join(', ') || 'нет'}</td>
+                                <td>
+                                    <button class="btn btn-danger" onclick="deleteLesson('${lesson.id}')">
+                                        <i class="fas fa-trash"></i> Удалить
+                                    </button>
+                                </td>
+                            `;
+                            tableBody.appendChild(row);
                         });
                     })
                     .catch(error => {
@@ -2178,55 +1871,12 @@
                 const studentsSelect = document.getElementById('lessonStudents');
                 const students = Array.from(studentsSelect.selectedOptions).map(option => option.value);
                 
-                const recurrenceType = document.querySelector('input[name="recurrence"]:checked').value;
-                const weekdays = Array.from(document.querySelectorAll('input[name="weekdays"]:checked')).map(el => el.value);
-                const endType = document.getElementById('recurrenceEndType').value;
-                const endValue = endType === 'count' 
-                    ? document.getElementById('recurrenceCountValue').value
-                    : document.getElementById('recurrenceEndDateValue').value;
-                
-                const lessonsToCreate = [];
-                const startDate = new Date(`${date}T${time}:00`);
-                
-                if (recurrenceType === 'none') {
-                    lessonsToCreate.push({
-                        title, description, duration, students,
-                        schedule: startDate.toISOString()
-                    });
-                } else {
-                    const interval = recurrenceType === 'weekly' ? 1 : 2;
-                    let currentDate = new Date(startDate);
-                    let createdCount = 0;
-                    const maxLessons = endType === 'count' ? parseInt(endValue) : Infinity;
-                    const endDate = endType === 'date' ? new Date(endValue) : null;
-                    
-                    while (createdCount < maxLessons && (!endDate || currentDate <= endDate)) {
-                        if (weekdays.length === 0 || weekdays.includes(currentDate.getDay().toString())) {
-                            lessonsToCreate.push({
-                                title, description, duration, students,
-                                schedule: new Date(currentDate).toISOString()
-                            });
-                            createdCount++;
-                        }
-                        
-                        currentDate.setDate(currentDate.getDate() + (interval * 7));
-                    }
-                }
-                
-                Promise.all(lessonsToCreate.map(lesson => 
-                    fetch('/api/lessons', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(lesson)
-                    }).then(res => res.json())
-                )).then(results => {
-                    if (results.every(r => r.success)) {
-                        alert(`Успешно создано ${lessonsToCreate.length} занятий!`);
-                        loadLessons();
-                        document.getElementById('addLessonModal').style.display = 'none';
-                    } else {
-                        alert('Ошибка при создании некоторых занятий');
-                    }
+                addLesson({
+                    title,
+                    description,
+                    schedule: new Date(`${date}T${time}:00`).toISOString(),
+                    duration,
+                    students
                 });
             });
             
@@ -2266,23 +1916,6 @@
                         preview.innerHTML += `${i+1}. ${this.files[i].name}<br>`;
                     }
                 }
-            });
-            
-            // Обработчики для формы повторяющихся занятий
-            document.querySelectorAll('input[name="recurrence"]').forEach(radio => {
-                radio.addEventListener('change', function() {
-                    document.getElementById('weeklyOptions').style.display = 
-                        this.value === 'weekly' || this.value === 'biweekly' ? 'block' : 'none';
-                    document.getElementById('recurrenceEndOptions').style.display = 
-                        this.value !== 'none' ? 'block' : 'none';
-                });
-            });
-            
-            document.getElementById('recurrenceEndType').addEventListener('change', function() {
-                document.getElementById('recurrenceCount').style.display = 
-                    this.value === 'count' ? 'block' : 'none';
-                document.getElementById('recurrenceEndDate').style.display = 
-                    this.value === 'date' ? 'block' : 'none';
             });
             
             // Загрузка начальных данных
@@ -2377,16 +2010,6 @@
         // Проверка поддержки Web Audio API
         if (!window.AudioContext && !window.webkitAudioContext) {
             console.warn('Ваш браузер не поддерживает Web Audio API. Аудио может не работать.');
-        }
-
-        // Проверка разрешений
-        if (navigator.permissions && navigator.permissions.query) {
-            navigator.permissions.query({ name: 'microphone' }).then(permissionStatus => {
-                console.log('Microphone permission state:', permissionStatus.state);
-                permissionStatus.onchange = () => {
-                    console.log('Microphone permission changed to:', permissionStatus.state);
-                };
-            }).catch(err => console.error('Permission query error:', err));
         }
     </script>
 </body>
