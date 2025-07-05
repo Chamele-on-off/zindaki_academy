@@ -384,10 +384,6 @@ def join_conference(room_name):
     user_id = session['user']['username']
     participants[room_name].add(user_id)
     
-    # Обновляем список участников в активной конференции
-    if room_name in active_conferences:
-        active_conferences[room_name]['participants'] = list(participants[room_name])
-    
     return jsonify({
         'success': True,
         'room_name': room_name,
@@ -404,10 +400,6 @@ def leave_conference(room_name):
         participants[room_name].remove(user_id)
         if user_id in video_frames.get(room_name, {}):
             del video_frames[room_name][user_id]
-        
-        # Обновляем список участников в активной конференции
-        if room_name in active_conferences:
-            active_conferences[room_name]['participants'] = list(participants[room_name])
         
         if not participants[room_name]:
             if room_name in video_frames:
@@ -436,7 +428,7 @@ def receive_video_frame(room_name):
         video_frames[room_name][user_id] = {
             'frame': frame_data,
             'timestamp': time.time(),
-            'is_screen': False  # По умолчанию это не демонстрация экрана
+            'is_screen': False
         }
         
         return jsonify({'success': True})
@@ -444,31 +436,28 @@ def receive_video_frame(room_name):
         logger.error(f"Error processing video frame: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/conference/<room_name>/video/<user_id>')
-def get_video_feed(room_name, user_id):
-    try:
-        if room_name in video_frames and user_id in video_frames[room_name]:
-            frame_data = video_frames[room_name][user_id]
-            # Проверяем, не устарели ли данные (больше 5 секунд)
-            if time.time() - frame_data['timestamp'] > 5:
-                return jsonify({'error': 'Frame too old'}), 404
-            
-            # Оптимизированный ответ - только необходимые данные
-            return jsonify({
-                'user_id': user_id,
-                'frame': frame_data['frame'],
-                'timestamp': frame_data['timestamp'],
-                'is_screen': frame_data.get('is_screen', False)
-            })
-        return jsonify({'error': 'No video feed available'}), 404
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+@app.route('/video_feed/<room_name>/<user_id>')
+def video_feed(room_name, user_id):
+    def generate():
+        while True:
+            if room_name in video_frames and user_id in video_frames[room_name]:
+                frame_data = video_frames[room_name][user_id]
+                # Проверяем, не устарели ли данные (больше 5 секунд)
+                if time.time() - frame_data['timestamp'] > 5:
+                    continue
+                
+                frame = base64.b64decode(frame_data['frame'].split(',')[1])
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            time.sleep(0.1)  # 10 FPS
+    
+    return Response(generate(),
+                  mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/api/conference/<room_name>/screen', methods=['POST'])
 def receive_screen_frame(room_name):
     if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
+        return jsonify({'error': 'Unauthorized'}), 401    
     if session['user']['role'] != 'teacher':
         return jsonify({'error': 'Only teacher can share screen'}), 403
     
@@ -486,7 +475,7 @@ def receive_screen_frame(room_name):
         video_frames[room_name][user_id] = {
             'frame': frame_data,
             'timestamp': time.time(),
-            'is_screen': True  # Помечаем как демонстрацию экрана
+            'is_screen': True
         }
         
         return jsonify({'success': True})
