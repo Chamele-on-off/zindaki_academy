@@ -463,6 +463,22 @@ def receive_video_frame(room_name):
         logger.error(f"Error processing video frame: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/conference/<room_name>/video/<user_id>')
+def get_video_feed(room_name, user_id):
+    try:
+        if user_id in video_queues.get(room_name, {}):
+            frame_data = video_queues[room_name][user_id].get(timeout=30)  # Таймаут 30 секунд
+            return jsonify({
+                'user_id': frame_data['user_id'],
+                'frame': base64.b64encode(frame_data['frame']).decode('utf-8'),
+                'timestamp': frame_data['timestamp']
+            })
+        return jsonify({'error': 'No video feed available'}), 404
+    except queue.Empty:
+        return jsonify({'error': 'No frames available'}), 204
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/conference/<room_name>/audio', methods=['POST'])
 def receive_audio_chunk(room_name):
     if 'user' not in session:
@@ -491,6 +507,22 @@ def receive_audio_chunk(room_name):
         return jsonify({'success': True})
     except Exception as e:
         logger.error(f"Error processing audio chunk: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/conference/<room_name>/audio/<user_id>')
+def get_audio_feed(room_name, user_id):
+    try:
+        if user_id in audio_queues.get(room_name, {}):
+            audio_data = audio_queues[room_name][user_id].get(timeout=30)  # Таймаут 30 секунд
+            return jsonify({
+                'user_id': audio_data['user_id'],
+                'audio': base64.b64encode(audio_data['data']).decode('utf-8'),
+                'timestamp': audio_data['timestamp']
+            })
+        return jsonify({'error': 'No audio feed available'}), 404
+    except queue.Empty:
+        return jsonify({'error': 'No audio available'}), 204
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/conference/<room_name>/screen', methods=['POST'])
@@ -523,6 +555,22 @@ def receive_screen_frame(room_name):
     except Exception as e:
         logger.error(f"Error processing screen frame: {e}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/conference/<room_name>/screen_feed')
+def screen_feed(room_name):
+    def generate():
+        while True:
+            try:
+                if room_name in screen_queues:
+                    frame_data = screen_queues[room_name].get()
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + frame_data['frame'] + b'\r\n')
+                time.sleep(0.1)
+            except Exception as e:
+                logger.error(f"Screen feed error: {e}")
+                break
+    
+    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/api/conference/<room_name>/settings', methods=['POST'])
 def update_conference_settings(room_name):
@@ -634,91 +682,6 @@ def respond_to_invite(invite_id):
         return jsonify({'success': True})
     
     return jsonify({'error': 'Invite not found'}), 404
-
-# Потоки для видеоконференций
-@app.route('/video_feed/<room_name>/<user_id>')
-def video_feed(room_name, user_id):
-    def generate():
-        last_frame = None
-        last_frame_time = 0
-        frame_timeout = 3  # seconds
-        
-        while True:
-            try:
-                if user_id in video_queues.get(room_name, {}):
-                    try:
-                        # Получаем кадр с таймаутом
-                        frame_data = video_queues[room_name][user_id].get(timeout=frame_timeout)
-                        last_frame = frame_data['frame']
-                        last_frame_time = time.time()
-                        
-                        yield (b'--frame\r\n'
-                               b'Content-Type: image/jpeg\r\n\r\n' + last_frame + b'\r\n')
-                    except queue.Empty:
-                        # Если нет новых кадров, отправляем последний полученный кадр
-                        if last_frame and (time.time() - last_frame_time) < frame_timeout:
-                            yield (b'--frame\r\n'
-                                   b'Content-Type: image/jpeg\r\n\r\n' + last_frame + b'\r\n')
-                        else:
-                            # Если кадры не поступают слишком долго, ждем новый
-                            continue
-                else:
-                    time.sleep(0.1)
-            except Exception as e:
-                logger.error(f"Video feed error for {user_id}: {e}")
-                break
-    
-    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
-
-@app.route('/audio_feed/<room_name>/<user_id>')
-def audio_feed(room_name, user_id):
-    def generate():
-        while True:
-            try:
-                if user_id in audio_queues.get(room_name, {}):
-                    audio_data = audio_queues[room_name][user_id].get()
-                    yield (b'--frame\r\n'
-                           b'Content-Type: audio/wav\r\n\r\n' + audio_data['data'] + b'\r\n')
-                time.sleep(0.02)
-            except Exception as e:
-                logger.error(f"Audio feed error for {user_id}: {e}")
-                break
-    
-    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
-
-@app.route('/screen_feed/<room_name>')
-def screen_feed(room_name):
-    def generate():
-        last_frame = None
-        last_frame_time = 0
-        frame_timeout = 3  # seconds
-        
-        while True:
-            try:
-                if room_name in screen_queues:
-                    try:
-                        # Получаем кадр с таймаутом
-                        frame_data = screen_queues[room_name].get(timeout=frame_timeout)
-                        last_frame = frame_data['frame']
-                        last_frame_time = time.time()
-                        
-                        yield (b'--frame\r\n'
-                               b'Content-Type: image/jpeg\r\n\r\n' + last_frame + b'\r\n')
-                    except queue.Empty:
-                        # Если нет новых кадров, отправляем последний полученный кадр
-                        if last_frame and (time.time() - last_frame_time) < frame_timeout:
-                            yield (b'--frame\r\n'
-                                   b'Content-Type: image/jpeg\r\n\r\n' + last_frame + b'\r\n')
-                        else:
-                            # Если кадры не поступают слишком долго, ждем новый
-                            continue
-                else:
-                    time.sleep(0.1)
-            except Exception as e:
-                logger.error(f"Screen feed error: {e}")
-                break
-    
-    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 # Главная страница и все SPA-роуты
 @app.route('/')
