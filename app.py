@@ -67,7 +67,7 @@ class DB:
     @staticmethod
     def get_user(username):
         users = DB.get_users()
-        return next((u for u in users if u['username'] == username), None)
+        return next((u for u in users if u['username'] == username), None
 
     @staticmethod
     def save_user(username, email, password, role='student', is_active=True):
@@ -115,7 +115,7 @@ class DB:
     @staticmethod
     def get_lesson(lesson_id):
         lessons = DB.get_lessons()
-        return next((l for l in lessons if l['id'] == lesson_id), None)
+        return next((l for l in lessons if l['id'] == lesson_id), None
 
     @staticmethod
     def save_lesson(title, description, teacher, schedule, duration=60, program_type='languages', students=None, recurrence=None):
@@ -639,13 +639,31 @@ def respond_to_invite(invite_id):
 @app.route('/video_feed/<room_name>/<user_id>')
 def video_feed(room_name, user_id):
     def generate():
+        last_frame = None
+        last_frame_time = 0
+        frame_timeout = 3  # seconds
+        
         while True:
             try:
                 if user_id in video_queues.get(room_name, {}):
-                    frame_data = video_queues[room_name][user_id].get()
-                    yield (b'--frame\r\n'
-                           b'Content-Type: image/jpeg\r\n\r\n' + frame_data['frame'] + b'\r\n')
-                time.sleep(0.05)
+                    try:
+                        # Получаем кадр с таймаутом
+                        frame_data = video_queues[room_name][user_id].get(timeout=frame_timeout)
+                        last_frame = frame_data['frame']
+                        last_frame_time = time.time()
+                        
+                        yield (b'--frame\r\n'
+                               b'Content-Type: image/jpeg\r\n\r\n' + last_frame + b'\r\n')
+                    except queue.Empty:
+                        # Если нет новых кадров, отправляем последний полученный кадр
+                        if last_frame and (time.time() - last_frame_time) < frame_timeout:
+                            yield (b'--frame\r\n'
+                                   b'Content-Type: image/jpeg\r\n\r\n' + last_frame + b'\r\n')
+                        else:
+                            # Если кадры не поступают слишком долго, ждем новый
+                            continue
+                else:
+                    time.sleep(0.1)
             except Exception as e:
                 logger.error(f"Video feed error for {user_id}: {e}")
                 break
@@ -671,13 +689,31 @@ def audio_feed(room_name, user_id):
 @app.route('/screen_feed/<room_name>')
 def screen_feed(room_name):
     def generate():
+        last_frame = None
+        last_frame_time = 0
+        frame_timeout = 3  # seconds
+        
         while True:
             try:
                 if room_name in screen_queues:
-                    frame_data = screen_queues[room_name].get()
-                    yield (b'--frame\r\n'
-                           b'Content-Type: image/jpeg\r\n\r\n' + frame_data['frame'] + b'\r\n')
-                time.sleep(0.1)
+                    try:
+                        # Получаем кадр с таймаутом
+                        frame_data = screen_queues[room_name].get(timeout=frame_timeout)
+                        last_frame = frame_data['frame']
+                        last_frame_time = time.time()
+                        
+                        yield (b'--frame\r\n'
+                               b'Content-Type: image/jpeg\r\n\r\n' + last_frame + b'\r\n')
+                    except queue.Empty:
+                        # Если нет новых кадров, отправляем последний полученный кадр
+                        if last_frame and (time.time() - last_frame_time) < frame_timeout:
+                            yield (b'--frame\r\n'
+                                   b'Content-Type: image/jpeg\r\n\r\n' + last_frame + b'\r\n')
+                        else:
+                            # Если кадры не поступают слишком долго, ждем новый
+                            continue
+                else:
+                    time.sleep(0.1)
             except Exception as e:
                 logger.error(f"Screen feed error: {e}")
                 break
