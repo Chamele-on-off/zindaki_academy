@@ -541,15 +541,15 @@ def receive_screen_frame(room_name):
     try:
         frame = base64.b64decode(frame_data.split(',')[1])
         
-        for participant in participants[room_name]:
-            try:
-                screen_queues[room_name].put({
-                    'user_id': user_id,
-                    'frame': frame,
-                    'timestamp': time.time()
-                })
-            except Exception as e:
-                logger.error(f"Error sending screen to {participant}: {e}")
+        # Останавливаем передачу обычного видео при демонстрации экрана
+        room_settings[room_name]['screen_sharing'] = True
+        
+        # Отправляем кадр экрана всем участникам
+        screen_queues[room_name].put({
+            'user_id': user_id,
+            'frame': frame,
+            'timestamp': time.time()
+        })
         
         return jsonify({'success': True})
     except Exception as e:
@@ -985,7 +985,7 @@ def api_get_homework(homework_id):
     return jsonify({'homework': homework})
 
 @app.route('/api/homework/<int:homework_id>/submit', methods=['POST'])
-def api_submit_homework(homework_id):
+def api_submit_homework(homework_id, student_username, comment, files=None):
     if 'user' not in session or session['user']['role'] != 'student':
         return jsonify({'error': 'Unauthorized'}), 401
     
