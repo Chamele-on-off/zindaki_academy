@@ -771,6 +771,20 @@
                 <div id="waitingMessage">
                     <p>Ожидаем подключения другого участника...</p>
                 </div>
+                
+                <!-- Демонстрация экрана -->
+                <div class="screen-container" id="screenContainer">
+                    <video id="screenShare" autoplay></video>
+                    <div class="video-label">Демонстрация экрана</div>
+                    <div class="video-controls">
+                        <button class="video-control-btn" onclick="stopScreenSharing()">
+                            <i class="fas fa-stop"></i>
+                        </button>
+                        <button class="video-control-btn" onclick="toggleFullscreen('screenShare')">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
             
             <!-- Маленькое окно с локальным видео (в правом нижнем углу) -->
@@ -786,22 +800,6 @@
                     </button>
                 </div>
             </div>
-            
-            {% if is_teacher %}
-            <!-- Демонстрация экрана -->
-            <div class="screen-container" id="screenContainer">
-                <video id="screenShare" autoplay></video>
-                <div class="video-label">Демонстрация экрана</div>
-                <div class="video-controls">
-                    <button class="video-control-btn" onclick="stopScreenSharing()">
-                        <i class="fas fa-stop"></i>
-                    </button>
-                    <button class="video-control-btn" onclick="toggleFullscreen('screenShare')">
-                        <i class="fas fa-expand"></i>
-                    </button>
-                </div>
-            </div>
-            {% endif %}
             
             <div class="participants-list" id="participantsList">
                 <h4>Участники:</h4>
@@ -1048,6 +1046,7 @@
         let isAudioEnabled = true;
         let videoInterval = null;
         let audioInterval = null;
+        let screenStream = null;
 
         // Инициализация видеоконференции
         async function initConference(roomName) {
@@ -1083,6 +1082,9 @@
                     
                     document.getElementById('conferenceSection').style.display = 'block';
                     document.getElementById('conferenceSection').scrollIntoView({ behavior: 'smooth' });
+                    
+                    // Обновляем список участников
+                    updateParticipantsList(roomName);
                 }
             } catch (error) {
                 console.error('Error initializing conference:', error);
@@ -1136,6 +1138,8 @@
             const remoteVideo = document.getElementById('remoteVideo');
             const remoteVideoContainer = document.getElementById('remoteVideoContainer');
             const waitingMessage = document.getElementById('waitingMessage');
+            const screenContainer = document.getElementById('screenContainer');
+            const screenShare = document.getElementById('screenShare');
             
             // Создаем MediaStream для удаленного видео
             const remoteStream = new MediaStream();
@@ -1165,27 +1169,38 @@
                                 
                                 if (videoData && videoData.frame) {
                                     waitingMessage.style.display = 'none';
-                                    remoteVideoContainer.style.display = 'block';
                                     
-                                    // Создаем изображение из полученных данных
-                                    const img = new Image();
-                                    img.onload = function() {
-                                        const tempCanvas = document.createElement('canvas');
-                                        tempCanvas.width = img.width;
-                                        tempCanvas.height = img.height;
-                                        const tempCtx = tempCanvas.getContext('2d');
-                                        tempCtx.drawImage(img, 0, 0);
+                                    // Определяем, что показывать - экран или видео
+                                    if (videoData.is_screen) {
+                                        remoteVideoContainer.style.display = 'none';
+                                        screenContainer.style.display = 'block';
+                                        screenShare.src = videoData.frame;
+                                    } else {
+                                        remoteVideoContainer.style.display = 'block';
+                                        screenContainer.style.display = 'none';
                                         
-                                        // Конвертируем в видео поток
-                                        const stream = tempCanvas.captureStream(5);
-                                        
-                                        // Обновляем удаленное видео
-                                        if (remoteVideo.srcObject) {
-                                            remoteVideo.srcObject.getVideoTracks().forEach(track => track.stop());
-                                        }
-                                        remoteVideo.srcObject = stream;
-                                    };
-                                    img.src = videoData.frame;
+                                        // Создаем изображение из полученных данных
+                                        const img = new Image();
+                                        img.onload = function() {
+                                            const tempCanvas = document.createElement('canvas');
+                                            tempCanvas.width = img.width;
+                                            tempCanvas.height = img.height;
+                                            const tempCtx = tempCanvas.getContext('2d');
+                                            tempCtx.drawImage(img, 0, 0);
+                                            
+                                            // Конвертируем в видео поток
+                                            const stream = tempCanvas.captureStream(5);
+                                            
+                                            // Обновляем удаленное видео
+                                            if (remoteVideo.srcObject) {
+                                                remoteVideo.srcObject.getVideoTracks().forEach(track => track.stop());
+                                            }
+                                            remoteVideo.srcObject = stream;
+                                            remoteVideo.play().catch(e => console.error("Video play error:", e));
+                                        };
+                                        img.onerror = () => console.error("Failed to load video frame");
+                                        img.src = videoData.frame;
+                                    }
                                 }
                             }
                         }
@@ -1204,11 +1219,50 @@
             updateRemoteVideo();
         }
 
+        // Обновление списка участников
+        async function updateParticipantsList(roomName) {
+            try {
+                const response = await fetch(`/api/conference/${roomName}/join`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    const participantsList = document.getElementById('participantsList');
+                    participantsList.innerHTML = '<h4>Участники:</h4>';
+                    
+                    data.participants.forEach(participant => {
+                        const participantItem = document.createElement('div');
+                        participantItem.className = 'participant-item';
+                        participantItem.innerHTML = `
+                            <div class="participant-avatar">${participant.charAt(0).toUpperCase()}</div>
+                            <div>${participant}</div>
+                        `;
+                        participantsList.appendChild(participantItem);
+                    });
+                }
+                
+                // Обновляем список каждые 5 секунд
+                setTimeout(() => updateParticipantsList(roomName), 5000);
+            } catch (error) {
+                console.error('Error updating participants list:', error);
+                setTimeout(() => updateParticipantsList(roomName), 5000);
+            }
+        }
+
         // Выход из конференции
         async function leaveConference() {
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
                 localStream = null;
+            }
+            
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+                screenStream = null;
             }
             
             if (videoInterval) clearInterval(videoInterval);
@@ -1223,6 +1277,7 @@
             document.getElementById('waitingMessage').style.display = 'flex';
             document.getElementById('remoteVideoContainer').style.display = 'none';
             document.getElementById('localVideoContainer').style.display = 'none';
+            document.getElementById('screenContainer').style.display = 'none';
             
             if (currentRoom) {
                 await fetch(`/api/conference/${currentRoom}/leave`, {
@@ -1296,6 +1351,17 @@
             }
         }
 
+        // Остановка демонстрации экрана
+        function stopScreenSharing() {
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+                screenStream = null;
+            }
+            
+            document.getElementById('screenContainer').style.display = 'none';
+            document.getElementById('shareScreenBtn').innerHTML = '<i class="fas fa-desktop"></i> Демонстрация экрана';
+        }
+
         // Обработчики кнопок
         document.getElementById('toggleVideoBtn').addEventListener('click', toggleVideo);
         document.getElementById('toggleAudioBtn').addEventListener('click', toggleAudio);
@@ -1313,13 +1379,13 @@
             // Демонстрация экрана
             async function startScreenSharing() {
                 try {
-                    const stream = await navigator.mediaDevices.getDisplayMedia({
+                    screenStream = await navigator.mediaDevices.getDisplayMedia({
                         video: true,
                         audio: false
                     });
                     
                     const screenVideo = document.getElementById('screenShare');
-                    screenVideo.srcObject = stream;
+                    screenVideo.srcObject = screenStream;
                     document.getElementById('screenContainer').style.display = 'block';
                     
                     const canvas = document.createElement('canvas');
@@ -1348,10 +1414,9 @@
                         }
                     }, 200);
                     
-                    stream.getVideoTracks()[0].onended = () => {
+                    screenStream.getVideoTracks()[0].onended = () => {
                         clearInterval(interval);
-                        document.getElementById('screenContainer').style.display = 'none';
-                        document.getElementById('shareScreenBtn').innerHTML = '<i class="fas fa-desktop"></i> Демонстрация экрана';
+                        stopScreenSharing();
                     };
                     
                     document.getElementById('shareScreenBtn').innerHTML = '<i class="fas fa-stop"></i> Остановить демонстрацию';
