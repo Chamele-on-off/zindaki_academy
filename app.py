@@ -8,6 +8,8 @@ import time
 import logging
 from collections import defaultdict
 import base64
+import threading
+from queue import Queue
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
@@ -31,6 +33,27 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 video_frames = defaultdict(dict)  # room -> user -> last_frame
 participants = defaultdict(set)
 active_conferences = defaultdict(dict)
+frame_queues = defaultdict(Queue)  # Очереди для каждого потока видео
+
+# Очистка старых кадров
+def cleanup_old_frames():
+    while True:
+        try:
+            current_time = time.time()
+            for room in list(video_frames.keys()):
+                for user in list(video_frames[room].keys()):
+                    frame_data = video_frames[room][user]
+                    if current_time - frame_data['timestamp'] > 5:  # Удаляем кадры старше 5 секунд
+                        del video_frames[room][user]
+                if not video_frames[room]:  # Если в комнате больше нет кадров
+                    del video_frames[room]
+        except Exception as e:
+            logger.error(f"Error in cleanup_old_frames: {e}")
+        time.sleep(1)
+
+# Запускаем очистку в отдельном потоке
+cleanup_thread = threading.Thread(target=cleanup_old_frames, daemon=True)
+cleanup_thread.start()
 
 class DB:
     @staticmethod
@@ -439,17 +462,32 @@ def receive_video_frame(room_name):
 @app.route('/video_feed/<room_name>/<user_id>')
 def video_feed(room_name, user_id):
     def generate():
+        last_frame_time = 0
         while True:
-            if room_name in video_frames and user_id in video_frames[room_name]:
-                frame_data = video_frames[room_name][user_id]
-                # Проверяем, не устарели ли данные (больше 5 секунд)
-                if time.time() - frame_data['timestamp'] > 5:
-                    continue
-                
-                frame = base64.b64decode(frame_data['frame'].split(',')[1])
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-            time.sleep(0.05)  # 10 FPS
+            try:
+                if room_name in video_frames and user_id in video_frames[room_name]:
+                    frame_data = video_frames[room_name][user_id]
+                    
+                    # Проверяем, не устарели ли данные (больше 5 секунд)
+                    current_time = time.time()
+                    if current_time - frame_data['timestamp'] > 5:
+                        time.sleep(0.1)
+                        continue
+                    
+                    # Проверяем, не слишком ли быстро обновляем кадры
+                    if current_time - last_frame_time < 0.1:  # Не чаще 10 FPS
+                        time.sleep(0.1 - (current_time - last_frame_time))
+                        continue
+                    
+                    frame = base64.b64decode(frame_data['frame'].split(',')[1])
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                    last_frame_time = time.time()
+                else:
+                    time.sleep(0.1)
+            except Exception as e:
+                logger.error(f"Error in video feed generation: {e}")
+                time.sleep(0.1)
     
     return Response(generate(),
                   mimetype='multipart/x-mixed-replace; boundary=frame')
@@ -950,4 +988,4 @@ def api_contact():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=7001, debug=os.environ.get('FLASK_DEBUG', False))
+    app.run(host='0.0.0.0', port=7001, debug=os.environ.get('FLASK_DEBUG', False), threaded=True)
