@@ -10,4 +10,4 @@ Pillow==10.0.1
 wave==0.0.2
 python-engineio==4.5.1
 python-socketio==5.8.0
-opencv-python==2.4.9
+opencv-python==2.8.0.76
