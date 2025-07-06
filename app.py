@@ -6,10 +6,10 @@ from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import time
 import logging
-from collections import defaultdict
+from collections import defaultdict, deque
 import base64
 import threading
-from queue import Queue
+import queue
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
@@ -30,30 +30,64 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
 # Глобальные переменные для видеоконференций
-video_frames = defaultdict(dict)  # room -> user -> last_frame
 participants = defaultdict(set)
 active_conferences = defaultdict(dict)
-frame_queues = defaultdict(Queue)  # Очереди для каждого потока видео
+frame_buffers = defaultdict(lambda: defaultdict(deque))  # Буфер кадров для каждого пользователя
+frame_timestamps = defaultdict(dict)  # Временные метки последних кадров
+last_cleanup_time = time.time()
 
-# Очистка старых кадров
-def cleanup_old_frames():
-    while True:
-        try:
-            current_time = time.time()
-            for room in list(video_frames.keys()):
-                for user in list(video_frames[room].keys()):
-                    frame_data = video_frames[room][user]
-                    if current_time - frame_data['timestamp'] > 5:  # Удаляем кадры старше 5 секунд
-                        del video_frames[room][user]
-                if not video_frames[room]:  # Если в комнате больше нет кадров
-                    del video_frames[room]
-        except Exception as e:
-            logger.error(f"Error in cleanup_old_frames: {e}")
-        time.sleep(1)
+# Функция для очистки старых данных
+def cleanup_old_data():
+    global last_cleanup_time
+    current_time = time.time()
+    if current_time - last_cleanup_time < 5:  # Очистка каждые 5 секунд
+        return
+    
+    try:
+        # Очистка старых кадров (старше 3 секунд)
+        for room in list(frame_buffers.keys()):
+            for user in list(frame_buffers[room].keys()):
+                if current_time - frame_timestamps.get(room, {}).get(user, 0) > 3:
+                    if user in frame_buffers[room]:
+                        del frame_buffers[room][user]
+                    if user in frame_timestamps.get(room, {}):
+                        del frame_timestamps[room][user]
+            
+            # Удаляем пустые комнаты
+            if not frame_buffers[room] and room not in participants:
+                del frame_buffers[room]
+                if room in frame_timestamps:
+                    del frame_timestamps[room]
+        
+        # Очистка участников без активности
+        for room in list(participants.keys()):
+            if not participants[room]:
+                if room in frame_buffers:
+                    del frame_buffers[room]
+                if room in frame_timestamps:
+                    del frame_timestamps[room]
+                if room in active_conferences:
+                    del active_conferences[room]
+                del participants[room]
+    
+    except Exception as e:
+        logger.error(f"Error in cleanup: {e}")
+    finally:
+        last_cleanup_time = current_time
 
-# Запускаем очистку в отдельном потоке
-cleanup_thread = threading.Thread(target=cleanup_old_frames, daemon=True)
-cleanup_thread.start()
+# Оптимизированная функция для обработки видео
+def process_video_frame(room_name, user_id, frame_data):
+    try:
+        cleanup_old_data()
+        
+        # Ограничиваем размер буфера для каждого пользователя
+        if len(frame_buffers[room_name][user_id]) > 5:  # Максимум 5 кадров в буфере
+            frame_buffers[room_name][user_id].popleft()
+        
+        frame_buffers[room_name][user_id].append(frame_data)
+        frame_timestamps[room_name][user_id] = time.time()
+    except Exception as e:
+        logger.error(f"Error processing video frame: {e}")
 
 class DB:
     @staticmethod
@@ -80,7 +114,7 @@ class DB:
     @staticmethod
     def get_user(username):
         users = DB.get_users()
-        return next((u for u in users if u['username'] == username), None)
+        return next((u for u in users if u['username'] == username), None
 
     @staticmethod
     def save_user(username, email, password, role='student', is_active=True):
@@ -128,7 +162,7 @@ class DB:
     @staticmethod
     def get_lesson(lesson_id):
         lessons = DB.get_lessons()
-        return next((l for l in lessons if l['id'] == lesson_id), None)
+        return next((l for l in lessons if l['id'] == lesson_id), None
 
     @staticmethod
     def save_lesson(title, description, teacher, schedule, duration=60, program_type='languages', students=None, recurrence=None):
@@ -222,7 +256,7 @@ class DB:
     @staticmethod
     def get_homework(homework_id):
         homeworks = DB.get_homeworks()
-        return next((h for h in homeworks if h['id'] == homework_id), None)
+        return next((h for h in homeworks if h['id'] == homework_id), None
 
     @staticmethod
     def save_homework(lesson_id, title, description, deadline, teacher, students=None, files=None):
@@ -421,12 +455,16 @@ def leave_conference(room_name):
     user_id = session['user']['username']
     if room_name in participants and user_id in participants[room_name]:
         participants[room_name].remove(user_id)
-        if user_id in video_frames.get(room_name, {}):
-            del video_frames[room_name][user_id]
+        if room_name in frame_buffers and user_id in frame_buffers[room_name]:
+            del frame_buffers[room_name][user_id]
+        if room_name in frame_timestamps and user_id in frame_timestamps[room_name]:
+            del frame_timestamps[room_name][user_id]
         
         if not participants[room_name]:
-            if room_name in video_frames:
-                del video_frames[room_name]
+            if room_name in frame_buffers:
+                del frame_buffers[room_name]
+            if room_name in frame_timestamps:
+                del frame_timestamps[room_name]
             if room_name in active_conferences:
                 del active_conferences[room_name]
     
@@ -443,48 +481,41 @@ def receive_video_frame(room_name):
     if not frame_data:
         return jsonify({'error': 'No frame data provided'}), 400
     
-    try:
-        # Сохраняем последний кадр для этого пользователя
-        if room_name not in video_frames:
-            video_frames[room_name] = {}
-        
-        video_frames[room_name][user_id] = {
-            'frame': frame_data,
-            'timestamp': time.time(),
-            'is_screen': False
-        }
-        
-        return jsonify({'success': True})
-    except Exception as e:
-        logger.error(f"Error processing video frame: {e}")
-        return jsonify({'error': str(e)}), 500
+    process_video_frame(room_name, user_id, frame_data)
+    return jsonify({'success': True})
 
 @app.route('/video_feed/<room_name>/<user_id>')
 def video_feed(room_name, user_id):
     def generate():
         last_frame_time = 0
+        target_fps = 15  # Целевая частота кадров
+        frame_interval = 1.0 / target_fps
+        
         while True:
             try:
-                if room_name in video_frames and user_id in video_frames[room_name]:
-                    frame_data = video_frames[room_name][user_id]
+                current_time = time.time()
+                
+                # Проверяем наличие новых кадров
+                if (room_name in frame_buffers and 
+                    user_id in frame_buffers[room_name] and 
+                    frame_buffers[room_name][user_id]):
                     
-                    # Проверяем, не устарели ли данные (больше 5 секунд)
-                    current_time = time.time()
-                    if current_time - frame_data['timestamp'] > 5:
-                        time.sleep(0.1)
-                        continue
+                    # Получаем самый свежий кадр из буфера
+                    frame_data = frame_buffers[room_name][user_id][-1]
                     
-                    # Проверяем, не слишком ли быстро обновляем кадры
-                    if current_time - last_frame_time < 0.1:  # Не чаще 10 FPS
-                        time.sleep(0.1 - (current_time - last_frame_time))
-                        continue
+                    # Рассчитываем время для поддержания целевого FPS
+                    elapsed = current_time - last_frame_time
+                    if elapsed < frame_interval:
+                        time.sleep(frame_interval - elapsed)
                     
-                    frame = base64.b64decode(frame_data['frame'].split(',')[1])
+                    # Отправляем кадр
+                    frame = base64.b64decode(frame_data.split(',')[1])
                     yield (b'--frame\r\n'
                            b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                    
                     last_frame_time = time.time()
                 else:
-                    time.sleep(0.1)
+                    time.sleep(0.01)  # Короткая пауза, если нет кадров
             except Exception as e:
                 logger.error(f"Error in video feed generation: {e}")
                 time.sleep(0.1)
@@ -505,21 +536,8 @@ def receive_screen_frame(room_name):
     if not frame_data:
         return jsonify({'error': 'No frame data provided'}), 400
     
-    try:
-        # Сохраняем последний кадр экрана
-        if room_name not in video_frames:
-            video_frames[room_name] = {}
-        
-        video_frames[room_name][user_id] = {
-            'frame': frame_data,
-            'timestamp': time.time(),
-            'is_screen': True
-        }
-        
-        return jsonify({'success': True})
-    except Exception as e:
-        logger.error(f"Error processing screen frame: {e}")
-        return jsonify({'error': str(e)}), 500
+    process_video_frame(room_name, user_id, frame_data)
+    return jsonify({'success': True})
 
 @app.route('/api/conference/<room_name>/start', methods=['POST'])
 def start_conference(room_name):
