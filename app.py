@@ -449,7 +449,7 @@ def video_feed(room_name, user_id):
                 frame = base64.b64decode(frame_data['frame'].split(',')[1])
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-            time.sleep(0.1)  # 10 FPS
+            time.sleep(0.05)  # 10 FPS
     
     return Response(generate(),
                   mimetype='multipart/x-mixed-replace; boundary=frame')
