@@ -8,9 +8,6 @@ import time
 import logging
 from collections import defaultdict
 import base64
-import uuid
-from io import BytesIO
-import wave
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
@@ -23,21 +20,17 @@ logger = logging.getLogger(__name__)
 UPLOAD_FOLDER = 'uploads'
 DB_FOLDER = 'data'
 INVITES_FOLDER = 'invites'
-AUDIO_FOLDER = 'audio'
 os.makedirs(DB_FOLDER, exist_ok=True)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(INVITES_FOLDER, exist_ok=True)
-os.makedirs(AUDIO_FOLDER, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
 # Глобальные переменные для видеоконференций
 video_frames = defaultdict(dict)  # room -> user -> last_frame
-audio_streams = defaultdict(dict)  # room -> user -> last_audio
 participants = defaultdict(set)
 active_conferences = defaultdict(dict)
-screen_shares = defaultdict(dict)  # room -> user -> screen_frame
 
 class DB:
     @staticmethod
@@ -407,18 +400,10 @@ def leave_conference(room_name):
         participants[room_name].remove(user_id)
         if user_id in video_frames.get(room_name, {}):
             del video_frames[room_name][user_id]
-        if user_id in audio_streams.get(room_name, {}):
-            del audio_streams[room_name][user_id]
-        if user_id in screen_shares.get(room_name, {}):
-            del screen_shares[room_name][user_id]
         
         if not participants[room_name]:
             if room_name in video_frames:
                 del video_frames[room_name]
-            if room_name in audio_streams:
-                del audio_streams[room_name]
-            if room_name in screen_shares:
-                del screen_shares[room_name]
             if room_name in active_conferences:
                 del active_conferences[room_name]
     
@@ -436,6 +421,7 @@ def receive_video_frame(room_name):
         return jsonify({'error': 'No frame data provided'}), 400
     
     try:
+        # Сохраняем последний кадр для этого пользователя
         if room_name not in video_frames:
             video_frames[room_name] = {}
         
@@ -453,36 +439,17 @@ def receive_video_frame(room_name):
 @app.route('/video_feed/<room_name>/<user_id>')
 def video_feed(room_name, user_id):
     def generate():
-        last_frame = None
         while True:
-            try:
-                if room_name in video_frames and user_id in video_frames[room_name]:
-                    frame_data = video_frames[room_name][user_id]
-                    
-                    # Проверяем, не устарели ли данные (больше 5 секунд)
-                    if time.time() - frame_data['timestamp'] > 5:
-                        continue
-                    
-                    # Если это демонстрация экрана, берем из другого хранилища
-                    if frame_data.get('is_screen'):
-                        if room_name in screen_shares and user_id in screen_shares[room_name]:
-                            frame_data = screen_shares[room_name][user_id]
-                    
-                    frame = base64.b64decode(frame_data['frame'].split(',')[1])
-                    last_frame = frame
-                elif last_frame:
-                    frame = last_frame
-                else:
+            if room_name in video_frames and user_id in video_frames[room_name]:
+                frame_data = video_frames[room_name][user_id]
+                # Проверяем, не устарели ли данные (больше 5 секунд)
+                if time.time() - frame_data['timestamp'] > 5:
                     continue
                 
+                frame = base64.b64decode(frame_data['frame'].split(',')[1])
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-                
-                # Задержка для достижения ~15 FPS
-                time.sleep(0.066)
-            except Exception as e:
-                logger.error(f"Error in video feed generator: {e}")
-                time.sleep(0.1)
+            time.sleep(0.1)  # 10 FPS
     
     return Response(generate(),
                   mimetype='multipart/x-mixed-replace; boundary=frame')
@@ -501,16 +468,7 @@ def receive_screen_frame(room_name):
         return jsonify({'error': 'No frame data provided'}), 400
     
     try:
-        if room_name not in screen_shares:
-            screen_shares[room_name] = {}
-        
-        screen_shares[room_name][user_id] = {
-            'frame': frame_data,
-            'timestamp': time.time(),
-            'is_screen': True
-        }
-        
-        # Также обновляем основной видеофрейм, чтобы переключиться на демонстрацию экрана
+        # Сохраняем последний кадр экрана
         if room_name not in video_frames:
             video_frames[room_name] = {}
         
@@ -524,65 +482,6 @@ def receive_screen_frame(room_name):
     except Exception as e:
         logger.error(f"Error processing screen frame: {e}")
         return jsonify({'error': str(e)}), 500
-
-@app.route('/api/conference/audio', methods=['POST'])
-def receive_audio():
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    room_name = request.form.get('room')
-    user_id = session['user']['username']
-    audio_file = request.files.get('audio')
-    
-    if not room_name or not audio_file:
-        return jsonify({'error': 'Missing room or audio data'}), 400
-    
-    try:
-        # Сохраняем аудиофайл временно
-        filename = f"{user_id}_{int(time.time())}.wav"
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], AUDIO_FOLDER, filename)
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        audio_file.save(filepath)
-        
-        # Сохраняем информацию о аудио в памяти
-        if room_name not in audio_streams:
-            audio_streams[room_name] = {}
-        
-        audio_streams[room_name][user_id] = {
-            'filepath': filepath,
-            'timestamp': time.time()
-        }
-        
-        return jsonify({'success': True})
-    except Exception as e:
-        logger.error(f"Error processing audio: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/audio_feed/<room_name>/<user_id>')
-def audio_feed(room_name, user_id):
-    def generate():
-        while True:
-            try:
-                if room_name in audio_streams and user_id in audio_streams[room_name]:
-                    audio_data = audio_streams[room_name][user_id]
-                    
-                    # Проверяем, не устарели ли данные (больше 5 секунд)
-                    if time.time() - audio_data['timestamp'] > 5:
-                        time.sleep(0.1)
-                        continue
-                    
-                    # Читаем аудиофайл и отправляем его
-                    with open(audio_data['filepath'], 'rb') as f:
-                        audio_bytes = f.read()
-                    
-                    yield audio_bytes
-                time.sleep(0.1)
-            except Exception as e:
-                logger.error(f"Error in audio feed generator: {e}")
-                time.sleep(0.1)
-    
-    return Response(generate(),
-                  mimetype='audio/wav')
 
 @app.route('/api/conference/<room_name>/start', methods=['POST'])
 def start_conference(room_name):
