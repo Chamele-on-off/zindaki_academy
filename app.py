@@ -36,21 +36,32 @@ frame_buffers = defaultdict(lambda: defaultdict(deque))  # Буфер кадро
 frame_timestamps = defaultdict(dict)  # Временные метки последних кадров
 last_cleanup_time = time.time()
 
+# Ограничения для видео
+MAX_FRAMES_PER_USER = 3  # Максимальное количество кадров в буфере
+MAX_FRAME_AGE = 2.0  # Максимальный возраст кадра в секундах
+TARGET_FPS = 15  # Целевая частота кадров
+
 # Функция для очистки старых данных
 def cleanup_old_data():
     global last_cleanup_time
     current_time = time.time()
-    if current_time - last_cleanup_time < 5:  # Очистка каждые 5 секунд
+    if current_time - last_cleanup_time < 1.0:  # Очистка каждую секунду
         return
     
     try:
-        # Очистка старых кадров (старше 3 секунд)
+        # Очистка старых кадров
         for room in list(frame_buffers.keys()):
             for user in list(frame_buffers[room].keys()):
-                if current_time - frame_timestamps.get(room, {}).get(user, 0) > 3:
-                    if user in frame_buffers[room]:
+                # Удаляем старые кадры из буфера
+                while (frame_buffers[room][user] and 
+                       current_time - frame_timestamps.get(room, {}).get(user, 0) > MAX_FRAME_AGE):
+                    frame_buffers[room][user].popleft()
+                
+                # Если буфер пуст и пользователь неактивен, удаляем его
+                if not frame_buffers[room][user] and user not in participants.get(room, set()):
+                    if room in frame_buffers and user in frame_buffers[room]:
                         del frame_buffers[room][user]
-                    if user in frame_timestamps.get(room, {}):
+                    if room in frame_timestamps and user in frame_timestamps[room]:
                         del frame_timestamps[room][user]
             
             # Удаляем пустые комнаты
@@ -81,7 +92,7 @@ def process_video_frame(room_name, user_id, frame_data):
         cleanup_old_data()
         
         # Ограничиваем размер буфера для каждого пользователя
-        if len(frame_buffers[room_name][user_id]) > 5:  # Максимум 5 кадров в буфере
+        if len(frame_buffers[room_name][user_id]) >= MAX_FRAMES_PER_USER:
             frame_buffers[room_name][user_id].popleft()
         
         frame_buffers[room_name][user_id].append(frame_data)
@@ -488,8 +499,7 @@ def receive_video_frame(room_name):
 def video_feed(room_name, user_id):
     def generate():
         last_frame_time = 0
-        target_fps = 15  # Целевая частота кадров
-        frame_interval = 1.0 / target_fps
+        frame_interval = 1.0 / TARGET_FPS
         
         while True:
             try:
