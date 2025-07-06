@@ -10,10 +10,6 @@ from collections import defaultdict, deque
 import base64
 import threading
 import queue
-import cv2
-import numpy as np
-from io import BytesIO
-from PIL import Image
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
@@ -36,26 +32,8 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 # Глобальные переменные для видеоконференций
 participants = defaultdict(set)
 active_conferences = defaultdict(dict)
-
-# Оптимизированный буфер кадров
-class FrameBuffer:
-    def __init__(self, max_size=3):
-        self.buffer = deque(maxlen=max_size)
-        self.last_update = time.time()
-        self.lock = threading.Lock()
-    
-    def add_frame(self, frame_data):
-        with self.lock:
-            self.buffer.append(frame_data)
-            self.last_update = time.time()
-    
-    def get_latest_frame(self):
-        with self.lock:
-            if self.buffer:
-                return self.buffer[-1]
-            return None
-
-optimized_frame_buffers = defaultdict(lambda: defaultdict(FrameBuffer))
+frame_buffers = defaultdict(lambda: defaultdict(deque))  # Буфер кадров для каждого пользователя
+frame_timestamps = defaultdict(dict)  # Временные метки последних кадров
 last_cleanup_time = time.time()
 
 # Функция для очистки старых данных
@@ -66,21 +44,28 @@ def cleanup_old_data():
         return
     
     try:
-        # Очистка старых кадров (старше 5 секунд)
-        for room in list(optimized_frame_buffers.keys()):
-            for user in list(optimized_frame_buffers[room].keys()):
-                if current_time - optimized_frame_buffers[room][user].last_update > 5:
-                    del optimized_frame_buffers[room][user]
+        # Очистка старых кадров (старше 3 секунд)
+        for room in list(frame_buffers.keys()):
+            for user in list(frame_buffers[room].keys()):
+                if current_time - frame_timestamps.get(room, {}).get(user, 0) > 3:
+                    if user in frame_buffers[room]:
+                        del frame_buffers[room][user]
+                    if user in frame_timestamps.get(room, {}):
+                        del frame_timestamps[room][user]
             
             # Удаляем пустые комнаты
-            if not optimized_frame_buffers[room] and room not in participants:
-                del optimized_frame_buffers[room]
+            if not frame_buffers[room] and room not in participants:
+                del frame_buffers[room]
+                if room in frame_timestamps:
+                    del frame_timestamps[room]
         
         # Очистка участников без активности
         for room in list(participants.keys()):
             if not participants[room]:
-                if room in optimized_frame_buffers:
-                    del optimized_frame_buffers[room]
+                if room in frame_buffers:
+                    del frame_buffers[room]
+                if room in frame_timestamps:
+                    del frame_timestamps[room]
                 if room in active_conferences:
                     del active_conferences[room]
                 del participants[room]
@@ -95,30 +80,12 @@ def process_video_frame(room_name, user_id, frame_data):
     try:
         cleanup_old_data()
         
-        # Оптимизированное сжатие кадра
-        try:
-            # Декодируем base64
-            img_data = base64.b64decode(frame_data.split(',')[1])
-            img = Image.open(BytesIO(img_data))
-            
-            # Конвертируем в numpy array
-            frame = np.array(img)
-            
-            # Изменяем размер для уменьшения данных
-            frame = cv2.resize(frame, (640, 480), interpolation=cv2.INTER_AREA)
-            
-            # Кодируем в JPEG с качеством 70%
-            _, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
-            optimized_frame = base64.b64encode(buffer).decode('utf-8')
-            
-            # Добавляем в буфер
-            optimized_frame_buffers[room_name][user_id].add_frame(optimized_frame)
-            
-        except Exception as e:
-            logger.error(f"Error optimizing frame: {e}")
-            # Если оптимизация не удалась, сохраняем оригинал
-            optimized_frame_buffers[room_name][user_id].add_frame(frame_data)
-            
+        # Ограничиваем размер буфера для каждого пользователя
+        if len(frame_buffers[room_name][user_id]) > 5:  # Максимум 5 кадров в буфере
+            frame_buffers[room_name][user_id].popleft()
+        
+        frame_buffers[room_name][user_id].append(frame_data)
+        frame_timestamps[room_name][user_id] = time.time()
     except Exception as e:
         logger.error(f"Error processing video frame: {e}")
 
@@ -488,12 +455,16 @@ def leave_conference(room_name):
     user_id = session['user']['username']
     if room_name in participants and user_id in participants[room_name]:
         participants[room_name].remove(user_id)
-        if room_name in optimized_frame_buffers and user_id in optimized_frame_buffers[room_name]:
-            del optimized_frame_buffers[room_name][user_id]
+        if room_name in frame_buffers and user_id in frame_buffers[room_name]:
+            del frame_buffers[room_name][user_id]
+        if room_name in frame_timestamps and user_id in frame_timestamps[room_name]:
+            del frame_timestamps[room_name][user_id]
         
         if not participants[room_name]:
-            if room_name in optimized_frame_buffers:
-                del optimized_frame_buffers[room_name]
+            if room_name in frame_buffers:
+                del frame_buffers[room_name]
+            if room_name in frame_timestamps:
+                del frame_timestamps[room_name]
             if room_name in active_conferences:
                 del active_conferences[room_name]
     
@@ -524,17 +495,21 @@ def video_feed(room_name, user_id):
             try:
                 current_time = time.time()
                 
-                # Получаем самый свежий кадр из оптимизированного буфера
-                frame_data = optimized_frame_buffers[room_name][user_id].get_latest_frame()
-                
-                if frame_data:
+                # Проверяем наличие новых кадров
+                if (room_name in frame_buffers and 
+                    user_id in frame_buffers[room_name] and 
+                    frame_buffers[room_name][user_id]):
+                    
+                    # Получаем самый свежий кадр из буфера
+                    frame_data = frame_buffers[room_name][user_id][-1]
+                    
                     # Рассчитываем время для поддержания целевого FPS
                     elapsed = current_time - last_frame_time
                     if elapsed < frame_interval:
                         time.sleep(frame_interval - elapsed)
                     
                     # Отправляем кадр
-                    frame = base64.b64decode(frame_data)
+                    frame = base64.b64decode(frame_data.split(',')[1])
                     yield (b'--frame\r\n'
                            b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
                     
@@ -1031,14 +1006,4 @@ def api_contact():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
-    # Режим разработки с фоновой очисткой
-    def background_cleanup():
-        while True:
-            cleanup_old_data()
-            time.sleep(3)
-    
-    cleanup_thread = threading.Thread(target=background_cleanup)
-    cleanup_thread.daemon = True
-    cleanup_thread.start()
-    
     app.run(host='0.0.0.0', port=7001, debug=os.environ.get('FLASK_DEBUG', False), threaded=True)
