@@ -10,9 +10,13 @@ from collections import defaultdict, deque
 import base64
 import threading
 import queue
+from flask_compress import Compress
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
+
+# Включение сжатия
+Compress(app)
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -29,6 +33,12 @@ os.makedirs(INVITES_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
+# Настройки видео
+VIDEO_QUALITY = 0.5  # Качество JPEG (0.1 - низкое, 1.0 - высокое)
+TARGET_WIDTH = 640    # Ширина кадра
+TARGET_HEIGHT = 480   # Высота кадра
+TARGET_FPS = 15       # Целевая частота кадров
+
 # Глобальные переменные для видеоконференций
 participants = defaultdict(set)
 active_conferences = defaultdict(dict)
@@ -38,8 +48,7 @@ last_cleanup_time = time.time()
 
 # Ограничения для видео
 MAX_FRAMES_PER_USER = 3  # Максимальное количество кадров в буфере
-MAX_FRAME_AGE = 2.0  # Максимальный возраст кадра в секундах
-TARGET_FPS = 15  # Целевая частота кадров
+MAX_FRAME_AGE = 2.0      # Максимальный возраст кадра в секундах
 
 # Функция для очистки старых данных
 def cleanup_old_data():
@@ -1014,7 +1023,6 @@ def api_contact():
         return jsonify({'success': True, 'message': 'Ваше сообщение отправлено!'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=7001, debug=os.environ.get('FLASK_DEBUG', False), threaded=True)
