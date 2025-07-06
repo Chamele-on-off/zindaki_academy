@@ -285,7 +285,7 @@
             aspect-ratio: 16/9;
         }
         
-        .video-container video {
+        .video-container img {
             width: 100%;
             height: 100%;
             object-fit: cover;
@@ -366,7 +366,7 @@
             display: none;
         }
         
-        .screen-container video {
+        .screen-container img {
             width: 100%;
             height: 100%;
             object-fit: contain;
@@ -758,7 +758,7 @@
             <div class="conference-container" id="conferenceContainer">
                 <!-- Основное видео (удаленный участник) -->
                 <div class="video-container" id="remoteVideoContainer" style="display: none;">
-                    <video id="remoteVideo" autoplay playsinline></video>
+                    <img id="remoteVideo" alt="Video feed">
                     <div class="video-label" id="remoteVideoLabel">Участник</div>
                     <div class="video-controls">
                         <button class="video-control-btn" onclick="toggleFullscreen('remoteVideo')">
@@ -775,7 +775,7 @@
             
             <!-- Маленькое окно с локальным видео (в правом нижнем углу) -->
             <div class="local-video-container" id="localVideoContainer" style="display: none;">
-                <video id="localVideo" autoplay muted playsinline></video>
+                <video id="localVideo" autoplay muted></video>
                 <div class="video-label">Вы ({{ user.username }})</div>
                 <div class="video-controls">
                     <button class="video-control-btn" id="toggleVideoBtn">
@@ -790,7 +790,7 @@
             {% if is_teacher %}
             <!-- Демонстрация экрана -->
             <div class="screen-container" id="screenContainer">
-                <video id="screenShare" autoplay playsinline></video>
+                <img id="screenShare" alt="Screen share">
                 <div class="video-label">Демонстрация экрана</div>
                 <div class="video-controls">
                     <button class="video-control-btn" onclick="stopScreenSharing()">
@@ -1041,30 +1041,25 @@
                 });
         });
 
-        // Видеоконференция с WebRTC и серверным рендерингом
+        // Видеоконференция с серверным рендерингом
         let localStream = null;
-        let remoteStream = null;
-        let peerConnection = null;
         let currentRoom = null;
         let isVideoEnabled = true;
         let isAudioEnabled = true;
-        let screenStream = null;
+        let videoInterval = null;
+        let audioInterval = null;
+        let screenSharingInterval = null;
         let isScreenSharing = false;
-        let socket = null;
 
         // Инициализация видеоконференции
         async function initConference(roomName) {
-            console.log('Initializing conference in room:', roomName);
+            console.log('Initializing conference...');
             currentRoom = roomName;
             
             try {
                 // Получаем доступ к камере и микрофону
                 localStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: {
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                        frameRate: { ideal: 30 }
-                    }, 
+                    video: true, 
                     audio: true 
                 });
                 
@@ -1083,8 +1078,8 @@
                 
                 const data = await response.json();
                 if (data.success) {
-                    // Начинаем передачу видео и аудио
-                    startMediaStreaming(roomName);
+                    // Начинаем отправку видео
+                    startSendingVideo(roomName);
                     // Начинаем получение видео других участников
                     startReceivingVideo(roomName);
                     
@@ -1097,21 +1092,15 @@
             }
         }
 
-        // Передача медиапотока на сервер
-        function startMediaStreaming(roomName) {
+        // Отправка видео на сервер
+        function startSendingVideo(roomName) {
             const videoTrack = localStream.getVideoTracks()[0];
-            const audioTrack = localStream.getAudioTracks()[0];
-            
-            if (!videoTrack || !audioTrack) return;
+            if (!videoTrack) return;
             
             const video = document.getElementById('localVideo');
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const mediaStreamSource = audioContext.createMediaStreamSource(localStream);
-            const processor = audioContext.createScriptProcessor(1024, 1, 1);
             
-            // Обработка видео
             function updateCanvasSize() {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
@@ -1120,13 +1109,12 @@
             video.addEventListener('playing', updateCanvasSize);
             updateCanvasSize();
             
-            // Отправка видео кадров (15 FPS для плавности)
-            setInterval(async () => {
+            videoInterval = setInterval(async () => {
                 if (!isVideoEnabled) return;
                 
                 try {
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const frame = canvas.toDataURL('image/jpeg', 0.8);
+                    const frame = canvas.toDataURL('image/jpeg', 0.7);
                     
                     await fetch(`/api/conference/${roomName}/video`, {
                         method: 'POST',
@@ -1141,39 +1129,7 @@
                 } catch (error) {
                     console.error('Error sending video frame:', error);
                 }
-            }, 66); // ~15 FPS
-            
-            // Обработка аудио
-            mediaStreamSource.connect(processor);
-            processor.connect(audioContext.destination);
-            
-            processor.onaudioprocess = async function(e) {
-                if (!isAudioEnabled) return;
-                
-                const inputBuffer = e.inputBuffer;
-                const outputBuffer = e.outputBuffer;
-                
-                // Здесь можно добавить обработку аудио перед отправкой
-                // Пока просто передаем как есть
-                
-                // Отправка аудио данных на сервер
-                try {
-                    const audioData = inputBuffer.getChannelData(0);
-                    const audioBlob = new Blob([audioData], { type: 'audio/ogg; codecs=opus' });
-                    
-                    const formData = new FormData();
-                    formData.append('audio', audioBlob);
-                    formData.append('room', roomName);
-                    formData.append('user', '{{ user.username }}');
-                    
-                    await fetch('/api/conference/audio', {
-                        method: 'POST',
-                        body: formData
-                    });
-                } catch (error) {
-                    console.error('Error sending audio:', error);
-                }
-            };
+            }, 200); // 5 FPS
         }
 
         // Получение видео с сервера
@@ -1203,15 +1159,8 @@
                             
                             // Устанавливаем источник видео с сервера
                             remoteVideo.src = `/video_feed/${roomName}/${participant}?t=${Date.now()}`;
-                            remoteVideo.onerror = () => {
-                                console.log('Error loading video feed');
-                                remoteVideoContainer.style.display = 'none';
-                                waitingMessage.style.display = 'flex';
-                            };
-                            
                             waitingMessage.style.display = 'none';
                             remoteVideoContainer.style.display = 'block';
-                            document.getElementById('remoteVideoLabel').textContent = participant;
                             break; // Показываем только одного участника
                         }
                         
@@ -1274,10 +1223,9 @@
                 localStream = null;
             }
             
-            if (screenStream) {
-                screenStream.getTracks().forEach(track => track.stop());
-                screenStream = null;
-            }
+            if (videoInterval) clearInterval(videoInterval);
+            if (audioInterval) clearInterval(audioInterval);
+            if (screenSharingInterval) clearInterval(screenSharingInterval);
             
             document.getElementById('waitingMessage').style.display = 'flex';
             document.getElementById('remoteVideoContainer').style.display = 'none';
@@ -1364,34 +1312,26 @@
             }
             
             try {
-                screenStream = await navigator.mediaDevices.getDisplayMedia({
-                    video: {
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 },
-                        frameRate: { ideal: 30 }
-                    },
+                const stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
                     audio: false
                 });
                 
                 isScreenSharing = true;
-                const screenContainer = document.getElementById('screenContainer');
-                const screenVideo = document.getElementById('screenShare');
-                screenVideo.srcObject = screenStream;
-                screenContainer.style.display = 'block';
-                
+                document.getElementById('screenContainer').style.display = 'block';
                 document.getElementById('shareScreenBtn').innerHTML = '<i class="fas fa-stop"></i> Остановить демонстрацию';
                 
+                const screenVideo = document.getElementById('screenShare');
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
-                // Отправка кадров экрана (15 FPS)
-                setInterval(async () => {
+                screenSharingInterval = setInterval(async () => {
                     try {
                         canvas.width = screenVideo.videoWidth;
                         canvas.height = screenVideo.videoHeight;
                         ctx.drawImage(screenVideo, 0, 0, canvas.width, canvas.height);
                         
-                        const frame = canvas.toDataURL('image/jpeg', 0.8);
+                        const frame = canvas.toDataURL('image/jpeg', 0.7);
                         
                         await fetch(`/api/conference/${currentRoom}/screen`, {
                             method: 'POST',
@@ -1407,9 +1347,9 @@
                     } catch (error) {
                         console.error('Error sending screen frame:', error);
                     }
-                }, 66); // ~15 FPS
+                }, 200);
                 
-                screenStream.getVideoTracks()[0].onended = () => {
+                stream.getVideoTracks()[0].onended = () => {
                     stopScreenSharing();
                 };
                 
@@ -1423,9 +1363,9 @@
 
         // Остановка демонстрации экрана
         function stopScreenSharing() {
-            if (screenStream) {
-                screenStream.getTracks().forEach(track => track.stop());
-                screenStream = null;
+            if (screenSharingInterval) {
+                clearInterval(screenSharingInterval);
+                screenSharingInterval = null;
             }
             
             isScreenSharing = false;
