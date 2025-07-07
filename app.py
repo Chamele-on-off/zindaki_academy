@@ -11,6 +11,9 @@ import base64
 import threading
 import queue
 from flask_compress import Compress
+import numpy as np
+import wave
+import io
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
@@ -33,22 +36,28 @@ os.makedirs(INVITES_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
-# Настройки видео
+# Настройки видео и аудио
 VIDEO_QUALITY = 0.5  # Качество JPEG (0.1 - низкое, 1.0 - высокое)
 TARGET_WIDTH = 640    # Ширина кадра
 TARGET_HEIGHT = 480   # Высота кадра
 TARGET_FPS = 12       # Целевая частота кадров
+AUDIO_SAMPLE_RATE = 16000  # Частота дискретизации аудио
+AUDIO_CHANNELS = 1    # Количество аудио каналов
 
 # Глобальные переменные для видеоконференций
 participants = defaultdict(set)
 active_conferences = defaultdict(dict)
 frame_buffers = defaultdict(lambda: defaultdict(deque))  # Буфер кадров для каждого пользователя
+audio_buffers = defaultdict(lambda: defaultdict(deque))  # Буфер аудио для каждого пользователя
 frame_timestamps = defaultdict(dict)  # Временные метки последних кадров
+audio_timestamps = defaultdict(dict)  # Временные метки последних аудио данных
 last_cleanup_time = time.time()
 
-# Ограничения для видео
-MAX_FRAMES_PER_USER = 3  # Максимальное количество кадров в буфере
-MAX_FRAME_AGE = 1.0      # Максимальный возраст кадра в секундах
+# Ограничения для видео и аудио
+MAX_FRAMES_PER_USER = 3      # Максимальное количество кадров в буфере
+MAX_AUDIO_CHUNKS_PER_USER = 10  # Максимальное количество аудио блоков в буфере
+MAX_FRAME_AGE = 1.0          # Максимальный возраст кадра в секундах
+MAX_AUDIO_AGE = 0.5          # Максимальный возраст аудио данных в секундах
 
 # Функция для очистки старых данных
 def cleanup_old_data():
@@ -79,13 +88,38 @@ def cleanup_old_data():
                 if room in frame_timestamps:
                     del frame_timestamps[room]
         
+        # Очистка старых аудио данных
+        for room in list(audio_buffers.keys()):
+            for user in list(audio_buffers[room].keys()):
+                # Удаляем старые аудио данные из буфера
+                while (audio_buffers[room][user] and 
+                       current_time - audio_timestamps.get(room, {}).get(user, 0) > MAX_AUDIO_AGE):
+                    audio_buffers[room][user].popleft()
+                
+                # Если буфер пуст и пользователь неактивен, удаляем его
+                if not audio_buffers[room][user] and user not in participants.get(room, set()):
+                    if room in audio_buffers and user in audio_buffers[room]:
+                        del audio_buffers[room][user]
+                    if room in audio_timestamps and user in audio_timestamps[room]:
+                        del audio_timestamps[room][user]
+            
+            # Удаляем пустые комнаты
+            if not audio_buffers[room] and room not in participants:
+                del audio_buffers[room]
+                if room in audio_timestamps:
+                    del audio_timestamps[room]
+        
         # Очистка участников без активности
         for room in list(participants.keys()):
             if not participants[room]:
                 if room in frame_buffers:
                     del frame_buffers[room]
+                if room in audio_buffers:
+                    del audio_buffers[room]
                 if room in frame_timestamps:
                     del frame_timestamps[room]
+                if room in audio_timestamps:
+                    del audio_timestamps[room]
                 if room in active_conferences:
                     del active_conferences[room]
                 del participants[room]
@@ -108,6 +142,20 @@ def process_video_frame(room_name, user_id, frame_data):
         frame_timestamps[room_name][user_id] = time.time()
     except Exception as e:
         logger.error(f"Error processing video frame: {e}")
+
+# Функция для обработки аудио данных
+def process_audio_data(room_name, user_id, audio_data):
+    try:
+        cleanup_old_data()
+        
+        # Ограничиваем размер буфера для каждого пользователя
+        if len(audio_buffers[room_name][user_id]) >= MAX_AUDIO_CHUNKS_PER_USER:
+            audio_buffers[room_name][user_id].popleft()
+        
+        audio_buffers[room_name][user_id].append(audio_data)
+        audio_timestamps[room_name][user_id] = time.time()
+    except Exception as e:
+        logger.error(f"Error processing audio data: {e}")
 
 class DB:
     @staticmethod
@@ -461,6 +509,14 @@ def join_conference(room_name):
     user_id = session['user']['username']
     participants[room_name].add(user_id)
     
+    # Если это учитель и конференция еще не активна, активируем ее
+    if session['user']['role'] == 'teacher' and room_name not in active_conferences:
+        active_conferences[room_name] = {
+            'teacher': user_id,
+            'started_at': datetime.now().isoformat(),
+            'participants': list(participants[room_name])
+        }
+    
     return jsonify({
         'success': True,
         'room_name': room_name,
@@ -477,16 +533,50 @@ def leave_conference(room_name):
         participants[room_name].remove(user_id)
         if room_name in frame_buffers and user_id in frame_buffers[room_name]:
             del frame_buffers[room_name][user_id]
+        if room_name in audio_buffers and user_id in audio_buffers[room_name]:
+            del audio_buffers[room_name][user_id]
         if room_name in frame_timestamps and user_id in frame_timestamps[room_name]:
             del frame_timestamps[room_name][user_id]
+        if room_name in audio_timestamps and user_id in audio_timestamps[room_name]:
+            del audio_timestamps[room_name][user_id]
+        
+        # Если это учитель и он покидает конференцию, завершаем ее
+        if session['user']['role'] == 'teacher' and room_name in active_conferences:
+            del active_conferences[room_name]
         
         if not participants[room_name]:
             if room_name in frame_buffers:
                 del frame_buffers[room_name]
+            if room_name in audio_buffers:
+                del audio_buffers[room_name]
             if room_name in frame_timestamps:
                 del frame_timestamps[room_name]
+            if room_name in audio_timestamps:
+                del audio_timestamps[room_name]
             if room_name in active_conferences:
                 del active_conferences[room_name]
+    
+    return jsonify({'success': True})
+
+@app.route('/api/conference/<room_name>/end', methods=['POST'])
+def end_conference(room_name):
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if room_name in active_conferences:
+        del active_conferences[room_name]
+    
+    # Очищаем все данные конференции
+    if room_name in participants:
+        del participants[room_name]
+    if room_name in frame_buffers:
+        del frame_buffers[room_name]
+    if room_name in audio_buffers:
+        del audio_buffers[room_name]
+    if room_name in frame_timestamps:
+        del frame_timestamps[room_name]
+    if room_name in audio_timestamps:
+        del audio_timestamps[room_name]
     
     return jsonify({'success': True})
 
@@ -502,6 +592,20 @@ def receive_video_frame(room_name):
         return jsonify({'error': 'No frame data provided'}), 400
     
     process_video_frame(room_name, user_id, frame_data)
+    return jsonify({'success': True})
+
+@app.route('/api/conference/<room_name>/audio', methods=['POST'])
+def receive_audio_data(room_name):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    user_id = session['user']['username']
+    audio_data = request.json.get('audio')
+    
+    if not audio_data:
+        return jsonify({'error': 'No audio data provided'}), 400
+    
+    process_audio_data(room_name, user_id, audio_data)
     return jsonify({'success': True})
 
 @app.route('/video_feed/<room_name>/<user_id>')
@@ -542,12 +646,47 @@ def video_feed(room_name, user_id):
     return Response(generate(),
                   mimetype='multipart/x-mixed-replace; boundary=frame')
 
+@app.route('/audio_feed/<room_name>/<user_id>')
+def audio_feed(room_name, user_id):
+    def generate():
+        last_audio_time = 0
+        audio_interval = 0.1  # 10 раз в секунду
+        
+        while True:
+            try:
+                current_time = time.time()
+                
+                # Проверяем наличие новых аудио данных
+                if (room_name in audio_buffers and 
+                    user_id in audio_buffers[room_name] and 
+                    audio_buffers[room_name][user_id]):
+                    
+                    # Получаем самый свежий аудио блок из буфера
+                    audio_data = audio_buffers[room_name][user_id][-1]
+                    
+                    # Рассчитываем время для поддержания частоты обновления
+                    elapsed = current_time - last_audio_time
+                    if elapsed < audio_interval:
+                        time.sleep(audio_interval - elapsed)
+                    
+                    # Отправляем аудио данные
+                    # В реальной системе здесь должна быть более сложная обработка аудио
+                    yield audio_data
+                    
+                    last_audio_time = time.time()
+                else:
+                    time.sleep(0.01)  # Короткая пауза, если нет аудио данных
+            except Exception as e:
+                logger.error(f"Error in audio feed generation: {e}")
+                time.sleep(0.1)
+    
+    return Response(generate(),
+                  mimetype='audio/wav')
+
 @app.route('/api/conference/<room_name>/screen', methods=['POST'])
 def receive_screen_frame(room_name):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401    
-    if session['user']['role'] != 'teacher':
-        return jsonify({'error': 'Only teacher can share screen'}), 403
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 403
     
     user_id = session['user']['username']
     frame_data = request.json.get('frame')
