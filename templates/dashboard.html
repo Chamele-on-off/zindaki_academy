@@ -301,43 +301,40 @@
             justify-content: center;
             gap: 0.5rem;
             padding: 0.5rem;
-            opacity: 1; /* Всегда видимые кнопки */
+            opacity: 0;
             transition: opacity 0.3s ease;
+        }
+        
+        .video-container:hover .video-controls {
+            opacity: 1;
         }
         
         .video-control-btn {
             background: rgba(255,255,255,0.2);
             border: none;
             color: white;
-            width: 40px;
-            height: 40px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1rem;
-            transition: all 0.2s ease;
         }
         
         .video-control-btn:hover {
             background: rgba(255,255,255,0.3);
-            transform: scale(1.1);
-        }
-        
-        .video-control-btn.active {
-            background: rgba(255,255,255,0.4);
         }
         
         .video-label {
             position: absolute;
-            bottom: 50px;
-            left: 10px;
+            bottom: 40px;
+            left: 0;
+            right: 0;
             color: white;
             padding: 0.25rem 0.5rem;
             font-size: 0.8rem;
             background: rgba(0,0,0,0.5);
-            border-radius: 4px;
         }
         
         /* Локальное видео (маленькое в углу) */
@@ -351,7 +348,6 @@
             background: #000;
             border-radius: var(--rounded-md);
             overflow: hidden;
-            box-shadow: var(--shadow-md);
         }
         
         .local-video-container video {
@@ -538,17 +534,6 @@
                 bottom: 10px;
                 right: 10px;
             }
-            
-            .video-controls {
-                padding: 0.25rem;
-                gap: 0.25rem;
-            }
-            
-            .video-control-btn {
-                width: 32px;
-                height: 32px;
-                font-size: 0.8rem;
-            }
         }
     </style>
 </head>
@@ -658,9 +643,6 @@
                     </button>
                     <button class="btn btn-secondary" id="inviteStudentBtn">
                         <i class="fas fa-user-plus"></i> Пригласить ученика
-                    </button>
-                    <button class="btn btn-danger" id="endConferenceBtn" style="display: none;">
-                        <i class="fas fa-stop"></i> Завершить конференцию
                     </button>
                 </div>
             </h2>
@@ -776,16 +758,10 @@
             <div class="conference-container" id="conferenceContainer">
                 <!-- Основное видео (удаленный участник) -->
                 <div class="video-container" id="remoteVideoContainer" style="display: none;">
-                    <video id="remoteVideo" autoplay></video>
+                    <img id="remoteVideo" alt="Video feed">
                     <div class="video-label" id="remoteVideoLabel">Участник</div>
                     <div class="video-controls">
-                        <button class="video-control-btn" id="toggleRemoteVideoBtn" title="Выключить видео">
-                            <i class="fas fa-video"></i>
-                        </button>
-                        <button class="video-control-btn" id="toggleRemoteAudioBtn" title="Выключить звук">
-                            <i class="fas fa-microphone"></i>
-                        </button>
-                        <button class="video-control-btn" onclick="toggleFullscreen('remoteVideo')" title="Полный экран">
+                        <button class="video-control-btn" onclick="toggleFullscreen('remoteVideo')">
                             <i class="fas fa-expand"></i>
                         </button>
                     </div>
@@ -802,10 +778,10 @@
                 <video id="localVideo" autoplay muted></video>
                 <div class="video-label">Вы ({{ user.username }})</div>
                 <div class="video-controls">
-                    <button class="video-control-btn" id="toggleVideoBtn" title="Выключить видео">
+                    <button class="video-control-btn" id="toggleVideoBtn">
                         <i class="fas fa-video"></i>
                     </button>
-                    <button class="video-control-btn" id="toggleAudioBtn" title="Выключить микрофон">
+                    <button class="video-control-btn" id="toggleAudioBtn">
                         <i class="fas fa-microphone"></i>
                     </button>
                 </div>
@@ -814,13 +790,13 @@
             {% if is_teacher %}
             <!-- Демонстрация экрана -->
             <div class="screen-container" id="screenContainer">
-                <video id="screenShare" autoplay></video>
+                <img id="screenShare" alt="Screen share">
                 <div class="video-label">Демонстрация экрана</div>
                 <div class="video-controls">
-                    <button class="video-control-btn" onclick="stopScreenSharing()" title="Остановить демонстрацию">
+                    <button class="video-control-btn" onclick="stopScreenSharing()">
                         <i class="fas fa-stop"></i>
                     </button>
-                    <button class="video-control-btn" onclick="toggleFullscreen('screenShare')" title="Полный экран">
+                    <button class="video-control-btn" onclick="toggleFullscreen('screenShare')">
                         <i class="fas fa-expand"></i>
                     </button>
                 </div>
@@ -838,7 +814,7 @@
                     <i class="fas fa-desktop"></i> Демонстрация экрана
                 </button>
                 {% endif %}
-                <button class="btn btn-danger" id="leaveConferenceBtn">
+                <button class="btn btn-danger" id="leaveConference">
                     <i class="fas fa-phone-slash"></i> Покинуть конференцию
                 </button>
             </div>
@@ -1074,9 +1050,6 @@
         let audioInterval = null;
         let screenSharingInterval = null;
         let isScreenSharing = false;
-        let audioContext = null;
-        let audioProcessor = null;
-        let audioDestination = null;
 
         // Инициализация видеоконференции с оптимизированными настройками
         async function initConference(roomName) {
@@ -1092,11 +1065,12 @@
                         frameRate: { ideal: 15, max: 20 }
                     },
                     audio: {
+                        sampleRate: 16000,
+                        channelCount: 1,
+                        volume: 1.0,
                         echoCancellation: true,
                         noiseSuppression: true,
-                        autoGainControl: true,
-                        channelCount: 1,
-                        sampleRate: 16000
+                        autoGainControl: true
                     }
                 };
                 
@@ -1106,9 +1080,6 @@
                 const localVideo = document.getElementById('localVideo');
                 localVideo.srcObject = localStream;
                 document.getElementById('localVideoContainer').style.display = 'block';
-                
-                // Инициализация аудио контекста
-                initAudioContext(localStream);
                 
                 // Присоединяемся к комнате
                 const response = await fetch(`/api/conference/${roomName}/join`, {
@@ -1122,59 +1093,15 @@
                 if (data.success) {
                     // Начинаем отправку видео с пониженным качеством
                     startSendingVideo(roomName);
-                    // Начинаем отправку аудио
-                    startSendingAudio(roomName);
                     // Начинаем получение видео других участников
                     startReceivingVideo(roomName);
                     
                     document.getElementById('conferenceSection').style.display = 'block';
                     document.getElementById('conferenceSection').scrollIntoView({ behavior: 'smooth' });
-                    
-                    // Для учителя: показываем кнопку завершения конференции
-                    if ({% if is_teacher %}true{% else %}false{% endif %}) {
-                        document.getElementById('endConferenceBtn').style.display = 'inline-flex';
-                    }
                 }
             } catch (error) {
                 console.error('Error initializing conference:', error);
                 alert('Ошибка при подключении к конференции: ' + error.message);
-            }
-        }
-
-        // Инициализация аудио контекста
-        function initAudioContext(stream) {
-            try {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                if (!AudioContext) {
-                    console.warn('Web Audio API не поддерживается в этом браузере');
-                    return;
-                }
-                
-                audioContext = new AudioContext();
-                const source = audioContext.createMediaStreamSource(stream);
-                
-                // Создаем процессор для обработки аудио
-                audioProcessor = audioContext.createScriptProcessor(4096, 1, 1);
-                
-                // Подключаем все к выходу
-                audioDestination = audioContext.createMediaStreamDestination();
-                source.connect(audioProcessor);
-                audioProcessor.connect(audioDestination);
-                
-                // Обработчик для аудио данных
-                audioProcessor.onaudioprocess = function(e) {
-                    if (!isAudioEnabled) return;
-                    
-                    const inputData = e.inputBuffer.getChannelData(0);
-                    // Здесь можно обработать аудио данные перед отправкой
-                    // Пока просто передаем как есть
-                    const outputData = e.outputBuffer.getChannelData(0);
-                    for (let i = 0; i < inputData.length; i++) {
-                        outputData[i] = inputData[i];
-                    }
-                };
-            } catch (error) {
-                console.error('Error initializing audio context:', error);
             }
         }
 
@@ -1213,38 +1140,6 @@
                     console.error('Error sending video frame:', error);
                 }
             }, 1000 / 15); // 15 FPS
-        }
-
-        // Отправка аудио на сервер
-        function startSendingAudio(roomName) {
-            if (!audioDestination) return;
-            
-            const audioTrack = audioDestination.stream.getAudioTracks()[0];
-            if (!audioTrack) return;
-            
-            const audioInterval = setInterval(async () => {
-                if (!isAudioEnabled) return;
-                
-                try {
-                    // Здесь должна быть реализация отправки аудио данных
-                    // В реальной системе нужно использовать WebSocket или другой механизм
-                    // для передачи аудио в реальном времени
-                    
-                    // Временная заглушка - просто отмечаем, что аудио активно
-                    await fetch(`/api/conference/${roomName}/audio`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            active: isAudioEnabled,
-                            timestamp: Date.now()
-                        })
-                    });
-                } catch (error) {
-                    console.error('Error sending audio data:', error);
-                }
-            }, 100); // 10 раз в секунду
         }
 
         // Получение видео с сервера с оптимизацией
@@ -1342,11 +1237,6 @@
             if (audioInterval) clearInterval(audioInterval);
             if (screenSharingInterval) clearInterval(screenSharingInterval);
             
-            if (audioContext) {
-                await audioContext.close();
-                audioContext = null;
-            }
-            
             document.getElementById('waitingMessage').style.display = 'flex';
             document.getElementById('remoteVideoContainer').style.display = 'none';
             document.getElementById('localVideoContainer').style.display = 'none';
@@ -1363,36 +1253,6 @@
             }
             
             document.getElementById('conferenceSection').style.display = 'none';
-            
-            // Для учителя: скрываем кнопку завершения конференции
-            if ({% if is_teacher %}true{% else %}false{% endif %}) {
-                document.getElementById('endConferenceBtn').style.display = 'none';
-            }
-        }
-
-        // Завершение конференции (для учителя)
-        async function endConference() {
-            if (confirm('Вы уверены, что хотите завершить конференцию для всех участников?')) {
-                try {
-                    const response = await fetch(`/api/conference/${currentRoom}/end`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        }
-                    });
-                    
-                    const data = await response.json();
-                    if (data.success) {
-                        await leaveConference();
-                        window.location.reload();
-                    } else {
-                        alert(data.error || 'Ошибка при завершении конференции');
-                    }
-                } catch (error) {
-                    console.error('Error ending conference:', error);
-                    alert('Ошибка при завершении конференции');
-                }
-            }
         }
 
         // Полноэкранный режим
@@ -1426,11 +1286,9 @@
             if (isVideoEnabled) {
                 btn.innerHTML = '<i class="fas fa-video"></i>';
                 btn.title = 'Выключить видео';
-                btn.classList.remove('active');
             } else {
                 btn.innerHTML = '<i class="fas fa-video-slash"></i>';
                 btn.title = 'Включить видео';
-                btn.classList.add('active');
             }
             
             if (localStream) {
@@ -1446,51 +1304,13 @@
             if (isAudioEnabled) {
                 btn.innerHTML = '<i class="fas fa-microphone"></i>';
                 btn.title = 'Выключить микрофон';
-                btn.classList.remove('active');
             } else {
                 btn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
                 btn.title = 'Включить микрофон';
-                btn.classList.add('active');
             }
             
             if (localStream) {
                 localStream.getAudioTracks()[0].enabled = isAudioEnabled;
-            }
-        }
-
-        // Переключение удаленного видео
-        function toggleRemoteVideo() {
-            const btn = document.getElementById('toggleRemoteVideoBtn');
-            const remoteVideo = document.getElementById('remoteVideo');
-            
-            if (remoteVideo.style.display !== 'none') {
-                remoteVideo.style.display = 'none';
-                btn.innerHTML = '<i class="fas fa-video-slash"></i>';
-                btn.title = 'Включить видео';
-                btn.classList.add('active');
-            } else {
-                remoteVideo.style.display = 'block';
-                btn.innerHTML = '<i class="fas fa-video"></i>';
-                btn.title = 'Выключить видео';
-                btn.classList.remove('active');
-            }
-        }
-
-        // Переключение удаленного аудио
-        function toggleRemoteAudio() {
-            const btn = document.getElementById('toggleRemoteAudioBtn');
-            const remoteVideo = document.getElementById('remoteVideo');
-            
-            if (remoteVideo.muted) {
-                remoteVideo.muted = false;
-                btn.innerHTML = '<i class="fas fa-microphone"></i>';
-                btn.title = 'Выключить звук';
-                btn.classList.remove('active');
-            } else {
-                remoteVideo.muted = true;
-                btn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
-                btn.title = 'Включить звук';
-                btn.classList.add('active');
             }
         }
 
@@ -1583,10 +1403,8 @@
         // Обработчики кнопок
         document.getElementById('toggleVideoBtn').addEventListener('click', toggleVideo);
         document.getElementById('toggleAudioBtn').addEventListener('click', toggleAudio);
-        document.getElementById('toggleRemoteVideoBtn').addEventListener('click', toggleRemoteVideo);
-        document.getElementById('toggleRemoteAudioBtn').addEventListener('click', toggleRemoteAudio);
 
-        document.getElementById('leaveConferenceBtn').addEventListener('click', function() {
+        document.getElementById('leaveConference').addEventListener('click', function() {
             if (confirm('Вы уверены, что хотите покинуть конференцию?')) {
                 leaveConference().then(() => {
                     window.location.reload();
@@ -1594,10 +1412,9 @@
             }
         });
 
-        // Для учителя: кнопка демонстрации экрана и завершения конференции
+        // Для учителя: кнопка демонстрации экрана
         if ({% if is_teacher %}true{% else %}false{% endif %}) {
             document.getElementById('shareScreenBtn').addEventListener('click', startScreenSharing);
-            document.getElementById('endConferenceBtn').addEventListener('click', endConference);
             
             // Обновление статуса конференции
             async function updateConferenceStatus() {
