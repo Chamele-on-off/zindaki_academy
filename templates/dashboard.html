@@ -773,6 +773,9 @@
                 </div>
             </div>
             
+            <!-- Аудио элемент для удаленного звука -->
+            <audio id="remoteAudio" autoplay></audio>
+            
             <!-- Маленькое окно с локальным видео (в правом нижнем углу) -->
             <div class="local-video-container" id="localVideoContainer" style="display: none;">
                 <video id="localVideo" autoplay muted></video>
@@ -1050,6 +1053,47 @@
         let audioInterval = null;
         let screenSharingInterval = null;
         let isScreenSharing = false;
+        let audioContext = null;
+        let mediaStreamSource = null;
+        let scriptProcessor = null;
+
+        // Инициализация аудио контекста
+        function initAudioContext(stream) {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                mediaStreamSource = audioContext.createMediaStreamSource(stream);
+                scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+                
+                scriptProcessor.onaudioprocess = function(e) {
+                    if (!isAudioEnabled) return;
+                    
+                    const audioData = e.inputBuffer.getChannelData(0);
+                    const audioBlob = new Blob([audioData], { type: 'audio/wav' });
+                    
+                    const reader = new FileReader();
+                    reader.onload = function() {
+                        const base64Audio = reader.result;
+                        
+                        fetch(`/api/conference/${currentRoom}/audio`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                audio: base64Audio,
+                                timestamp: Date.now()
+                            })
+                        }).catch(e => console.error('Audio send error:', e));
+                    };
+                    reader.readAsDataURL(audioBlob);
+                };
+                
+                mediaStreamSource.connect(scriptProcessor);
+                scriptProcessor.connect(audioContext.destination);
+            } catch (e) {
+                console.error('Audio context error:', e);
+            }
+        }
 
         // Инициализация видеоконференции с оптимизированными настройками
         async function initConference(roomName) {
@@ -1076,6 +1120,9 @@
                 
                 localStream = await navigator.mediaDevices.getUserMedia(constraints);
                 
+                // Инициализируем аудио контекст
+                initAudioContext(localStream);
+                
                 // Отображаем локальное видео
                 const localVideo = document.getElementById('localVideo');
                 localVideo.srcObject = localStream;
@@ -1093,8 +1140,8 @@
                 if (data.success) {
                     // Начинаем отправку видео с пониженным качеством
                     startSendingVideo(roomName);
-                    // Начинаем получение видео других участников
-                    startReceivingVideo(roomName);
+                    // Начинаем получение видео и аудио других участников
+                    startReceivingMedia(roomName);
                     
                     document.getElementById('conferenceSection').style.display = 'block';
                     document.getElementById('conferenceSection').scrollIntoView({ behavior: 'smooth' });
@@ -1142,15 +1189,16 @@
             }, 1000 / 15); // 15 FPS
         }
 
-        // Получение видео с сервера с оптимизацией
-        function startReceivingVideo(roomName) {
+        // Получение видео и аудио с сервера с оптимизацией
+        function startReceivingMedia(roomName) {
             const userId = '{{ user.username }}';
             const remoteVideo = document.getElementById('remoteVideo');
             const remoteVideoContainer = document.getElementById('remoteVideoContainer');
+            const remoteAudio = document.getElementById('remoteAudio');
             const waitingMessage = document.getElementById('waitingMessage');
             
-            // Функция для обновления видео других участников
-            async function updateRemoteVideo() {
+            // Функция для обновления видео и аудио других участников
+            async function updateRemoteMedia() {
                 try {
                     // Получаем список участников
                     const participantsResponse = await fetch(`/api/conference/${roomName}/join`, {
@@ -1163,12 +1211,22 @@
                     const participantsData = await participantsResponse.json();
                     
                     if (participantsData.success) {
-                        // Для каждого участника (кроме себя) получаем видео
+                        // Для каждого участника (кроме себя) получаем видео и аудио
                         for (const participant of participantsData.participants) {
                             if (participant === userId) continue;
                             
                             // Устанавливаем источник видео с сервера с параметром для избежания кэширования
                             remoteVideo.src = `/video_feed/${roomName}/${participant}?t=${Date.now()}`;
+                            
+                            // Устанавливаем источник аудио
+                            remoteAudio.src = `/audio_feed/${roomName}/${participant}?t=${Date.now()}`;
+                            
+                            try {
+                                await remoteAudio.play();
+                            } catch (e) {
+                                console.log('Audio play failed:', e);
+                            }
+                            
                             waitingMessage.style.display = 'none';
                             remoteVideoContainer.style.display = 'block';
                             break; // Показываем только одного участника
@@ -1184,16 +1242,16 @@
                     updateParticipantsList(roomName);
                     
                     // Повторяем запрос через 1 секунду
-                    setTimeout(updateRemoteVideo, 1000);
+                    setTimeout(updateRemoteMedia, 1000);
                 } catch (error) {
-                    console.error('Error updating remote video:', error);
+                    console.error('Error updating remote media:', error);
                     // Повторяем запрос через 1 секунду в случае ошибки
-                    setTimeout(updateRemoteVideo, 1000);
+                    setTimeout(updateRemoteMedia, 1000);
                 }
             }
             
             // Запускаем процесс обновления
-            updateRemoteVideo();
+            updateRemoteMedia();
         }
 
         // Обновление списка участников
@@ -1236,6 +1294,16 @@
             if (videoInterval) clearInterval(videoInterval);
             if (audioInterval) clearInterval(audioInterval);
             if (screenSharingInterval) clearInterval(screenSharingInterval);
+            
+            if (scriptProcessor) {
+                scriptProcessor.disconnect();
+            }
+            if (mediaStreamSource) {
+                mediaStreamSource.disconnect();
+            }
+            if (audioContext) {
+                await audioContext.close();
+            }
             
             document.getElementById('waitingMessage').style.display = 'flex';
             document.getElementById('remoteVideoContainer').style.display = 'none';
