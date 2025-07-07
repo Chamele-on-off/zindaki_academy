@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Полезные ресурсы | Zindaki Academy</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-light: #4895ef;
+            --primary-dark: #3a0ca3;
+            --light: #f8f9fa;
+            --lighter: #ffffff;
+            --text: #2b2d42;
+            --text-light: #8d99ae;
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+            --rounded-md: 12px;
+            --rounded-lg: 16px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background-color: var(--light);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 80px auto 0;
+            padding: 2rem;
+        }
+        
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        
+        .user-greeting h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .user-greeting p {
+            color: var(--text-light);
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--rounded-md);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .btn-secondary {
+            background-color: var(--light);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+        
+        .btn-secondary:hover {
+            background-color: var(--primary-light);
+            color: white;
+        }
+        
+        .section {
+            margin-top: 3rem;
+            background: var(--lighter);
+            padding: 1.5rem;
+            border-radius: var(--rounded-lg);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--text);
+        }
+        
+        .resource-card {
+            background: white;
+            border-radius: var(--rounded-md);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .resource-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .resource-description {
+            margin-bottom: 1rem;
+        }
+        
+        .resource-links {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .dashboard-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .resource-links {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <div class="user-greeting">
+                <h1>Полезные ресурсы | {{ user.username }}</h1>
+                <p>{{ 'Преподаватель' if user.role == 'teacher' else 'Студент' }} Zindaki Academy</p>
+            </div>
+            <div>
+                <a href="/dashboard" class="btn btn-secondary">
+                    <i class="fas fa-video"></i> Видеоконференция
+                </a>
+                <a href="/courses" class="btn btn-secondary">
+                    <i class="fas fa-book"></i> Мои курсы
+                </a>
+                <a href="/homework" class="btn btn-secondary">
+                    <i class="fas fa-tasks"></i> Домашние задания
+                </a>
+                <button class="btn" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i> Выйти
+                </button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">VPN и полезные инструменты</h2>
+            
+            <div class="resource-card">
+                <div class="resource-title">Бесплатные VPN сервисы</div>
+                <div class="resource-description">
+                    <p>Используйте VPN для безопасного доступа к образовательным ресурсам и обхода ограничений.</p>
+                </div>
+                <div class="resource-links">
+                    <a href="https://protonvpn.com/" class="btn" target="_blank">
+                        <i class="fas fa-shield-alt"></i> ProtonVPN
+                    </a>
+                    <a href="https://windscribe.com/" class="btn" target="_blank">
+                        <i class="fas fa-wind"></i> Windscribe
+                    </a>
+                    <a href="https://www.tunnelbear.com/" class="btn" target="_blank">
+                        <i class="fas fa-bear"></i> TunnelBear
+                    </a>
+                </div>
+            </div>
+            
+            <div class="resource-card">
+                <div class="resource-title">Онлайн-переводчики</div>
+                <div class="resource-description">
+                    <p>Полезные инструменты для перевода текстов и изучения языков.</p>
+                </div>
+                <div class="resource-links">
+                    <a href="https://translate.google.com/" class="btn" target="_blank">
+                        <i class="fas fa-language"></i> Google Переводчик
+                    </a>
+                    <a href="https://www.deepl.com/translator" class="btn" target="_blank">
+                        <i class="fas fa-language"></i> DeepL
+                    </a>
+                </div>
+            </div>
+            
+            <div class="resource-card">
+                <div class="resource-title">Образовательные платформы</div>
+                <div class="resource-description">
+                    <p>Дополнительные ресурсы для самообразования.</p>
+                </div>
+                <div class="resource-links">
+                    <a href="https://stepik.org/" class="btn" target="_blank">
+                        <i class="fas fa-graduation-cap"></i> Stepik
+                    </a>
+                    <a href="https://www.coursera.org/" class="btn" target="_blank">
+                        <i class="fas fa-graduation-cap"></i> Coursera
+                    </a>
+                    <a href="https://www.khanacademy.org/" class="btn" target="_blank">
+                        <i class="fas fa-graduation-cap"></i> Khan Academy
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Обработка выхода
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            fetch('/api/logout')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = '/';
+                    }
+                });
+        });
+    </script>
+</body>
+</html>
