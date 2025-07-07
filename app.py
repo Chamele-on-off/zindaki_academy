@@ -567,8 +567,14 @@ def receive_audio_frame(room_name):
     if not audio_data:
         return jsonify({'error': 'No audio data provided'}), 400
     
-    process_audio_frame(room_name, user_id, audio_data)
-    return jsonify({'success': True})
+    try:
+        # Декодируем base64 и добавляем в буфер
+        audio_bytes = base64.b64decode(audio_data)
+        process_audio_frame(room_name, user_id, audio_bytes)
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error processing audio frame: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/video_feed/<room_name>/<user_id>')
 def video_feed(room_name, user_id):
@@ -618,16 +624,13 @@ def audio_feed(room_name, user_id):
                     audio_buffers[room_name][user_id]):
                     
                     audio_data = audio_buffers[room_name][user_id][-1]
-                    audio_bytes = base64.b64decode(audio_data.split(',')[1])
-                    yield (b'--frame\r\n'
-                           b'Content-Type: audio/wav\r\n\r\n' + audio_bytes + b'\r\n')
+                    yield audio_data
                 time.sleep(0.02)  # 50 FPS для аудио
             except Exception as e:
                 logger.error(f"Error in audio feed generation: {e}")
                 time.sleep(0.1)
     
-    return Response(generate(),
-                  mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(generate(), mimetype='audio/x-wav')
 
 @app.route('/api/conference/<room_name>/screen', methods=['POST'])
 def receive_screen_frame(room_name):
