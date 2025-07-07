@@ -505,6 +505,9 @@ def join_conference(room_name):
     user_id = session['user']['username']
     participants[room_name].add(user_id)
     
+    if room_name in active_conferences:
+        active_conferences[room_name]['participants'] = list(participants[room_name])
+    
     return jsonify({
         'success': True,
         'room_name': room_name,
