@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мои курсы | Zindaki Academy</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-light: #4895ef;
+            --primary-dark: #3a0ca3;
+            --light: #f8f9fa;
+            --lighter: #ffffff;
+            --text: #2b2d42;
+            --text-light: #8d99ae;
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+            --rounded-md: 12px;
+            --rounded-lg: 16px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background-color: var(--light);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 80px auto 0;
+            padding: 2rem;
+        }
+        
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        
+        .user-greeting h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .user-greeting p {
+            color: var(--text-light);
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--rounded-md);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .btn-secondary {
+            background-color: var(--light);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+        
+        .btn-secondary:hover {
+            background-color: var(--primary-light);
+            color: white;
+        }
+        
+        .btn-danger {
+            background-color: #f72585;
+        }
+        
+        .btn-danger:hover {
+            background-color: #d1146e;
+        }
+        
+        .section {
+            margin-top: 3rem;
+            background: var(--lighter);
+            padding: 1.5rem;
+            border-radius: var(--rounded-lg);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--text);
+        }
+        
+        .course-card {
+            background: white;
+            border-radius: var(--rounded-md);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .course-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .course-description {
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+        
+        .course-schedule {
+            margin-top: 1rem;
+        }
+        
+        .schedule-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .schedule-day {
+            font-weight: 500;
+        }
+        
+        .schedule-time {
+            color: var(--primary);
+        }
+        
+        .conference-link {
+            margin-top: 1rem;
+            padding: 0.5rem;
+            background: var(--light);
+            border-radius: var(--rounded-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .teacher-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .teacher-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .dashboard-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .schedule-item {
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+            
+            .conference-link {
+                flex-direction: column;
+                gap: 0.5rem;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <div class="user-greeting">
+                <h1>Мои курсы | {{ user.username }}</h1>
+                <p>{{ 'Преподаватель' if user.role == 'teacher' else 'Студент' }} Zindaki Academy</p>
+            </div>
+            <div>
+                <a href="/dashboard" class="btn btn-secondary">
+                    <i class="fas fa-video"></i> Видеоконференция
+                </a>
+                <a href="/homework" class="btn btn-secondary">
+                    <i class="fas fa-tasks"></i> Домашние задания
+                </a>
+                <a href="/vpn" class="btn btn-secondary">
+                    <i class="fas fa-tools"></i> Полезные ресурсы
+                </a>
+                <button class="btn" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i> Выйти
+                </button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">Мои курсы</h2>
+            
+            {% if is_teacher %}
+            <!-- Для учителя: список всех курсов -->
+            <div id="teacherCourses">
+                {% for course in courses %}
+                <div class="course-card">
+                    <div class="course-title">{{ course.title }}</div>
+                    <div class="course-description">{{ course.description }}</div>
+                    
+                    <div class="course-schedule">
+                        <h4>Расписание:</h4>
+                        {% for lesson in course.schedule %}
+                        <div class="schedule-item">
+                            <span class="schedule-day">{{ lesson.day }}</span>
+                            <span class="schedule-time">{{ lesson.time }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="conference-link">
+                        <span>Ссылка на конференцию:</span>
+                        <a href="/conference/ZindakiRoom_{{ user.username }}" class="btn">
+                            <i class="fas fa-video"></i> Начать
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <!-- Для студента: список курсов с расписанием -->
+            <div id="studentCourses">
+                {% for course in courses %}
+                <div class="course-card">
+                    <div class="course-title">{{ course.title }}</div>
+                    <div class="course-description">{{ course.description }}</div>
+                    
+                    <div class="teacher-info">
+                        <div class="teacher-avatar">{{ course.teacher[0]|upper }}</div>
+                        <span>Преподаватель: {{ course.teacher }}</span>
+                    </div>
+                    
+                    <div class="course-schedule">
+                        <h4>Ближайшие занятия:</h4>
+                        {% for lesson in course.schedule %}
+                        <div class="schedule-item">
+                            <span class="schedule-day">{{ lesson.day }}</span>
+                            <span class="schedule-time">{{ lesson.time }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="conference-link">
+                        <span>Ссылка на конференцию:</span>
+                        <a href="/conference/ZindakiRoom_{{ course.teacher }}" class="btn">
+                            <i class="fas fa-video"></i> Присоединиться
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // Обработка выхода
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            fetch('/api/logout')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = '/';
+                    }
+                });
+        });
+
+        // Загрузка данных курсов
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/api/courses')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Данные уже подставлены сервером в шаблон
+                        console.log('Courses loaded successfully');
+                    } else {
+                        console.error('Error loading courses:', data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        });
+    </script>
+</body>
+</html>
