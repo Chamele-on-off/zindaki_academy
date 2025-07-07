@@ -817,6 +817,9 @@
                 <button class="btn btn-danger" id="leaveConference">
                     <i class="fas fa-phone-slash"></i> Покинуть конференцию
                 </button>
+                <button class="btn" id="endConferenceBtn" style="display: none;">
+                    <i class="fas fa-stop"></i> Завершить конференцию
+                </button>
             </div>
         </div>
     </div>
@@ -1050,6 +1053,10 @@
         let audioInterval = null;
         let screenSharingInterval = null;
         let isScreenSharing = false;
+        let audioContext = null;
+        let audioProcessor = null;
+        let audioDestination = null;
+        let audioIntervalId = null;
 
         // Инициализация видеоконференции с оптимизированными настройками
         async function initConference(roomName) {
@@ -1081,6 +1088,9 @@
                 localVideo.srcObject = localStream;
                 document.getElementById('localVideoContainer').style.display = 'block';
                 
+                // Инициализация аудио
+                initAudio();
+                
                 // Присоединяемся к комнате
                 const response = await fetch(`/api/conference/${roomName}/join`, {
                     method: 'POST',
@@ -1093,15 +1103,49 @@
                 if (data.success) {
                     // Начинаем отправку видео с пониженным качеством
                     startSendingVideo(roomName);
+                    // Начинаем отправку аудио
+                    startSendingAudio(roomName);
                     // Начинаем получение видео других участников
                     startReceivingVideo(roomName);
+                    // Начинаем получение аудио других участников
+                    startReceivingAudio(roomName);
                     
                     document.getElementById('conferenceSection').style.display = 'block';
                     document.getElementById('conferenceSection').scrollIntoView({ behavior: 'smooth' });
+                    
+                    // Для учителя показываем кнопку завершения конференции
+                    if ({% if is_teacher %}true{% else %}false{% endif %}) {
+                        document.getElementById('endConferenceBtn').style.display = 'inline-block';
+                    }
                 }
             } catch (error) {
                 console.error('Error initializing conference:', error);
                 alert('Ошибка при подключении к конференции: ' + error.message);
+            }
+        }
+
+        // Инициализация аудио
+        function initAudio() {
+            try {
+                if (!window.AudioContext && !window.webkitAudioContext) {
+                    console.warn('Web Audio API не поддерживается в этом браузере');
+                    return;
+                }
+                
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(localStream);
+                
+                // Создаем процессор для обработки аудио
+                audioProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+                
+                source.connect(audioProcessor);
+                audioProcessor.connect(audioContext.destination);
+                
+                audioDestination = audioContext.createMediaStreamDestination();
+                source.connect(audioDestination);
+                
+            } catch (error) {
+                console.error('Error initializing audio:', error);
             }
         }
 
@@ -1140,6 +1184,33 @@
                     console.error('Error sending video frame:', error);
                 }
             }, 1000 / 15); // 15 FPS
+        }
+
+        // Отправка аудио на сервер
+        function startSendingAudio(roomName) {
+            if (!audioProcessor) return;
+            
+            audioProcessor.onaudioprocess = async (e) => {
+                if (!isAudioEnabled) return;
+                
+                try {
+                    const audioData = e.inputBuffer.getChannelData(0);
+                    const audioArray = Array.from(audioData);
+                    
+                    await fetch(`/api/conference/${roomName}/audio`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            audio: audioArray,
+                            timestamp: Date.now()
+                        })
+                    });
+                } catch (error) {
+                    console.error('Error sending audio:', error);
+                }
+            };
         }
 
         // Получение видео с сервера с оптимизацией
@@ -1196,6 +1267,71 @@
             updateRemoteVideo();
         }
 
+        // Получение аудио с сервера
+        function startReceivingAudio(roomName) {
+            const userId = '{{ user.username }}';
+            
+            async function updateRemoteAudio() {
+                try {
+                    // Получаем список участников
+                    const participantsResponse = await fetch(`/api/conference/${roomName}/join`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    const participantsData = await participantsResponse.json();
+                    
+                    if (participantsData.success) {
+                        // Для каждого участника (кроме себя) получаем аудио
+                        for (const participant of participantsData.participants) {
+                            if (participant === userId) continue;
+                            
+                            // Получаем аудио данные с сервера
+                            const audioResponse = await fetch(`/api/conference/${roomName}/audio/${participant}`);
+                            const audioData = await audioResponse.json();
+                            
+                            if (audioData.success && audioData.audio) {
+                                playAudio(audioData.audio);
+                            }
+                        }
+                    }
+                    
+                    // Повторяем запрос через 100 мс для плавного звука
+                    setTimeout(updateRemoteAudio, 100);
+                } catch (error) {
+                    console.error('Error updating remote audio:', error);
+                    // Повторяем запрос через 100 мс в случае ошибки
+                    setTimeout(updateRemoteAudio, 100);
+                }
+            }
+            
+            // Запускаем процесс обновления
+            updateRemoteAudio();
+        }
+
+        // Воспроизведение полученного аудио
+        function playAudio(audioArray) {
+            if (!audioContext) return;
+            
+            try {
+                const audioBuffer = audioContext.createBuffer(1, audioArray.length, audioContext.sampleRate);
+                const channelData = audioBuffer.getChannelData(0);
+                
+                for (let i = 0; i < audioArray.length; i++) {
+                    channelData[i] = audioArray[i];
+                }
+                
+                const source = audioContext.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(audioContext.destination);
+                source.start();
+            } catch (error) {
+                console.error('Error playing audio:', error);
+            }
+        }
+
         // Обновление списка участников
         async function updateParticipantsList(roomName) {
             try {
@@ -1236,6 +1372,17 @@
             if (videoInterval) clearInterval(videoInterval);
             if (audioInterval) clearInterval(audioInterval);
             if (screenSharingInterval) clearInterval(screenSharingInterval);
+            if (audioIntervalId) clearInterval(audioIntervalId);
+            
+            if (audioProcessor) {
+                audioProcessor.disconnect();
+                audioProcessor = null;
+            }
+            
+            if (audioContext) {
+                await audioContext.close();
+                audioContext = null;
+            }
             
             document.getElementById('waitingMessage').style.display = 'flex';
             document.getElementById('remoteVideoContainer').style.display = 'none';
@@ -1253,6 +1400,25 @@
             }
             
             document.getElementById('conferenceSection').style.display = 'none';
+            document.getElementById('endConferenceBtn').style.display = 'none';
+        }
+
+        // Завершение конференции (для учителя)
+        async function endConference() {
+            if (confirm('Вы уверены, что хотите завершить конференцию для всех участников?')) {
+                await leaveConference();
+                
+                if (currentRoom) {
+                    await fetch(`/api/conference/${currentRoom}/end`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                }
+                
+                window.location.reload();
+            }
         }
 
         // Полноэкранный режим
@@ -1411,6 +1577,8 @@
                 });
             }
         });
+
+        document.getElementById('endConferenceBtn').addEventListener('click', endConference);
 
         // Для учителя: кнопка демонстрации экрана
         if ({% if is_teacher %}true{% else %}false{% endif %}) {
