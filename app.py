@@ -37,11 +37,11 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
 # Настройки видео и аудио
-VIDEO_QUALITY = 0.3  # Качество JPEG (0.1 - низкое, 1.0 - высокое)
+VIDEO_QUALITY = 0.5  # Качество JPEG (0.1 - низкое, 1.0 - высокое)
 TARGET_WIDTH = 640    # Ширина кадра
 TARGET_HEIGHT = 480   # Высота кадра
-TARGET_FPS = 15       # Целевая частота кадров
-AUDIO_SAMPLE_RATE = 20000  # Частота дискретизации аудио
+TARGET_FPS = 12       # Целевая частота кадров
+AUDIO_SAMPLE_RATE = 16000  # Частота дискретизации аудио
 AUDIO_CHANNELS = 1    # Количество каналов аудио
 
 # Глобальные переменные для видеоконференций
@@ -55,7 +55,7 @@ last_cleanup_time = time.time()
 
 # Ограничения для видео и аудио
 MAX_FRAMES_PER_USER = 3  # Максимальное количество кадров в буфере
-MAX_FRAME_AGE = 0.5      # Максимальный возраст кадра в секундах
+MAX_FRAME_AGE = 1.0      # Максимальный возраст кадра в секундах
 MAX_AUDIO_PER_USER = 10  # Максимальное количество аудио блоков в буфере
 MAX_AUDIO_AGE = 0.5      # Максимальный возраст аудио данных в секундах
 
@@ -218,96 +218,6 @@ class DB:
         users = [u for u in users if u['username'] != username]
         DB._save_db('users', users)
         return True
-
-    # Курсы
-    @staticmethod
-    def get_courses():
-        courses = DB._get_db('courses')
-        if not courses:
-            # Инициализация тестовых данных
-            initial_courses = [
-                {
-                    'id': 1,
-                    'title': 'Английский язык',
-                    'description': 'Курс английского языка для начинающих',
-                    'teacher': 'admin',
-                    'students': ['student1'],
-                    'schedule': [
-                        {'day': 'Понедельник', 'time': '13:00-14:00'},
-                        {'day': 'Среда', 'time': '13:00-14:00'}
-                    ],
-                    'created_at': datetime.now().isoformat()
-                },
-                {
-                    'id': 2,
-                    'title': 'Обществознание',
-                    'description': 'Основы обществознания для школьников',
-                    'teacher': 'admin',
-                    'students': ['student1'],
-                    'schedule': [
-                        {'day': 'Четверг', 'time': '14:00-15:30'}
-                    ],
-                    'created_at': datetime.now().isoformat()
-                },
-                {
-                    'id': 3,
-                    'title': 'Французский язык',
-                    'description': 'Базовый курс французского языка',
-                    'teacher': 'teacher2',
-                    'students': [],
-                    'schedule': [
-                        {'day': 'Вторник', 'time': '15:00-16:00'},
-                        {'day': 'Пятница', 'time': '15:00-16:00'}
-                    ],
-                    'created_at': datetime.now().isoformat()
-                }
-            ]
-            DB._save_db('courses', initial_courses)
-            return initial_courses
-        return courses
-
-    @staticmethod
-    def get_course(course_id):
-        courses = DB.get_courses()
-        return next((c for c in courses if c['id'] == course_id), None)
-
-    @staticmethod
-    def save_course(title, description, teacher, schedule, students=None):
-        if students is None:
-            students = []
-        courses = DB.get_courses()
-        course_id = max([c['id'] for c in courses], default=0) + 1
-        
-        course = {
-            'id': course_id,
-            'title': title,
-            'description': description,
-            'teacher': teacher,
-            'schedule': schedule,
-            'students': students,
-            'created_at': datetime.now().isoformat()
-        }
-        
-        courses.append(course)
-        DB._save_db('courses', courses)
-        return course
-
-    @staticmethod
-    def delete_course(course_id):
-        courses = DB.get_courses()
-        courses = [c for c in courses if c['id'] != course_id]
-        DB._save_db('courses', courses)
-        return True
-
-    @staticmethod
-    def add_student_to_course(course_id, student_username):
-        courses = DB.get_courses()
-        for course in courses:
-            if course['id'] == course_id and student_username not in course['students']:
-                course['students'].append(student_username)
-                DB._save_db('courses', courses)
-                return True
-        return False
 
     # Уроки
     @staticmethod
@@ -545,15 +455,6 @@ if not os.path.exists(f'{DB_FOLDER}/users.json'):
             'is_active': True,
             'created_at': datetime.now().isoformat(),
             'avatar': 'https://i.pravatar.cc/150?u=student1'
-        },
-        {
-            'username': 'teacher2',
-            'email': 'teacher2@example.com',
-            'password': generate_password_hash('teacher123'),
-            'role': 'teacher',
-            'is_active': True,
-            'created_at': datetime.now().isoformat(),
-            'avatar': 'https://i.pravatar.cc/150?u=teacher2'
         }
     ]
     
@@ -955,55 +856,6 @@ def api_delete_user(username):
         return jsonify({'success': True})
     return jsonify({'error': 'User not found'}), 404
 
-# Управление курсами
-@app.route('/api/courses', methods=['GET'])
-def api_get_courses():
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    if session['user']['role'] == 'teacher':
-        courses = [c for c in DB.get_courses() if c['teacher'] == session['user']['username']]
-    else:
-        courses = [c for c in DB.get_courses() if session['user']['username'] in c['students']]
-    
-    return jsonify({'success': True, 'courses': courses})
-
-@app.route('/api/courses', methods=['POST'])
-def api_create_course():
-    if 'user' not in session or session['user']['role'] != 'teacher':
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    data = request.json
-    required_fields = ['title', 'description', 'schedule']
-    if not all(field in data for field in required_fields):
-        return jsonify({'error': 'Missing required fields'}), 400
-    
-    course = DB.save_course(
-        title=data['title'],
-        description=data['description'],
-        teacher=session['user']['username'],
-        schedule=data['schedule'],
-        students=data.get('students', [])
-    )
-    
-    return jsonify({'success': True, 'course': course})
-
-@app.route('/api/courses/<int:course_id>', methods=['DELETE'])
-def api_delete_course(course_id):
-    if 'user' not in session or session['user']['role'] != 'teacher':
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    course = DB.get_course(course_id)
-    if not course:
-        return jsonify({'error': 'Course not found'}), 404
-    
-    if course['teacher'] != session['user']['username']:
-        return jsonify({'error': 'Access denied'}), 403
-    
-    if DB.delete_course(course_id):
-        return jsonify({'success': True})
-    return jsonify({'error': 'Failed to delete course'}), 500
-
 # Управление уроками
 @app.route('/api/lessons', methods=['GET', 'POST'])
 def api_lessons():
@@ -1142,7 +994,7 @@ def conference(room_name):
             if not has_invite:
                 return "Доступ запрещен", 403
     
-    return render_template('dashboard.html', 
+    return render_template('conference.html', 
                          room_name=room_name,
                          user=session['user'],
                          is_teacher=session['user']['role'] == 'teacher')
@@ -1250,54 +1102,29 @@ def dashboard():
     if 'user' not in session:
         return redirect('/#login')
     
-    room_name = request.args.get('room')
-    if room_name:
-        return render_template('dashboard.html', 
-                             room_name=room_name,
-                             user=session['user'],
-                             is_teacher=session['user']['role'] == 'teacher')
+    if session['user']['role'] == 'teacher':
+        lessons = DB.get_lessons(teacher=session['user']['username'])
+        homeworks = DB.get_teacher_homeworks(session['user']['username'])
+    else:
+        lessons = [l for l in DB.get_lessons() if session['user']['username'] in l.get('students', [])]
+        homeworks = DB.get_student_homeworks(session['user']['username'])
+    
+    formatted_lessons = []
+    for lesson in lessons:
+        formatted_lesson = lesson.copy()
+        try:
+            lesson_date = datetime.fromisoformat(lesson['schedule'])
+            formatted_lesson['schedule'] = lesson_date.isoformat()
+            formatted_lesson['formatted_schedule'] = lesson_date.strftime('%d.%m.%Y %H:%M')
+        except:
+            formatted_lesson['formatted_schedule'] = lesson['schedule']
+        
+        formatted_lessons.append(formatted_lesson)
     
     return render_template('dashboard.html', 
                          user=session['user'],
-                         is_teacher=session['user']['role'] == 'teacher')
-
-@app.route('/courses')
-def courses():
-    if 'user' not in session:
-        return redirect('/#login')
-    
-    if session['user']['role'] == 'teacher':
-        courses_list = [c for c in DB.get_courses() if c['teacher'] == session['user']['username']]
-    else:
-        courses_list = [c for c in DB.get_courses() if session['user']['username'] in c['students']]
-    
-    return render_template('courses.html', 
-                         user=session['user'],
-                         courses=courses_list,
-                         is_teacher=session['user']['role'] == 'teacher')
-
-@app.route('/homework')
-def homework():
-    if 'user' not in session:
-        return redirect('/#login')
-    
-    if session['user']['role'] == 'teacher':
-        homeworks_list = DB.get_teacher_homeworks(session['user']['username'])
-    else:
-        homeworks_list = DB.get_student_homeworks(session['user']['username'])
-    
-    return render_template('homework.html', 
-                         user=session['user'],
-                         homeworks=homeworks_list,
-                         is_teacher=session['user']['role'] == 'teacher')
-
-@app.route('/vpn')
-def vpn():
-    if 'user' not in session:
-        return redirect('/#login')
-    
-    return render_template('vpn.html', 
-                         user=session['user'],
+                         lessons=formatted_lessons,
+                         homeworks=homeworks,
                          is_teacher=session['user']['role'] == 'teacher')
 
 # Обработка контактной формы
