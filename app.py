@@ -33,27 +33,22 @@ os.makedirs(INVITES_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
-# Настройки видео и аудио
+# Настройки видео
 VIDEO_QUALITY = 0.5  # Качество JPEG (0.1 - низкое, 1.0 - высокое)
 TARGET_WIDTH = 640    # Ширина кадра
 TARGET_HEIGHT = 480   # Высота кадра
-TARGET_FPS = 15       # Целевая частота кадров
-AUDIO_SAMPLE_RATE = 16000  # Частота дискретизации аудио (16kHz)
+TARGET_FPS = 12       # Целевая частота кадров
 
 # Глобальные переменные для видеоконференций
 participants = defaultdict(set)
 active_conferences = defaultdict(dict)
 frame_buffers = defaultdict(lambda: defaultdict(deque))  # Буфер кадров для каждого пользователя
 frame_timestamps = defaultdict(dict)  # Временные метки последних кадров
-audio_buffers = defaultdict(lambda: defaultdict(deque))  # Буфер аудио для каждого пользователя
-audio_timestamps = defaultdict(dict)  # Временные метки последних аудио фрагментов
 last_cleanup_time = time.time()
 
-# Ограничения для видео и аудио
+# Ограничения для видео
 MAX_FRAMES_PER_USER = 3  # Максимальное количество кадров в буфере
-MAX_AUDIO_CHUNKS_PER_USER = 5  # Максимальное количество аудио фрагментов в буфере
-MAX_FRAME_AGE = 2.0      # Максимальный возраст кадра в секундах
-MAX_AUDIO_AGE = 2.0      # Максимальный возраст аудио фрагмента в секундах
+MAX_FRAME_AGE = 1.0      # Максимальный возраст кадра в секундах
 
 # Функция для очистки старых данных
 def cleanup_old_data():
@@ -84,27 +79,6 @@ def cleanup_old_data():
                 if room in frame_timestamps:
                     del frame_timestamps[room]
         
-        # Очистка старых аудио фрагментов
-        for room in list(audio_buffers.keys()):
-            for user in list(audio_buffers[room].keys()):
-                # Удаляем старые аудио фрагменты из буфера
-                while (audio_buffers[room][user] and 
-                       current_time - audio_timestamps.get(room, {}).get(user, 0) > MAX_AUDIO_AGE):
-                    audio_buffers[room][user].popleft()
-                
-                # Если буфер пуст и пользователь неактивен, удаляем его
-                if not audio_buffers[room][user] and user not in participants.get(room, set()):
-                    if room in audio_buffers and user in audio_buffers[room]:
-                        del audio_buffers[room][user]
-                    if room in audio_timestamps and user in audio_timestamps[room]:
-                        del audio_timestamps[room][user]
-            
-            # Удаляем пустые комнаты
-            if not audio_buffers[room] and room not in participants:
-                del audio_buffers[room]
-                if room in audio_timestamps:
-                    del audio_timestamps[room]
-        
         # Очистка участников без активности
         for room in list(participants.keys()):
             if not participants[room]:
@@ -112,10 +86,6 @@ def cleanup_old_data():
                     del frame_buffers[room]
                 if room in frame_timestamps:
                     del frame_timestamps[room]
-                if room in audio_buffers:
-                    del audio_buffers[room]
-                if room in audio_timestamps:
-                    del audio_timestamps[room]
                 if room in active_conferences:
                     del active_conferences[room]
                 del participants[room]
@@ -138,20 +108,6 @@ def process_video_frame(room_name, user_id, frame_data):
         frame_timestamps[room_name][user_id] = time.time()
     except Exception as e:
         logger.error(f"Error processing video frame: {e}")
-
-# Функция для обработки аудио
-def process_audio_frame(room_name, user_id, audio_data):
-    try:
-        cleanup_old_data()
-        
-        # Ограничиваем размер буфера для каждого пользователя
-        if len(audio_buffers[room_name][user_id]) >= MAX_AUDIO_CHUNKS_PER_USER:
-            audio_buffers[room_name][user_id].popleft()
-        
-        audio_buffers[room_name][user_id].append(audio_data)
-        audio_timestamps[room_name][user_id] = time.time()
-    except Exception as e:
-        logger.error(f"Error processing audio frame: {e}")
 
 class DB:
     @staticmethod
@@ -505,9 +461,6 @@ def join_conference(room_name):
     user_id = session['user']['username']
     participants[room_name].add(user_id)
     
-    if room_name in active_conferences:
-        active_conferences[room_name]['participants'] = list(participants[room_name])
-    
     return jsonify({
         'success': True,
         'room_name': room_name,
@@ -526,20 +479,12 @@ def leave_conference(room_name):
             del frame_buffers[room_name][user_id]
         if room_name in frame_timestamps and user_id in frame_timestamps[room_name]:
             del frame_timestamps[room_name][user_id]
-        if room_name in audio_buffers and user_id in audio_buffers[room_name]:
-            del audio_buffers[room_name][user_id]
-        if room_name in audio_timestamps and user_id in audio_timestamps[room_name]:
-            del audio_timestamps[room_name][user_id]
         
         if not participants[room_name]:
             if room_name in frame_buffers:
                 del frame_buffers[room_name]
             if room_name in frame_timestamps:
                 del frame_timestamps[room_name]
-            if room_name in audio_buffers:
-                del audio_buffers[room_name]
-            if room_name in audio_timestamps:
-                del audio_timestamps[room_name]
             if room_name in active_conferences:
                 del active_conferences[room_name]
     
@@ -558,26 +503,6 @@ def receive_video_frame(room_name):
     
     process_video_frame(room_name, user_id, frame_data)
     return jsonify({'success': True})
-
-@app.route('/api/conference/<room_name>/audio', methods=['POST'])
-def receive_audio_frame(room_name):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    user_id = session['user']['username']
-    audio_data = request.json.get('audio')
-    
-    if not audio_data:
-        return jsonify({'error': 'No audio data provided'}), 400
-    
-    try:
-        # Декодируем base64 и добавляем в буфер
-        audio_bytes = base64.b64decode(audio_data)
-        process_audio_frame(room_name, user_id, audio_bytes)
-        return jsonify({'success': True})
-    except Exception as e:
-        logger.error(f"Error processing audio frame: {e}")
-        return jsonify({'error': str(e)}), 500
 
 @app.route('/video_feed/<room_name>/<user_id>')
 def video_feed(room_name, user_id):
@@ -616,24 +541,6 @@ def video_feed(room_name, user_id):
     
     return Response(generate(),
                   mimetype='multipart/x-mixed-replace; boundary=frame')
-
-@app.route('/audio_feed/<room_name>/<user_id>')
-def audio_feed(room_name, user_id):
-    def generate():
-        while True:
-            try:
-                if (room_name in audio_buffers and 
-                    user_id in audio_buffers[room_name] and 
-                    audio_buffers[room_name][user_id]):
-                    
-                    audio_data = audio_buffers[room_name][user_id][-1]
-                    yield audio_data
-                time.sleep(0.02)  # 50 FPS для аудио
-            except Exception as e:
-                logger.error(f"Error in audio feed generation: {e}")
-                time.sleep(0.1)
-    
-    return Response(generate(), mimetype='audio/x-wav')
 
 @app.route('/api/conference/<room_name>/screen', methods=['POST'])
 def receive_screen_frame(room_name):
