@@ -1056,7 +1056,6 @@
         let audioContext = null;
         let mediaStreamSource = null;
         let scriptProcessor = null;
-        let audioChunks = [];
 
         // Инициализация аудио контекста
         function initAudioContext(stream) {
@@ -1069,11 +1068,11 @@
                     if (!isAudioEnabled) return;
                     
                     const audioData = e.inputBuffer.getChannelData(0);
-                    const audioBlob = new Blob([audioData], { type: 'application/octet-stream' });
+                    const audioBlob = new Blob([audioData], { type: 'audio/wav' });
                     
                     const reader = new FileReader();
                     reader.onload = function() {
-                        const base64Audio = reader.result.split(',')[1]; // только base64 без префикса
+                        const base64Audio = reader.result;
                         
                         fetch(`/api/conference/${currentRoom}/audio`, {
                             method: 'POST',
@@ -1195,11 +1194,8 @@
             const userId = '{{ user.username }}';
             const remoteVideo = document.getElementById('remoteVideo');
             const remoteVideoContainer = document.getElementById('remoteVideoContainer');
+            const remoteAudio = document.getElementById('remoteAudio');
             const waitingMessage = document.getElementById('waitingMessage');
-            
-            // Инициализация аудио контекста для воспроизведения
-            const playbackAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-            let playbackAudioSource = null;
             
             // Функция для обновления видео и аудио других участников
             async function updateRemoteMedia() {
@@ -1222,26 +1218,17 @@
                             // Устанавливаем источник видео с сервера с параметром для избежания кэширования
                             remoteVideo.src = `/video_feed/${roomName}/${participant}?t=${Date.now()}`;
                             
-                            // Воспроизводим аудио через Web Audio API
+                            // Устанавливаем источник аудио
+                            remoteAudio.src = `/audio_feed/${roomName}/${participant}?t=${Date.now()}`;
+                            
                             try {
-                                const audioResponse = await fetch(`/audio_feed/${roomName}/${participant}?t=${Date.now()}`);
-                                const audioData = await audioResponse.arrayBuffer();
-                                
-                                if (playbackAudioSource) {
-                                    playbackAudioSource.disconnect();
-                                }
-                                
-                                playbackAudioSource = playbackAudioContext.createBufferSource();
-                                playbackAudioSource.buffer = await playbackAudioContext.decodeAudioData(audioData);
-                                playbackAudioSource.connect(playbackAudioContext.destination);
-                                playbackAudioSource.start();
-                                
-                                waitingMessage.style.display = 'none';
-                                remoteVideoContainer.style.display = 'block';
+                                await remoteAudio.play();
                             } catch (e) {
-                                console.error('Audio playback error:', e);
+                                console.log('Audio play failed:', e);
                             }
                             
+                            waitingMessage.style.display = 'none';
+                            remoteVideoContainer.style.display = 'block';
                             break; // Показываем только одного участника
                         }
                         
