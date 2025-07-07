@@ -716,8 +716,7 @@
                         <tr>
                             <td>{{ lesson.title }}</td>
                             <td>{{ lesson.description }}</td>
-                            <td>{{ lesson.day_of_week }}</td>
-                            <td>{{ lesson.time_slot }}</td>
+                            <td>{{ lesson.formatted_schedule }}</td>
                             <td>
                                 <a href="/api/lesson/{{ lesson.id }}/join" class="btn">
                                     <i class="fas fa-video"></i> Присоединиться
