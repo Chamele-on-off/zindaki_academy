@@ -853,7 +853,11 @@ def api_lessons():
     formatted_lessons = []
     for lesson in lessons:
         formatted_lesson = lesson.copy()
-        formatted_lesson['formatted_schedule'] = f"{lesson['day_of_week']} {lesson['time_slot']}"
+        try:
+            lesson_date = datetime.fromisoformat(lesson['schedule'])
+            formatted_lesson['formatted_schedule'] = lesson_date.strftime('%d.%m.%Y %H:%M')
+        except:
+            formatted_lesson['formatted_schedule'] = lesson['schedule']
         formatted_lessons.append(formatted_lesson)
     
     return jsonify({'lessons': formatted_lessons})
