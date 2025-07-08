@@ -4,7 +4,7 @@ services:
   web:
     build: .
     ports:
-      - "7001:7001"
+      - "7001:7001"  # Пробрасываем порт Flask напрямую
     volumes:
       - .:/app
       - ./uploads:/app/uploads
@@ -14,23 +14,4 @@ services:
       - FLASK_ENV=production
       - SECRET_KEY=your-secret-key-here
     restart: unless-stopped
-    networks:
-      - zindaki-network
-
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "8080:80"
-    volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      - ./logs/nginx:/var/log/nginx
-    depends_on:
-      - web
-    restart: unless-stopped
-    networks:
-      - zindaki-network
-
-networks:
-  zindaki-network:
-    driver: bridge
+    command: gunicorn --bind 0.0.0.0:7001 app:app  # Используем production-сервер
