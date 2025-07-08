@@ -1151,4 +1151,4 @@ def health():
 
 if __name__ == '__main__':
     # Для разработки (не использовать в production)
-    app.run(host='0.0.0.0', port=8443, debug=False)
+    app.run(host='0.0.0.0', port=8000, debug=False)
