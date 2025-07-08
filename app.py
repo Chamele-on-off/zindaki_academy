@@ -1136,5 +1136,14 @@ def api_contact():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# Убедитесь, что app создается правильно
+app = Flask(__name__, static_folder='static', template_folder='templates')
+
+# Добавьте health-check endpoint
+@app.route('/health')
+def health():
+    return jsonify({"status": "ok"}), 200
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=7001, debug=os.environ.get('FLASK_DEBUG', False), threaded=True)
+    # Для разработки (не использовать в production)
+    app.run(host='0.0.0.0', port=7001, debug=False)
