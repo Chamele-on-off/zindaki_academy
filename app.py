@@ -1143,7 +1143,6 @@ def api_contact():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # Убедитесь, что app создается правильно
-app = Flask(__name__, static_folder='static', template_folder='templates')
 
 # Добавьте health-check endpoint
 @app.route('/health')
@@ -1152,4 +1151,4 @@ def health():
 
 if __name__ == '__main__':
     # Для разработки (не использовать в production)
-    app.run(host='0.0.0.0', port=7001, debug=False)
+    app.run(host='0.0.0.0', port=8443, debug=False)
