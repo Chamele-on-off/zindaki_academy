@@ -18,6 +18,12 @@ import wave
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 
+@app.before_request
+def redirect_https():
+    if not request.is_secure:
+        return redirect(request.url.replace('http://', 'https://', 1), code=301)
+
+
 # Включение сжатия
 Compress(app)
 
