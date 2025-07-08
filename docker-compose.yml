@@ -4,11 +4,23 @@ services:
   web:
     build: .
     ports:
-      - "7001:7001"  # Теперь только внутренний порт (Nginx на хосте проксирует>
+      - "7001:7001"
     volumes:
       - .:/app
       - ./uploads:/app/uploads
+      - ./data:/app/data
     environment:
       - FLASK_APP=app.py
       - FLASK_ENV=production
+      - SECRET_KEY=your-secret-key-here
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - web
     restart: unless-stopped
