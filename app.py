@@ -182,7 +182,7 @@ class DB:
     @staticmethod
     def get_user(username):
         users = DB.get_users()
-        return next((u for u in users if u['username'] == username), None
+        return next((u for u in users if u['username'] == username), None)
 
     @staticmethod
     def save_user(username, email, password, role='student', is_active=True):
@@ -230,7 +230,7 @@ class DB:
     @staticmethod
     def get_lesson(lesson_id):
         lessons = DB.get_lessons()
-        return next((l for l in lessons if l['id'] == lesson_id), None
+        return next((l for l in lessons if l['id'] == lesson_id), None)
 
     @staticmethod
     def save_lesson(title, description, teacher, day_of_week, time_slot, duration=60, subject=None, students=None):
@@ -271,7 +271,7 @@ class DB:
     @staticmethod
     def get_homework(homework_id):
         homeworks = DB.get_homeworks()
-        return next((h for h in homeworks if h['id'] == homework_id), None
+        return next((h for h in homeworks if h['id'] == homework_id), None)
 
     @staticmethod
     def save_homework(lesson_id, title, description, deadline, teacher, students=None, files=None):
