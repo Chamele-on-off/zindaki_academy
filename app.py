@@ -849,14 +849,7 @@ def api_lessons():
     else:
         lessons = [l for l in DB.get_lessons() if session['user']['username'] in l.get('students', [])]
     
-    # Форматируем расписание для отображения
-    formatted_lessons = []
-    for lesson in lessons:
-        formatted_lesson = lesson.copy()
-        formatted_lesson['formatted_schedule'] = f"{lesson['day_of_week']} {lesson['time_slot']}"
-        formatted_lessons.append(formatted_lesson)
-    
-    return jsonify({'lessons': formatted_lessons})
+    return jsonify({'lessons': lessons})
 
 @app.route('/api/lessons/<int:lesson_id>', methods=['DELETE'])
 def api_delete_lesson(lesson_id):
