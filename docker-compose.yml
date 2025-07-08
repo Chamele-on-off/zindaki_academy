@@ -4,14 +4,14 @@ services:
   web:
     build: .
     ports:
-      - "443:8443"  # Пробрасываем HTTPS порт напрямую
-      - "80:8000"   # HTTP для редиректа
+      - "8000:8000"  # HTTP порт
+      - "8443:8443"  # HTTPS порт
     volumes:
       - .:/app
+      - ./uploads:/app/uploads
+      - ./data:/app/data
       - ./certs:/app/certs
     environment:
       - FLASK_APP=app.py
       - FLASK_ENV=production
-      - GUNICORN_CERTFILE=/app/certs/fullchain.pem
-      - GUNICORN_KEYFILE=/app/certs/privkey.pem
     restart: unless-stopped
