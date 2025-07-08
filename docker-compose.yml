@@ -4,39 +4,14 @@ services:
   web:
     build: .
     ports:
-      - "7001:7001"  # Проброс порта Flask/Gunicorn
-    expose:
-      - "7001"       # Для внутреннего взаимодействия
+      - "443:8443"  # Пробрасываем HTTPS порт напрямую
+      - "80:8000"   # HTTP для редиректа
     volumes:
       - .:/app
-      - ./uploads:/app/uploads
-      - ./data:/app/data
+      - ./certs:/app/certs
     environment:
       - FLASK_APP=app.py
       - FLASK_ENV=production
-      - GUNICORN_BIND=0.0.0.0:7001
+      - GUNICORN_CERTFILE=/app/certs/fullchain.pem
+      - GUNICORN_KEYFILE=/app/certs/privkey.pem
     restart: unless-stopped
-    networks:
-      - zindaki-net
-
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d
-      - ./certs:/etc/nginx/certs
-      - ./logs/nginx:/var/log/nginx
-    depends_on:
-      - web
-    restart: unless-stopped
-    networks:
-      - zindaki-net
-
-networks:
-  zindaki-net:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/24  # Фиксированная подсеть
