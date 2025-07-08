@@ -3,8 +3,10 @@ version: '3.8'
 services:
   web:
     build: .
+    ports:
+      - "7001:7001"  # Проброс порта Flask/Gunicorn
     expose:
-      - "7001"
+      - "7001"       # Для внутреннего взаимодействия
     volumes:
       - .:/app
       - ./uploads:/app/uploads
@@ -12,9 +14,10 @@ services:
     environment:
       - FLASK_APP=app.py
       - FLASK_ENV=production
-      - SECRET_KEY=\${SECRET_KEY}
-      - SERVER_NAME=\${SERVER_NAME}
+      - GUNICORN_BIND=0.0.0.0:7001
     restart: unless-stopped
+    networks:
+      - zindaki-net
 
   nginx:
     image: nginx:alpine
@@ -28,7 +31,12 @@ services:
     depends_on:
       - web
     restart: unless-stopped
+    networks:
+      - zindaki-net
 
 networks:
-  default:
+  zindaki-net:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24  # Фиксированная подсеть
