@@ -12,10 +12,9 @@ services:
     environment:
       - FLASK_APP=app.py
       - FLASK_ENV=production
-      - SECRET_KEY=${SECRET_KEY}
+      - SECRET_KEY=\${SECRET_KEY}
+      - SERVER_NAME=\${SERVER_NAME}
     restart: unless-stopped
-    networks:
-      - zindaki-net
 
   nginx:
     image: nginx:alpine
@@ -29,9 +28,7 @@ services:
     depends_on:
       - web
     restart: unless-stopped
-    networks:
-      - zindaki-net
 
 networks:
-  zindaki-net:
+  default:
     driver: bridge
