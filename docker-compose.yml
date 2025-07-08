@@ -3,8 +3,8 @@ version: '3.8'
 services:
   web:
     build: .
-    ports:
-      - "7001:7001"
+    expose:
+      - "7001"
     volumes:
       - .:/app
       - ./uploads:/app/uploads
@@ -12,10 +12,26 @@ services:
     environment:
       - FLASK_APP=app.py
       - FLASK_ENV=production
-      - SECRET_KEY=your-secret-key
+      - SECRET_KEY=${SECRET_KEY}
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    networks:
+      - zindaki-net
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./certs:/etc/nginx/certs
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - web
+    restart: unless-stopped
+    networks:
+      - zindaki-net
+
+networks:
+  zindaki-net:
+    driver: bridge
