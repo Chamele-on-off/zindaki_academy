@@ -4,7 +4,7 @@ services:
   web:
     build: .
     ports:
-      - "7001:7001"  # Пробрасываем порт Flask напрямую
+      - "7001:7001"
     volumes:
       - .:/app
       - ./uploads:/app/uploads
@@ -12,6 +12,10 @@ services:
     environment:
       - FLASK_APP=app.py
       - FLASK_ENV=production
-      - SECRET_KEY=your-secret-key-here
+      - SECRET_KEY=your-secret-key
     restart: unless-stopped
-    command: gunicorn --bind 0.0.0.0:7001 app:app  # Используем production-сервер
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
