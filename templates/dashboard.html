@@ -620,7 +620,7 @@
         <!-- Расписание занятий -->
         <div class="section">
             <h2 class="section-title">
-                Расписание занятий
+                Мои занятия
                 <div class="actions">
                     <button class="btn" id="addLessonBtn">
                         <i class="fas fa-plus"></i> Добавить занятие
@@ -637,7 +637,7 @@
                         <tr>
                             <th>Название</th>
                             <th>Описание</th>
-                            <th>Расписание</th>
+                            <th>Дата и время</th>
                             <th>Длительность</th>
                             <th>Ученики</th>
                             <th>Действия</th>
@@ -648,10 +648,19 @@
                         <tr>
                             <td>{{ lesson.title }}</td>
                             <td>{{ lesson.description }}</td>
-                            <td>{{ lesson.day_of_week }} {{ lesson.time_slot }}</td>
+                            <td>
+                                {% if lesson.day_of_week and lesson.time_slot %}
+                                    {{ lesson.day_of_week }}, {{ lesson.time_slot }}
+                                {% else %}
+                                    По расписанию
+                                {% endif %}
+                            </td>
                             <td>{{ lesson.duration }} мин</td>
                             <td>{{ lesson.students|join(', ') if lesson.students else 'нет' }}</td>
                             <td>
+                                <a href="/api/lesson/{{ lesson.id }}/join" class="btn">
+                                    <i class="fas fa-video"></i> Начать
+                                </a>
                                 <button class="btn btn-danger" onclick="deleteLesson('{{ lesson.id }}')">
                                     <i class="fas fa-trash"></i> Удалить
                                 </button>
@@ -722,7 +731,7 @@
         {% else %}
         <!-- Для студентов -->
         <div class="section">
-            <h2 class="section-title">Мои курсы</h2>
+            <h2 class="section-title">Мои занятия</h2>
             
             {% if lessons %}
             <div class="table-container">
@@ -731,7 +740,8 @@
                         <tr>
                             <th>Название</th>
                             <th>Описание</th>
-                            <th>Расписание</th>
+                            <th>Дата и время</th>
+                            <th>Преподаватель</th>
                             <th>Действия</th>
                         </tr>
                     </thead>
@@ -740,7 +750,14 @@
                         <tr>
                             <td>{{ lesson.title }}</td>
                             <td>{{ lesson.description }}</td>
-                            <td>{{ lesson.day_of_week }} {{ lesson.time_slot }}</td>
+                            <td>
+                                {% if lesson.day_of_week and lesson.time_slot %}
+                                    {{ lesson.day_of_week }}, {{ lesson.time_slot }}
+                                {% else %}
+                                    По расписанию
+                                {% endif %}
+                            </td>
+                            <td>{{ lesson.teacher }}</td>
                             <td>
                                 <a href="/api/lesson/{{ lesson.id }}/join" class="btn">
                                     <i class="fas fa-video"></i> Присоединиться
@@ -752,7 +769,7 @@
                 </table>
             </div>
             {% else %}
-            <p>Вы пока не записаны ни на один курс</p>
+            <p>Вы пока не записаны ни на одно занятие</p>
             {% endif %}
             
             <!-- Альтернативные ссылки на конференции -->
@@ -1020,54 +1037,41 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="lessonDay">День недели</label>
-                    <select id="lessonDay" class="form-control" required>
-                        <option value="Понедельник">Понедельник</option>
-                        <option value="Вторник">Вторник</option>
-                        <option value="Среда">Среда</option>
-                        <option value="Четверг">Четверг</option>
-                        <option value="Пятница">Пятница</option>
-                        <option value="Суббота">Суббота</option>
-                        <option value="Воскресенье">Воскресенье</option>
-                    </select>
+                    <label>Расписание</label>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="lessonDate">Дата</label>
+                            <input type="date" id="lessonDate" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="lessonTime">Время</label>
+                            <input type="time" id="lessonTime" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="recurringCheckbox"> Повторяющееся занятие
+                        </label>
+                    </div>
+                    <div id="recurringOptions" style="display: none;">
+                        <div class="form-group">
+                            <label for="lessonDay">День недели</label>
+                            <select id="lessonDay" class="form-control">
+                                <option value="Понедельник">Понедельник</option>
+                                <option value="Вторник">Вторник</option>
+                                <option value="Среда">Среда</option>
+                                <option value="Четверг">Четверг</option>
+                                <option value="Пятница">Пятница</option>
+                                <option value="Суббота">Суббота</option>
+                                <option value="Воскресенье">Воскресенье</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="lessonTime">Время начала</label>
-                        <select id="lessonTime" class="form-control" required>
-                            <option value="09:00">09:00</option>
-                            <option value="09:30">09:30</option>
-                            <option value="10:00">10:00</option>
-                            <option value="10:30">10:30</option>
-                            <option value="11:00">11:00</option>
-                            <option value="11:30">11:30</option>
-                            <option value="12:00">12:00</option>
-                            <option value="12:30">12:30</option>
-                            <option value="13:00">13:00</option>
-                            <option value="13:30">13:30</option>
-                            <option value="14:00">14:00</option>
-                            <option value="14:30">14:30</option>
-                            <option value="15:00">15:00</option>
-                            <option value="15:30">15:30</option>
-                            <option value="16:00">16:00</option>
-                            <option value="16:30">16:30</option>
-                            <option value="17:00">17:00</option>
-                            <option value="17:30">17:30</option>
-                            <option value="18:00">18:00</option>
-                            <option value="18:30">18:30</option>
-                            <option value="19:00">19:00</option>
-                            <option value="19:30">19:30</option>
-                            <option value="20:00">20:00</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="lessonDuration">Длительность</label>
-                        <select id="lessonDuration" class="form-control" required>
-                            <option value="60">1 час</option>
-                            <option value="90">1.5 часа</option>
-                        </select>
-                    </div>
+                <div class="form-group">
+                    <label for="lessonDuration">Длительность (минут)</label>
+                    <input type="number" id="lessonDuration" class="form-control" value="60" min="30" max="180" required>
                 </div>
                 
                 <div class="form-group">
@@ -2027,10 +2031,15 @@
                             row.innerHTML = `
                                 <td>${lesson.title}</td>
                                 <td>${lesson.description || '-'}</td>
-                                <td>${lesson.day_of_week || ''} ${lesson.time_slot || ''}</td>
+                                <td>
+                                    ${lesson.day_of_week ? `${lesson.day_of_week}, ${lesson.time_slot}` : 'По расписанию'}
+                                </td>
                                 <td>${lesson.duration} мин</td>
                                 <td>${lesson.students?.join(', ') || 'нет'}</td>
                                 <td>
+                                    <a href="/api/lesson/${lesson.id}/join" class="btn">
+                                        <i class="fas fa-video"></i> Начать
+                                    </a>
                                     <button class="btn btn-danger" onclick="deleteLesson('${lesson.id}')">
                                         <i class="fas fa-trash"></i> Удалить
                                     </button>
@@ -2116,7 +2125,7 @@
                         data.lessons.forEach(lesson => {
                             const option = document.createElement('option');
                             option.value = lesson.id;
-                            option.textContent = `${lesson.title} (${lesson.day_of_week} ${lesson.time_slot})`;
+                            option.textContent = `${lesson.title} (${lesson.day_of_week ? `${lesson.day_of_week}, ${lesson.time_slot}` : 'По расписанию'})`;
                             select.appendChild(option);
                         });
                     })
@@ -2280,8 +2289,10 @@
                 const title = document.getElementById('lessonTitle').value;
                 const description = document.getElementById('lessonDescription').value;
                 const subject = document.getElementById('lessonSubject').value;
-                const day = document.getElementById('lessonDay').value;
+                const date = document.getElementById('lessonDate').value;
                 const time = document.getElementById('lessonTime').value;
+                const isRecurring = document.getElementById('recurringCheckbox').checked;
+                const day = document.getElementById('lessonDay').value;
                 const duration = document.getElementById('lessonDuration').value;
                 
                 const studentsSelect = document.getElementById('lessonStudents');
@@ -2291,11 +2302,30 @@
                     title,
                     description,
                     subject,
-                    day_of_week: day,
-                    time_slot: time,
+                    day_of_week: isRecurring ? day : null,
+                    time_slot: isRecurring ? time : null,
+                    date: isRecurring ? null : date,
+                    time: isRecurring ? null : time,
                     duration,
                     students
                 });
+            });
+            
+            // Переключение между разовым и повторяющимся занятием
+            document.getElementById('recurringCheckbox').addEventListener('change', function() {
+                const recurringOptions = document.getElementById('recurringOptions');
+                const dateInput = document.getElementById('lessonDate');
+                const timeInput = document.getElementById('lessonTime');
+                
+                if (this.checked) {
+                    recurringOptions.style.display = 'block';
+                    dateInput.disabled = true;
+                    timeInput.disabled = true;
+                } else {
+                    recurringOptions.style.display = 'none';
+                    dateInput.disabled = false;
+                    timeInput.disabled = false;
+                }
             });
             
             // Форма назначения домашнего задания
