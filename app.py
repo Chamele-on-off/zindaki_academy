@@ -233,7 +233,7 @@ class DB:
         return next((l for l in lessons if l['id'] == lesson_id), None)
 
     @staticmethod
-    def save_lesson(title, description, teacher, day_of_week, time_slot, duration=60, subject=None, students=None):
+    def save_lesson(title, description, teacher, subject=None, students=None):
         if students is None:
             students = []
         lessons = DB.get_lessons()
@@ -244,9 +244,6 @@ class DB:
             'title': title,
             'description': description,
             'teacher': teacher,
-            'day_of_week': day_of_week,
-            'time_slot': time_slot,
-            'duration': duration,
             'subject': subject,
             'students': students,
             'created_at': datetime.now().isoformat()
@@ -411,9 +408,6 @@ if not os.path.exists(f'{DB_FOLDER}/users.json'):
             'title': 'Вводный урок по английскому',
             'description': 'Основы грамматики и произношения',
             'teacher': 'admin',
-            'day_of_week': 'Понедельник',
-            'time_slot': '13:00-14:00',
-            'duration': 60,
             'subject': 'Английский язык',
             'students': ['student1'],
             'created_at': datetime.now().isoformat()
@@ -423,9 +417,6 @@ if not os.path.exists(f'{DB_FOLDER}/users.json'):
             'title': 'Обществознание для начинающих',
             'description': 'Основные понятия и термины',
             'teacher': 'admin',
-            'day_of_week': 'Четверг',
-            'time_slot': '14:00-15:30',
-            'duration': 90,
             'subject': 'Обществознание',
             'students': ['student1'],
             'created_at': datetime.now().isoformat()
@@ -827,7 +818,7 @@ def api_lessons():
             return jsonify({'error': 'Only teachers can create lessons'}), 403
             
         data = request.json
-        required_fields = ['title', 'day_of_week', 'time_slot', 'duration']
+        required_fields = ['title', 'description']
         if not all(field in data for field in required_fields):
             return jsonify({'error': 'Missing required fields'}), 400
         
@@ -835,9 +826,6 @@ def api_lessons():
             data['title'],
             data.get('description', ''),
             session['user']['username'],
-            data['day_of_week'],
-            data['time_slot'],
-            data['duration'],
             data.get('subject'),
             data.get('students', [])
         )
@@ -1034,16 +1022,9 @@ def dashboard():
         lessons = [l for l in DB.get_lessons() if session['user']['username'] in l.get('students', [])]
         homeworks = DB.get_student_homeworks(session['user']['username'])
     
-    # Форматируем расписание для отображения
-    formatted_lessons = []
-    for lesson in lessons:
-        formatted_lesson = lesson.copy()
-        formatted_lesson['formatted_schedule'] = f"{lesson['day_of_week']} {lesson['time_slot']}"
-        formatted_lessons.append(formatted_lesson)
-    
     return render_template('dashboard.html', 
                          user=session['user'],
-                         lessons=formatted_lessons,
+                         lessons=lessons,
                          homeworks=homeworks,
                          is_teacher=session['user']['role'] == 'teacher')
 
