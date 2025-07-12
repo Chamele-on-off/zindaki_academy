@@ -344,6 +344,18 @@ def join_conference(room_name):
     user_id = session['user']['username']
     participants[room_name].add(user_id)
     
+    # Инициализация структур данных для комнаты, если их нет
+    if room_name not in peer_connections:
+        peer_connections[room_name] = {}
+    if room_name not in offers:
+        offers[room_name] = {}
+    if room_name not in answers:
+        answers[room_name] = {}
+    if room_name not in ice_candidates:
+        ice_candidates[room_name] = defaultdict(list)
+    
+    logger.info(f"User {user_id} joined room {room_name}")
+    
     return jsonify({
         'success': True,
         'room_name': room_name,
@@ -358,6 +370,7 @@ def leave_conference(room_name):
     user_id = session['user']['username']
     if room_name in participants and user_id in participants[room_name]:
         participants[room_name].remove(user_id)
+        logger.info(f"User {user_id} left room {room_name}")
         
         # Очищаем данные WebRTC для пользователя
         if room_name in peer_connections and user_id in peer_connections[room_name]:
@@ -369,6 +382,7 @@ def leave_conference(room_name):
         if room_name in ice_candidates and user_id in ice_candidates[room_name]:
             del ice_candidates[room_name][user_id]
         
+        # Если комната пуста, очищаем все данные
         if not participants[room_name]:
             if room_name in peer_connections:
                 del peer_connections[room_name]
@@ -380,6 +394,7 @@ def leave_conference(room_name):
                 del ice_candidates[room_name]
             if room_name in active_conferences:
                 del active_conferences[room_name]
+            logger.info(f"Room {room_name} cleared as empty")
     
     return jsonify({'success': True})
 
@@ -394,10 +409,12 @@ def handle_offer(room_name):
     # Сохраняем предложение (offer)
     offers[room_name][user_id] = {
         'sdp': data['sdp'],
-        'type': data['type']
+        'type': data['type'],
+        'datetime': datetime.now().isoformat()
     }
     
-    # Возвращаем успешный ответ (реальный answer будет отправлен другим участником)
+    logger.info(f"Received offer from {user_id} in room {room_name}")
+    
     return jsonify({'success': True, 'message': 'Offer received'})
 
 @app.route('/api/conference/<room_name>/answer', methods=['POST'])
@@ -411,14 +428,11 @@ def handle_answer(room_name):
     # Сохраняем ответ (answer)
     answers[room_name][user_id] = {
         'sdp': data['sdp'],
-        'type': data['type']
+        'type': data['type'],
+        'datetime': datetime.now().isoformat()
     }
     
-    # Отправляем answer другому участнику
-    other_participants = [p for p in participants[room_name] if p != user_id]
-    if other_participants:
-        # В реальном приложении здесь можно уведомить другого участника через long polling или SSE
-        pass
+    logger.info(f"Received answer from {user_id} in room {room_name}")
     
     return jsonify({'success': True, 'message': 'Answer received'})
 
@@ -434,14 +448,11 @@ def handle_ice_candidate(room_name):
     ice_candidates[room_name][user_id].append({
         'candidate': data['candidate'],
         'sdpMid': data['sdpMid'],
-        'sdpMLineIndex': data['sdpMLineIndex']
+        'sdpMLineIndex': data['sdpMLineIndex'],
+        'datetime': datetime.now().isoformat()
     })
     
-    # Отправляем кандидата другому участнику
-    other_participants = [p for p in participants[room_name] if p != user_id]
-    if other_participants:
-        # В реальном приложении здесь можно уведомить другого участника через long polling или SSE
-        pass
+    logger.info(f"Received ICE candidate from {user_id} in room {room_name}")
     
     return jsonify({'success': True, 'message': 'ICE candidate received'})
 
@@ -451,17 +462,22 @@ def get_offer(room_name):
         return jsonify({'error': 'Unauthorized'}), 401
     
     user_id = session['user']['username']
-    other_participants = [p for p in participants[room_name] if p != user_id]
+    other_participants = [p for p in participants.get(room_name, []) if p != user_id]
     
     if not other_participants:
         return jsonify({'success': False, 'error': 'No other participants'})
     
     # Получаем offer от другого участника
     for participant in other_participants:
-        if participant in offers[room_name]:
+        if participant in offers.get(room_name, {}):
+            offer = offers[room_name][participant]
+            # Удаляем offer после получения
+            del offers[room_name][participant]
+            logger.info(f"Sending offer from {participant} to {user_id} in room {room_name}")
             return jsonify({
                 'success': True,
-                'offer': offers[room_name][participant]
+                'offer': offer,
+                'from': participant
             })
     
     return jsonify({'success': False, 'error': 'No offer available'})
@@ -472,17 +488,22 @@ def get_answer(room_name):
         return jsonify({'error': 'Unauthorized'}), 401
     
     user_id = session['user']['username']
-    other_participants = [p for p in participants[room_name] if p != user_id]
+    other_participants = [p for p in participants.get(room_name, []) if p != user_id]
     
     if not other_participants:
         return jsonify({'success': False, 'error': 'No other participants'})
     
     # Получаем answer от другого участника
     for participant in other_participants:
-        if participant in answers[room_name]:
+        if participant in answers.get(room_name, {}):
+            answer = answers[room_name][participant]
+            # Удаляем answer после получения
+            del answers[room_name][participant]
+            logger.info(f"Sending answer from {participant} to {user_id} in room {room_name}")
             return jsonify({
                 'success': True,
-                'answer': answers[room_name][participant]
+                'answer': answer,
+                'from': participant
             })
     
     return jsonify({'success': False, 'error': 'No answer available'})
@@ -493,20 +514,22 @@ def get_ice_candidates(room_name):
         return jsonify({'error': 'Unauthorized'}), 401
     
     user_id = session['user']['username']
-    other_participants = [p for p in participants[room_name] if p != user_id]
+    other_participants = [p for p in participants.get(room_name, []) if p != user_id]
     
     if not other_participants:
         return jsonify({'success': False, 'error': 'No other participants'})
     
     # Получаем ICE кандидаты от другого участника
     for participant in other_participants:
-        if participant in ice_candidates[room_name] and ice_candidates[room_name][participant]:
+        if participant in ice_candidates.get(room_name, {}) and ice_candidates[room_name][participant]:
             candidates = ice_candidates[room_name][participant]
             # Очищаем полученные кандидаты
             ice_candidates[room_name][participant] = []
+            logger.info(f"Sending {len(candidates)} ICE candidates from {participant} to {user_id} in room {room_name}")
             return jsonify({
                 'success': True,
-                'candidates': candidates
+                'candidates': candidates,
+                'from': participant
             })
     
     return jsonify({'success': False, 'error': 'No ICE candidates available'})
@@ -530,6 +553,8 @@ def end_conference(room_name):
     if room_name in active_conferences:
         del active_conferences[room_name]
     
+    logger.info(f"Conference in room {room_name} ended by teacher")
+    
     return jsonify({'success': True})
 
 @app.route('/api/conference/<room_name>/start', methods=['POST'])
@@ -546,6 +571,8 @@ def start_conference(room_name):
         'participants': []
     }
     
+    logger.info(f"Conference started in room {room_name} by {session['user']['username']}")
+    
     return jsonify({'success': True, 'room_name': room_name})
 
 @app.route('/api/conference/<room_name>/status', methods=['GET'])
@@ -553,10 +580,15 @@ def get_conference_status(room_name):
     if 'user' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     
+    is_active = room_name in active_conferences
+    conference_data = active_conferences.get(room_name, {})
+    
     return jsonify({
         'success': True,
-        'is_active': room_name in active_conferences,
-        'conference': active_conferences.get(room_name)
+        'is_active': is_active,
+        'teacher': conference_data.get('teacher'),
+        'started_at': conference_data.get('started_at'),
+        'participants': list(participants.get(room_name, []))
     })
 
 @app.route('/api/conference/invite', methods=['POST'])
@@ -583,6 +615,8 @@ def send_conference_invite():
         student_username=student_username,
         room_name=room_name
     )
+    
+    logger.info(f"Invite sent to {student_username} for room {room_name}")
     
     return jsonify({'success': True, 'invite': invite})
 
@@ -618,11 +652,13 @@ def respond_to_invite(invite_id):
             invites = DB.get_invites()
             invite = next((i for i in invites if i['id'] == invite_id), None)
             if invite:
+                logger.info(f"Invite {invite_id} accepted by {session['user']['username']}")
                 return jsonify({
                     'success': True,
                     'conference_url': f'/conference/{invite["room_name"]}',
                     'room_name': invite["room_name"]
                 })
+        logger.info(f"Invite {invite_id} {status} by {session['user']['username']}")
         return jsonify({'success': True})
     
     return jsonify({'error': 'Invite not found'}), 404
