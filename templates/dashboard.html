@@ -1044,7 +1044,7 @@
                 });
         });
 
-        // Видеоконференция на основе WebRTC
+        // Видеоконференция на основе WebRTC с WebSocket
         let localStream = null;
         let peerConnection = null;
         let currentRoom = null;
@@ -1052,20 +1052,84 @@
         let isAudioEnabled = true;
         let screenStream = null;
         let isScreenSharing = false;
+        let socket = null;
 
         // Конфигурация STUN/TURN серверов
         const configuration = {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun2.l.google.com:19302' },
-                { 
-                    urls: 'turn:numb.viagenie.ca',
-                    credential: 'muazkh',
-                    username: 'webrtc@live.com'
-                }
+                { urls: 'stun:stun2.l.google.com:19302' }
+                // Добавьте здесь свои TURN серверы при необходимости
             ]
         };
+
+        // Инициализация WebSocket соединения
+        function initWebSocket(roomName) {
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+            const wsUrl = wsProtocol + window.location.host + '/ws/conference/' + roomName;
+            
+            socket = new WebSocket(wsUrl);
+            
+            socket.onopen = () => {
+                console.log('WebSocket connection established');
+                sendWebSocketMessage({
+                    type: 'join',
+                    user: '{{ user.username }}',
+                    role: '{{ user.role }}'
+                });
+            };
+            
+            socket.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                handleWebSocketMessage(message);
+            };
+            
+            socket.onclose = () => {
+                console.log('WebSocket connection closed');
+            };
+            
+            socket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        // Отправка сообщения через WebSocket
+        function sendWebSocketMessage(message) {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify(message));
+            } else {
+                console.error('WebSocket is not connected');
+            }
+        }
+
+        // Обработка входящих WebSocket сообщений
+        function handleWebSocketMessage(message) {
+            console.log('Received WebSocket message:', message);
+            
+            switch (message.type) {
+                case 'offer':
+                    handleOffer(message);
+                    break;
+                case 'answer':
+                    handleAnswer(message);
+                    break;
+                case 'ice-candidate':
+                    handleIceCandidate(message);
+                    break;
+                case 'user-joined':
+                    updateParticipantsList();
+                    break;
+                case 'user-left':
+                    updateParticipantsList();
+                    break;
+                case 'conference-ended':
+                    handleConferenceEnded();
+                    break;
+                default:
+                    console.warn('Unknown message type:', message.type);
+            }
+        }
 
         // Инициализация видеоконференции
         async function initConference(roomName) {
@@ -1073,6 +1137,9 @@
             currentRoom = roomName;
             
             try {
+                // Инициализируем WebSocket соединение
+                initWebSocket(roomName);
+                
                 // Получаем доступ к камере и микрофону
                 localStream = await navigator.mediaDevices.getUserMedia({
                     video: {
@@ -1080,11 +1147,7 @@
                         height: { ideal: 720 },
                         frameRate: { ideal: 30 }
                     },
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true
-                    }
+                    audio: true
                 });
                 
                 // Отображаем локальное видео
@@ -1104,28 +1167,10 @@
                 peerConnection.ontrack = event => {
                     console.log('Received remote track:', event.track.kind);
                     const remoteVideo = document.getElementById('remoteVideo');
-                    const remoteVideoContainer = document.getElementById('remoteVideoContainer');
-                    
                     if (!remoteVideo.srcObject) {
                         remoteVideo.srcObject = event.streams[0];
-                        remoteVideoContainer.style.display = 'block';
+                        document.getElementById('remoteVideoContainer').style.display = 'block';
                         document.getElementById('waitingMessage').style.display = 'none';
-                        
-                        // Обработка ошибок видео
-                        remoteVideo.onerror = () => {
-                            console.error('Remote video error');
-                            remoteVideoContainer.style.display = 'none';
-                            document.getElementById('waitingMessage').style.display = 'flex';
-                        };
-                        
-                        // Проверка, что видео действительно играет
-                        const checkVideoPlaying = setInterval(() => {
-                            if (remoteVideo.readyState >= 2 && remoteVideo.videoWidth > 0) {
-                                clearInterval(checkVideoPlaying);
-                            } else {
-                                console.log('Waiting for remote video to play...');
-                            }
-                        }, 500);
                     }
                 };
                 
@@ -1133,7 +1178,12 @@
                 peerConnection.onicecandidate = event => {
                     if (event.candidate) {
                         console.log('Sending ICE candidate:', event.candidate);
-                        sendIceCandidate(event.candidate);
+                        sendWebSocketMessage({
+                            type: 'ice-candidate',
+                            candidate: event.candidate,
+                            room: currentRoom,
+                            user: '{{ user.username }}'
+                        });
                     } else {
                         console.log('All ICE candidates have been sent');
                     }
@@ -1144,7 +1194,7 @@
                     if (peerConnection.iceConnectionState === 'disconnected' || 
                         peerConnection.iceConnectionState === 'failed') {
                         console.log('ICE connection failed, trying to reconnect...');
-                        reconnectConference();
+                        // Можно попробовать переподключиться
                     }
                 };
                 
@@ -1152,25 +1202,11 @@
                     console.log('Signaling state:', peerConnection.signalingState);
                 };
                 
-                peerConnection.onconnectionstatechange = () => {
-                    console.log('Connection state:', peerConnection.connectionState);
-                };
-                
-                // Присоединяемся к комнате
-                await joinRoom(roomName);
-                
                 // Если учитель - создаем предложение (offer)
                 if ({% if is_teacher %}true{% else %}false{% endif %}) {
                     console.log('Creating offer as teacher...');
-                    await createOffer(roomName);
-                } else {
-                    // Если студент - проверяем наличие offer
-                    console.log('Checking for offer as student...');
-                    await checkForOffer(roomName);
+                    await createOffer();
                 }
-                
-                // Начинаем проверку ICE кандидатов
-                checkForIceCandidates(roomName);
                 
                 document.getElementById('conferenceSection').style.display = 'block';
                 document.getElementById('conferenceSection').scrollIntoView({ behavior: 'smooth' });
@@ -1182,33 +1218,11 @@
             } catch (error) {
                 console.error('Error initializing conference:', error);
                 alert('Ошибка при подключении к конференции: ' + error.message);
-                leaveConference();
             }
         }
 
-        // Попытка переподключения
-        async function reconnectConference() {
-            if (!currentRoom) return;
-            
-            console.log('Attempting to reconnect...');
-            await leaveConference();
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            initConference(currentRoom);
-        }
-
-        // Присоединение к комнате
-        async function joinRoom(roomName) {
-            const response = await fetch(`/api/conference/${roomName}/join`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            });
-            return await response.json();
-        }
-
         // Создание и отправка предложения (offer)
-        async function createOffer(roomName) {
+        async function createOffer() {
             try {
                 const offer = await peerConnection.createOffer({
                     offerToReceiveAudio: true,
@@ -1219,55 +1233,27 @@
                 await peerConnection.setLocalDescription(offer);
                 console.log('Set local description:', peerConnection.localDescription);
                 
-                const response = await fetch(`/api/conference/${roomName}/offer`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        sdp: offer.sdp,
-                        type: offer.type
-                    })
+                sendWebSocketMessage({
+                    type: 'offer',
+                    sdp: offer.sdp,
+                    room: currentRoom,
+                    user: '{{ user.username }}'
                 });
                 
-                const data = await response.json();
-                if (!data.success) {
-                    throw new Error('Failed to send offer');
-                }
-                
                 console.log('Offer sent successfully');
-                // Начинаем проверку ответов (answer)
-                checkForAnswer(roomName);
             } catch (error) {
                 console.error('Error in createOffer:', error);
-                reconnectConference();
-            }
-        }
-
-        // Проверка наличия предложения (offer)
-        async function checkForOffer(roomName) {
-            try {
-                const response = await fetch(`/api/conference/${roomName}/get_offer`);
-                const data = await response.json();
-                
-                if (data.success && data.offer) {
-                    console.log('Received offer:', data.offer);
-                    await handleOffer(roomName, data.offer);
-                } else {
-                    // Если нет offer, ждем и проверяем снова
-                    setTimeout(() => checkForOffer(roomName), 2000);
-                }
-            } catch (error) {
-                console.error('Error in checkForOffer:', error);
-                setTimeout(() => checkForOffer(roomName), 2000);
             }
         }
 
         // Обработка полученного предложения (offer)
-        async function handleOffer(roomName, offer) {
+        async function handleOffer(message) {
             try {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-                console.log('Set remote description:', offer);
+                await peerConnection.setRemoteDescription(new RTCSessionDescription({
+                    type: 'offer',
+                    sdp: message.sdp
+                }));
+                console.log('Set remote description:', message.sdp);
                 
                 // Создаем ответ (answer)
                 const answer = await peerConnection.createAnswer({
@@ -1279,97 +1265,67 @@
                 await peerConnection.setLocalDescription(answer);
                 console.log('Set local description:', peerConnection.localDescription);
                 
-                // Отправляем answer на сервер
-                const response = await fetch(`/api/conference/${roomName}/answer`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        sdp: answer.sdp,
-                        type: answer.type
-                    })
+                // Отправляем answer через WebSocket
+                sendWebSocketMessage({
+                    type: 'answer',
+                    sdp: answer.sdp,
+                    room: currentRoom,
+                    user: '{{ user.username }}'
                 });
-                
-                const data = await response.json();
-                if (!data.success) {
-                    throw new Error('Failed to send answer');
-                }
                 
                 console.log('Answer sent successfully');
             } catch (error) {
                 console.error('Error in handleOffer:', error);
-                reconnectConference();
             }
         }
 
-        // Проверка наличия ответа (answer)
-        async function checkForAnswer(roomName) {
+        // Обработка полученного ответа (answer)
+        async function handleAnswer(message) {
             try {
-                const response = await fetch(`/api/conference/${roomName}/get_answer`);
-                const data = await response.json();
-                
-                if (data.success && data.answer) {
-                    console.log('Received answer:', data.answer);
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-                } else {
-                    // Если нет answer, ждем и проверяем снова
-                    setTimeout(() => checkForAnswer(roomName), 2000);
+                await peerConnection.setRemoteDescription(new RTCSessionDescription({
+                    type: 'answer',
+                    sdp: message.sdp
+                }));
+                console.log('Set remote answer:', message.sdp);
+            } catch (error) {
+                console.error('Error in handleAnswer:', error);
+            }
+        }
+
+        // Обработка полученного ICE кандидата
+        async function handleIceCandidate(message) {
+            try {
+                if (message.candidate) {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
+                    console.log('Added ICE candidate:', message.candidate);
                 }
             } catch (error) {
-                console.error('Error in checkForAnswer:', error);
-                setTimeout(() => checkForAnswer(roomName), 2000);
+                console.error('Error adding ICE candidate:', error);
             }
         }
 
-        // Проверка ICE кандидатов
-        async function checkForIceCandidates(roomName) {
-            try {
-                if (!peerConnection || peerConnection.iceConnectionState === 'closed') {
-                    return;
-                }
-                
-                const response = await fetch(`/api/conference/${roomName}/get_ice_candidates`);
-                const data = await response.json();
-                
-                if (data.success && data.candidates && data.candidates.length > 0) {
-                    console.log('Received ICE candidates:', data.candidates);
-                    for (const candidate of data.candidates) {
-                        try {
-                            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-                        } catch (e) {
-                            console.error('Error adding ICE candidate:', e);
-                        }
-                    }
-                }
-                
-                // Продолжаем проверять новые кандидаты
-                setTimeout(() => checkForIceCandidates(roomName), 2000);
-            } catch (error) {
-                console.error('Error in checkForIceCandidates:', error);
-                setTimeout(() => checkForIceCandidates(roomName), 2000);
-            }
+        // Обработка завершения конференции
+        function handleConferenceEnded() {
+            alert('Конференция завершена преподавателем');
+            leaveConference();
         }
 
-        // Отправка ICE кандидата на сервер
-        async function sendIceCandidate(candidate) {
-            if (!currentRoom || !peerConnection) return;
+        // Обновление списка участников
+        function updateParticipantsList() {
+            // В реальном приложении можно запросить список участников через API
+            const participantsList = document.getElementById('participantsList');
+            participantsList.innerHTML = '<h4>Участники:</h4>';
             
-            try {
-                await fetch(`/api/conference/${currentRoom}/ice`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        candidate: candidate.candidate,
-                        sdpMid: candidate.sdpMid,
-                        sdpMLineIndex: candidate.sdpMLineIndex
-                    })
-                });
-            } catch (error) {
-                console.error('Error sending ICE candidate:', error);
-            }
+            // Добавляем себя в список
+            const selfItem = document.createElement('div');
+            selfItem.className = 'participant-item';
+            selfItem.innerHTML = `
+                <div class="participant-avatar">{{ user.username[0].toUpperCase() }}</div>
+                <div>{{ user.username }} (Вы)</div>
+            `;
+            participantsList.appendChild(selfItem);
+            
+            // Здесь можно добавить других участников, если доступна информация
         }
 
         // Выход из конференции
@@ -1391,20 +1347,20 @@
                 peerConnection = null;
             }
             
+            if (socket) {
+                sendWebSocketMessage({
+                    type: 'leave',
+                    room: currentRoom,
+                    user: '{{ user.username }}'
+                });
+                socket.close();
+                socket = null;
+            }
+            
             document.getElementById('waitingMessage').style.display = 'flex';
             document.getElementById('remoteVideoContainer').style.display = 'none';
             document.getElementById('localVideoContainer').style.display = 'none';
             document.getElementById('screenContainer').style.display = 'none';
-            
-            if (currentRoom) {
-                await fetch(`/api/conference/${currentRoom}/leave`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-                currentRoom = null;
-            }
             
             document.getElementById('conferenceSection').style.display = 'none';
             document.getElementById('endConferenceBtn').style.display = 'none';
@@ -1413,17 +1369,14 @@
         // Завершение конференции (для учителя)
         async function endConference() {
             if (confirm('Вы уверены, что хотите завершить конференцию для всех участников?')) {
-                await leaveConference();
-                
-                if (currentRoom) {
-                    await fetch(`/api/conference/${currentRoom}/end`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        }
+                if (socket) {
+                    sendWebSocketMessage({
+                        type: 'end-conference',
+                        room: currentRoom,
+                        user: '{{ user.username }}'
                     });
                 }
-                
+                await leaveConference();
                 window.location.reload();
             }
         }
