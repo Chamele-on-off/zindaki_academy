@@ -678,7 +678,7 @@
                         <tr>
                             <td>{{ lesson.title }}</td>
                             <td>{{ lesson.description }}</td>
-                            <td>{{ lesson.formatted_schedule }}</td>
+                            <td>{{ lesson.schedule }}</td>
                             <td>{{ lesson.duration }} мин</td>
                             <td>
                                 <a href="/api/lesson/{{ lesson.id }}/join" class="btn">
@@ -1606,7 +1606,7 @@
                             row.innerHTML = `
                                 <td>${lesson.title}</td>
                                 <td>${lesson.description || '-'}</td>
-                                <td>${lesson.formatted_schedule || lesson.schedule}</td>
+                                <td>${lesson.schedule}</td>
                                 <td>${lesson.duration} мин</td>
                                 <td>${lesson.students?.join(', ') || 'нет'}</td>
                                 <td>
@@ -1695,7 +1695,7 @@
                         data.lessons.forEach(lesson => {
                             const option = document.createElement('option');
                             option.value = lesson.id;
-                            option.textContent = `${lesson.title} (${lesson.formatted_schedule || lesson.schedule})`;
+                            option.textContent = `${lesson.title} (${lesson.schedule})`;
                             select.appendChild(option);
                         });
                     })
