@@ -1046,7 +1046,6 @@
 
         // Видеоконференция на основе WebRTC
         let localStream = null;
-        let remoteStream = null;
         let peerConnection = null;
         let currentRoom = null;
         let isVideoEnabled = true;
@@ -1117,6 +1116,9 @@
                     await checkForOffer(roomName);
                 }
                 
+                // Начинаем проверку ICE кандидатов
+                checkForIceCandidates(roomName);
+                
                 document.getElementById('conferenceSection').style.display = 'block';
                 document.getElementById('conferenceSection').scrollIntoView({ behavior: 'smooth' });
                 
@@ -1181,7 +1183,7 @@
 
         // Обработка полученного предложения (offer)
         async function handleOffer(roomName, offer) {
-            await peerConnection.setRemoteDescription(offer);
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
             
             // Создаем ответ (answer)
             const answer = await peerConnection.createAnswer();
@@ -1211,7 +1213,7 @@
             const data = await response.json();
             
             if (data.success && data.answer) {
-                await peerConnection.setRemoteDescription(data.answer);
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
             } else {
                 // Если нет answer, ждем и проверяем снова
                 setTimeout(() => checkForAnswer(roomName), 2000);
