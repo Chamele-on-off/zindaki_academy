@@ -1054,7 +1054,7 @@
         let screenStream = null;
         let isScreenSharing = false;
 
-        // Конфигурация STUN/TURN серверов (можно использовать бесплатные)
+        // Конфигурация STUN/TURN серверов
         const configuration = {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
@@ -1106,42 +1106,135 @@
                     }
                 };
                 
-                // Создаем предложение (offer)
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
+                // Присоединяемся к комнате
+                await joinRoom(roomName);
                 
-                // Отправляем предложение на сервер
-                const response = await fetch(`/api/conference/${roomName}/offer`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        sdp: offer.sdp,
-                        type: offer.type
-                    })
-                });
+                // Если учитель - создаем предложение (offer)
+                if ({% if is_teacher %}true{% else %}false{% endif %}) {
+                    await createOffer(roomName);
+                } else {
+                    // Если студент - проверяем наличие offer
+                    await checkForOffer(roomName);
+                }
                 
-                const data = await response.json();
-                if (data.success) {
-                    // Устанавливаем удаленное описание
-                    await peerConnection.setRemoteDescription({
-                        type: 'answer',
-                        sdp: data.answer.sdp
-                    });
-                    
-                    document.getElementById('conferenceSection').style.display = 'block';
-                    document.getElementById('conferenceSection').scrollIntoView({ behavior: 'smooth' });
-                    
-                    // Для учителя показываем кнопку завершения конференции
-                    if ({% if is_teacher %}true{% else %}false{% endif %}) {
-                        document.getElementById('endConferenceBtn').style.display = 'inline-block';
-                    }
+                document.getElementById('conferenceSection').style.display = 'block';
+                document.getElementById('conferenceSection').scrollIntoView({ behavior: 'smooth' });
+                
+                // Для учителя показываем кнопку завершения конференции
+                if ({% if is_teacher %}true{% else %}false{% endif %}) {
+                    document.getElementById('endConferenceBtn').style.display = 'inline-block';
                 }
             } catch (error) {
                 console.error('Error initializing conference:', error);
                 alert('Ошибка при подключении к конференции: ' + error.message);
             }
+        }
+
+        // Присоединение к комнате
+        async function joinRoom(roomName) {
+            const response = await fetch(`/api/conference/${roomName}/join`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            return await response.json();
+        }
+
+        // Создание и отправка предложения (offer)
+        async function createOffer(roomName) {
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            
+            const response = await fetch(`/api/conference/${roomName}/offer`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    sdp: offer.sdp,
+                    type: offer.type
+                })
+            });
+            
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error('Failed to send offer');
+            }
+            
+            // Начинаем проверку ответов (answer)
+            checkForAnswer(roomName);
+        }
+
+        // Проверка наличия предложения (offer)
+        async function checkForOffer(roomName) {
+            const response = await fetch(`/api/conference/${roomName}/get_offer`);
+            const data = await response.json();
+            
+            if (data.success && data.offer) {
+                await handleOffer(roomName, data.offer);
+            } else {
+                // Если нет offer, ждем и проверяем снова
+                setTimeout(() => checkForOffer(roomName), 2000);
+            }
+        }
+
+        // Обработка полученного предложения (offer)
+        async function handleOffer(roomName, offer) {
+            await peerConnection.setRemoteDescription(offer);
+            
+            // Создаем ответ (answer)
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            
+            // Отправляем answer на сервер
+            const response = await fetch(`/api/conference/${roomName}/answer`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    sdp: answer.sdp,
+                    type: answer.type
+                })
+            });
+            
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error('Failed to send answer');
+            }
+        }
+
+        // Проверка наличия ответа (answer)
+        async function checkForAnswer(roomName) {
+            const response = await fetch(`/api/conference/${roomName}/get_answer`);
+            const data = await response.json();
+            
+            if (data.success && data.answer) {
+                await peerConnection.setRemoteDescription(data.answer);
+            } else {
+                // Если нет answer, ждем и проверяем снова
+                setTimeout(() => checkForAnswer(roomName), 2000);
+            }
+        }
+
+        // Проверка ICE кандидатов
+        async function checkForIceCandidates(roomName) {
+            const response = await fetch(`/api/conference/${roomName}/get_ice_candidates`);
+            const data = await response.json();
+            
+            if (data.success && data.candidates) {
+                for (const candidate of data.candidates) {
+                    try {
+                        await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                    } catch (e) {
+                        console.error('Error adding ICE candidate:', e);
+                    }
+                }
+            }
+            
+            // Продолжаем проверять новые кандидаты
+            setTimeout(() => checkForIceCandidates(roomName), 2000);
         }
 
         // Отправка ICE кандидата на сервер
@@ -2000,6 +2093,6 @@
                 e.target.style.display = 'none';
             }
         });
-    </script> 
+    </script>
 </body>
 </html>
