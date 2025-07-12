@@ -1058,8 +1058,12 @@
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun2.l.google.com:19302' }
-                // Добавьте здесь свои TURN серверы при необходимости
+                { urls: 'stun:stun2.l.google.com:19302' },
+                { 
+                    urls: 'turn:numb.viagenie.ca',
+                    credential: 'muazkh',
+                    username: 'webrtc@live.com'
+                }
             ]
         };
 
@@ -1076,7 +1080,11 @@
                         height: { ideal: 720 },
                         frameRate: { ideal: 30 }
                     },
-                    audio: true
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
                 });
                 
                 // Отображаем локальное видео
@@ -1096,10 +1104,28 @@
                 peerConnection.ontrack = event => {
                     console.log('Received remote track:', event.track.kind);
                     const remoteVideo = document.getElementById('remoteVideo');
+                    const remoteVideoContainer = document.getElementById('remoteVideoContainer');
+                    
                     if (!remoteVideo.srcObject) {
                         remoteVideo.srcObject = event.streams[0];
-                        document.getElementById('remoteVideoContainer').style.display = 'block';
+                        remoteVideoContainer.style.display = 'block';
                         document.getElementById('waitingMessage').style.display = 'none';
+                        
+                        // Обработка ошибок видео
+                        remoteVideo.onerror = () => {
+                            console.error('Remote video error');
+                            remoteVideoContainer.style.display = 'none';
+                            document.getElementById('waitingMessage').style.display = 'flex';
+                        };
+                        
+                        // Проверка, что видео действительно играет
+                        const checkVideoPlaying = setInterval(() => {
+                            if (remoteVideo.readyState >= 2 && remoteVideo.videoWidth > 0) {
+                                clearInterval(checkVideoPlaying);
+                            } else {
+                                console.log('Waiting for remote video to play...');
+                            }
+                        }, 500);
                     }
                 };
                 
@@ -1115,10 +1141,19 @@
                 
                 peerConnection.oniceconnectionstatechange = () => {
                     console.log('ICE connection state:', peerConnection.iceConnectionState);
+                    if (peerConnection.iceConnectionState === 'disconnected' || 
+                        peerConnection.iceConnectionState === 'failed') {
+                        console.log('ICE connection failed, trying to reconnect...');
+                        reconnectConference();
+                    }
                 };
                 
                 peerConnection.onsignalingstatechange = () => {
                     console.log('Signaling state:', peerConnection.signalingState);
+                };
+                
+                peerConnection.onconnectionstatechange = () => {
+                    console.log('Connection state:', peerConnection.connectionState);
                 };
                 
                 // Присоединяемся к комнате
@@ -1147,7 +1182,18 @@
             } catch (error) {
                 console.error('Error initializing conference:', error);
                 alert('Ошибка при подключении к конференции: ' + error.message);
+                leaveConference();
             }
+        }
+
+        // Попытка переподключения
+        async function reconnectConference() {
+            if (!currentRoom) return;
+            
+            console.log('Attempting to reconnect...');
+            await leaveConference();
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            initConference(currentRoom);
         }
 
         // Присоединение к комнате
@@ -1194,6 +1240,7 @@
                 checkForAnswer(roomName);
             } catch (error) {
                 console.error('Error in createOffer:', error);
+                reconnectConference();
             }
         }
 
@@ -1252,6 +1299,7 @@
                 console.log('Answer sent successfully');
             } catch (error) {
                 console.error('Error in handleOffer:', error);
+                reconnectConference();
             }
         }
 
