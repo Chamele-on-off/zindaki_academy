@@ -37,11 +37,11 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
 # Настройки видео и аудио
-VIDEO_QUALITY = 0.5  # Качество JPEG (0.1 - низкое, 1.0 - высокое)
+VIDEO_QUALITY = 0.3  # Качество JPEG (0.1 - низкое, 1.0 - высокое)
 TARGET_WIDTH = 640    # Ширина кадра
-TARGET_HEIGHT = 480   # Высота кадра
-TARGET_FPS = 12       # Целевая частота кадров
-AUDIO_SAMPLE_RATE = 16000  # Частота дискретизации аудио
+TARGET_HEIGHT = 360   # Высота кадра
+TARGET_FPS = 11       # Целевая частота кадров
+AUDIO_SAMPLE_RATE = 20000  # Частота дискретизации аудио
 AUDIO_CHANNELS = 1    # Количество каналов аудио
 
 # Глобальные переменные для видеоконференций
@@ -54,8 +54,8 @@ audio_timestamps = defaultdict(dict)  # Временные метки после
 last_cleanup_time = time.time()
 
 # Ограничения для видео и аудио
-MAX_FRAMES_PER_USER = 3  # Максимальное количество кадров в буфере
-MAX_FRAME_AGE = 1.0      # Максимальный возраст кадра в секундах
+MAX_FRAMES_PER_USER = 2  # Максимальное количество кадров в буфере
+MAX_FRAME_AGE = 0.5      # Максимальный возраст кадра в секундах
 MAX_AUDIO_PER_USER = 10  # Максимальное количество аудио блоков в буфере
 MAX_AUDIO_AGE = 0.5      # Максимальный возраст аудио данных в секундах
 
