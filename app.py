@@ -76,7 +76,7 @@ class DB:
     @staticmethod
     def get_user(username):
         users = DB.get_users()
-        return next((u for u in users if u['username'] == username), None
+        return next((u for u in users if u['username'] == username), None)
 
     @staticmethod
     def save_user(username, email, password, role='student', is_active=True):
@@ -124,7 +124,7 @@ class DB:
     @staticmethod
     def get_lesson(lesson_id):
         lessons = DB.get_lessons()
-        return next((l for l in lessons if l['id'] == lesson_id), None
+        return next((l for l in lessons if l['id'] == lesson_id), None)
 
     @staticmethod
     def save_lesson(title, description, teacher, schedule, duration=60, subject=None, students=None):
@@ -164,7 +164,7 @@ class DB:
     @staticmethod
     def get_homework(homework_id):
         homeworks = DB.get_homeworks()
-        return next((h for h in homeworks if h['id'] == homework_id), None
+        return next((h for h in homeworks if h['id'] == homework_id), None)
 
     @staticmethod
     def save_homework(lesson_id, title, description, deadline, teacher, students=None, files=None):
@@ -752,5 +752,5 @@ def api_contact():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-if __name__ == '__main__': 
+if __name__ == '__main__':  
     socketio.run(app, host='0.0.0.0', port=8000, debug=True)
