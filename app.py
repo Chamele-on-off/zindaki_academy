@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 # Конфигурация Jitsi (ЗАМЕНИТЕ НА ВАШ ДОМЕН ИЛИ IP:PORT)
 JITSI_DOMAIN = '109.172.101.94:8001'  # Например: '123.123.123.123:8443' или 'jitsi.yourdomain.com'
 JITSI_OPTIONS = {
+    'useSSL': False,
+    'serviceUrl': 'http://109.172.101.94:8001/http-bind',
     'roomName': 'ZindakiRoom',
     'width': '100%',
     'height': 500,
