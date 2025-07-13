@@ -94,14 +94,6 @@
             background-color: #d1146e;
         }
         
-        .btn-success {
-            background-color: #4cc9f0;
-        }
-        
-        .btn-success:hover {
-            background-color: #3aa8cc;
-        }
-        
         .section {
             margin-top: 3rem;
             background: var(--lighter);
@@ -157,21 +149,6 @@
         
         .status-inactive {
             color: var(--text-light);
-        }
-        
-        .status-pending {
-            color: #f8961e;
-            font-weight: 600;
-        }
-        
-        .status-accepted {
-            color: #43aa8b;
-            font-weight: 600;
-        }
-        
-        .status-declined {
-            color: #f94144;
-            font-weight: 600;
         }
         
         /* Формы */
@@ -242,14 +219,26 @@
             cursor: pointer;
         }
         
-        /* Jitsi конференция */
-        #jitsiConference {
-            width: 100%;
-            height: 600px;
-            margin-bottom: 1rem;
+        /* Видеоконференции */
+        .conference-info {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: var(--light);
             border-radius: var(--rounded-md);
-            overflow: hidden;
-            display: none;
+        }
+        
+        .conference-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            word-break: break-all;
+        }
+        
+        .conference-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
         }
         
         /* Домашние задания */
@@ -281,25 +270,18 @@
             color: var(--text-light);
         }
         
-        /* Приглашения */
-        .invite-card {
-            background: white;
-            border-radius: var(--rounded-md);
+        /* Повторяющиеся занятия */
+        .recurring-options {
+            margin: 1rem 0;
             padding: 1rem;
-            margin-bottom: 1rem;
-            box-shadow: var(--shadow-md);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            background: var(--light);
+            border-radius: var(--rounded-md);
         }
         
-        .invite-info {
-            flex: 1;
-        }
-        
-        .invite-actions {
-            display: flex;
-            gap: 0.5rem;
+        .recurring-options label {
+            display: inline-block;
+            margin-right: 1rem;
+            margin-bottom: 0.5rem;
         }
         
         /* Адаптивность */
@@ -326,19 +308,8 @@
                 justify-content: flex-end;
             }
             
-            .invite-card {
+            .conference-controls {
                 flex-direction: column;
-                align-items: flex-start;
-                gap: 1rem;
-            }
-            
-            .invite-actions {
-                width: 100%;
-                justify-content: flex-end;
-            }
-            
-            #jitsiConference {
-                height: 400px;
             }
         }
     </style>
@@ -438,37 +409,6 @@
                 </table>
             </div>
         </div>
-
-        <!-- Управление конференциями (для учителя) -->
-        <div class="section" id="conferenceManagementSection">
-            <h2 class="section-title">
-                Управление конференциями
-                <div class="actions">
-                    <button class="btn" id="startConferenceBtn">
-                        <i class="fas fa-video"></i> Начать конференцию
-                    </button>
-                    <button class="btn btn-secondary" id="inviteStudentBtn">
-                        <i class="fas fa-user-plus"></i> Пригласить ученика
-                    </button>
-                </div>
-            </h2>
-            
-            <div id="invitesList">
-                <h4>Отправленные приглашения:</h4>
-                <!-- Список приглашений будет загружен через JavaScript -->
-            </div>
-        </div>
-
-        <!-- Контейнер для Jitsi конференции -->
-        <div class="section" id="conferenceSection" style="display: none;">
-            <h2 class="section-title">Видеоконференция</h2>
-            <div id="jitsiConference"></div>
-            <div class="conference-controls">
-                <button class="btn btn-danger" id="leaveConference">
-                    <i class="fas fa-phone-slash"></i> Покинуть конференцию
-                </button>
-            </div>
-        </div>
         {% else %}
         <!-- Для студентов -->
         <div class="section">
@@ -491,12 +431,12 @@
                         <tr>
                             <td>{{ lesson.title }}</td>
                             <td>{{ lesson.description }}</td>
-                            <td>{{ lesson.schedule }}</td>
+                            <td>{{ lesson.formatted_schedule }}</td>
                             <td>{{ lesson.duration }} мин</td>
                             <td>
-                                <button class="btn join-lesson-btn" data-lesson-id="{{ lesson.id }}">
+                                <a href="/api/lesson/{{ lesson.id }}/join" class="btn">
                                     <i class="fas fa-video"></i> Присоединиться
-                                </button>
+                                </a>
                             </td>
                         </tr>
                         {% endfor %}
@@ -506,25 +446,6 @@
             {% else %}
             <p>Вы пока не записаны ни на один курс</p>
             {% endif %}
-        </div>
-
-        <!-- Приглашения на конференции (для студента) -->
-        <div class="section" id="invitesSection">
-            <h2 class="section-title">Приглашения на конференции</h2>
-            <div id="studentInvitesList">
-                <!-- Приглашения будут загружены через JavaScript -->
-            </div>
-        </div>
-
-        <!-- Контейнер для Jitsi конференции -->
-        <div class="section" id="conferenceSection" style="display: none;">
-            <h2 class="section-title">Видеоконференция</h2>
-            <div id="jitsiConference"></div>
-            <div class="conference-controls">
-                <button class="btn btn-danger" id="leaveConference">
-                    <i class="fas fa-phone-slash"></i> Покинуть конференцию
-                </button>
-            </div>
         </div>
 
         <!-- Домашние задания (для студента) -->
@@ -574,9 +495,46 @@
             {% endif %}
         </div>
         {% endif %}
+
+        <!-- Видеоконференция -->
+        <div class="section">
+            <h2 class="section-title">Видеоконференция</h2>
+            
+            <div class="conference-info">
+                <p>Используйте наш сервер видеоконференций:</p>
+                <div class="conference-link">
+                    <i class="fas fa-link"></i>
+                    <span id="conferenceLink">Загрузка...</span>
+                    <button class="btn btn-secondary" onclick="copyConferenceLink()">
+                        <i class="fas fa-copy"></i> Копировать
+                    </button>
+                </div>
+            </div>
+            
+            <div id="jitsi-container" style="width: 100%; height: 500px; background: #f0f0f0;">
+                <!-- Контейнер для Jitsi -->
+            </div>
+            
+            {% if is_teacher %}
+            <div class="conference-controls">
+                <button class="btn" id="toggleVideo">
+                    <i class="fas fa-video"></i> Выключить камеру
+                </button>
+                <button class="btn" id="toggleAudio">
+                    <i class="fas fa-microphone"></i> Выключить микрофон
+                </button>
+                <button class="btn" id="shareScreen">
+                    <i class="fas fa-desktop"></i> Демонстрация экрана
+                </button>
+                <button class="btn btn-danger" id="endMeeting">
+                    <i class="fas fa-phone-slash"></i> Завершить конференцию
+                </button>
+            </div>
+            {% endif %}
+        </div>
     </div>
 
-    <!-- Модальные окна -->
+    <!-- Модальное окно добавления пользователя -->
     <div class="modal" id="addUserModal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -621,6 +579,7 @@
         </div>
     </div>
 
+    <!-- Модальное окно добавления занятия -->
     <div class="modal" id="addLessonModal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -651,6 +610,41 @@
                     </div>
                 </div>
                 
+                <!-- Опции повторения -->
+                <div class="recurring-options">
+                    <h4>Повторение занятия</h4>
+                    <div>
+                        <label><input type="radio" name="recurrence" value="none" checked> Без повторения</label>
+                        <label><input type="radio" name="recurrence" value="weekly"> Еженедельно</label>
+                        <label><input type="radio" name="recurrence" value="biweekly"> Раз в две недели</label>
+                    </div>
+                    
+                    <div id="weeklyOptions" style="display: none; margin-top: 1rem;">
+                        <label>Дни недели:</label><br>
+                        <label><input type="checkbox" name="weekdays" value="1"> Понедельник</label>
+                        <label><input type="checkbox" name="weekdays" value="2"> Вторник</label>
+                        <label><input type="checkbox" name="weekdays" value="3"> Среда</label>
+                        <label><input type="checkbox" name="weekdays" value="4"> Четверг</label>
+                        <label><input type="checkbox" name="weekdays" value="5"> Пятница</label>
+                        <label><input type="checkbox" name="weekdays" value="6"> Суббота</label>
+                        <label><input type="checkbox" name="weekdays" value="0"> Воскресенье</label>
+                    </div>
+                    
+                    <div id="recurrenceEndOptions" style="margin-top: 1rem; display: none;">
+                        <label>Окончание повторения:</label>
+                        <select id="recurrenceEndType" class="form-control">
+                            <option value="count">После N занятий</option>
+                            <option value="date">По дате</option>
+                        </select>
+                        <div id="recurrenceCount" style="margin-top: 0.5rem;">
+                            <input type="number" id="recurrenceCountValue" class="form-control" min="1" value="12" placeholder="Количество занятий">
+                        </div>
+                        <div id="recurrenceEndDate" style="margin-top: 0.5rem; display: none;">
+                            <input type="date" id="recurrenceEndDateValue" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="form-group">
                     <label for="lessonStudents">Выберите учеников</label>
                     <select id="lessonStudents" class="form-control" multiple style="height: 150px;">
@@ -667,6 +661,7 @@
         </div>
     </div>
 
+    <!-- Модальное окно назначения домашнего задания -->
     <div class="modal" id="assignHomeworkModal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -716,6 +711,7 @@
         </div>
     </div>
 
+    <!-- Модальное окно сдачи домашнего задания -->
     <div class="modal" id="submitHomeworkModal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -758,35 +754,7 @@
         </div>
     </div>
 
-    <div class="modal" id="inviteStudentModal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2>Пригласить ученика на конференцию</h2>
-            <form id="inviteStudentForm">
-                <div class="form-group">
-                    <label for="inviteRoomName">Название комнаты</label>
-                    <input type="text" id="inviteRoomName" class="form-control" value="ZindakiRoom_{{ user.username }}" readonly>
-                </div>
-                
-                <div class="form-group">
-                    <label for="inviteStudent">Выберите ученика</label>
-                    <select id="inviteStudent" class="form-control" required>
-                        <!-- Список учеников будет загружен через JavaScript -->
-                    </select>
-                </div>
-                
-                <div class="form-group" style="margin-top: 2rem;">
-                    <button type="submit" class="btn">
-                        <i class="fas fa-paper-plane"></i> Отправить приглашение
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Подключаем Jitsi Meet API -->
-    <script src="https://meet.jit.si/external_api.js"></script>
-    
+    <script src="https://jitsi.zindaki-edu.ru/external_api.js"></script>
     <script>
         // Обработка выхода
         document.getElementById('logoutBtn').addEventListener('click', function() {
@@ -799,80 +767,172 @@
                 });
         });
 
-        // Jitsi Meet API
+        // Jitsi видеоконференция с собственным сервером
         let jitsiApi = null;
-        const domain = 'meet.jit.si'; // Замените на свой домен, если используете собственный сервер Jitsi
-        const options = {
-            width: '100%',
-            height: '100%',
-            parentNode: document.querySelector('#jitsiConference'),
-            configOverwrite: {
-                disableSimulcast: false,
-                startWithAudioMuted: false,
-                startWithVideoMuted: false,
-                enableWelcomePage: false,
-                prejoinPageEnabled: false
-            },
-            interfaceConfigOverwrite: {
-                DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
-                SHOW_CHROME_EXTENSION_BANNER: false,
-                MOBILE_APP_PROMO: false,
-                HIDE_INVITE_MORE_HEADER: true
-            },
-            userInfo: {
-                displayName: '{{ user.username }}',
-                email: '{{ user.email }}'
+        let currentRoomName = '';
+        
+        function startConference(roomName) {
+            // Используем ваш домен для Jitsi
+            const domain = 'jitsi.zindaki-edu.ru';
+            
+            // Очищаем контейнер перед созданием новой конференции
+            const container = document.getElementById('jitsi-container');
+            container.innerHTML = '';
+            
+            const options = {
+                roomName: roomName,
+                width: '100%',
+                height: 500,
+                parentNode: container,
+                userInfo: {
+                    displayName: '{{ user.username }}',
+                    email: '{{ user.email }}'
+                },
+                configOverwrite: {
+                    startWithAudioMuted: false,
+                    startWithVideoMuted: false,
+                    enableWelcomePage: false,
+                    enableNoAudioDetection: true,
+                    enableNoisyMicDetection: true,
+                    prejoinPageEnabled: false,
+                    disableSimulcast: false,
+                    startAudioOnly: false,
+                    enableClosePage: false,
+                    disableBeforeUnloadHandlers: true,
+                    // Оптимизации для долгих конференций
+                    p2p: {
+                        enabled: false
+                    },
+                    analytics: {
+                        disabled: true
+                    },
+                    testing: {
+                        noAutoPlayVideo: false
+                    }
+                },
+                interfaceConfigOverwrite: {
+                    DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
+                    SHOW_JITSI_WATERMARK: false,
+                    SHOW_WATERMARK_FOR_GUESTS: false,
+                    TOOLBAR_BUTTONS: [
+                        'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
+                        'fodeviceselection', 'hangup', 'profile', 'info', 'chat', 'recording',
+                        'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
+                        'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
+                        'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
+                        'security'
+                    ]
+                }
+            };
+            
+            try {
+                jitsiApi = new JitsiMeetExternalAPI(domain, options);
+                
+                // Обновляем ссылку на конференцию
+                const conferenceUrl = `https://${domain}/${roomName}`;
+                document.getElementById('conferenceLink').textContent = conferenceUrl;
+                currentRoomName = roomName;
+                
+                // Обработчики событий
+                jitsiApi.addListener('readyToClose', () => {
+                    endConference();
+                });
+                
+                jitsiApi.addListener('participantRoleChanged', (event) => {
+                    if (event.role === 'moderator') {
+                        console.log('Вы стали модератором конференции');
+                    }
+                });
+                
+                // Для учителя добавляем обработчики управления
+                if ({% if is_teacher %}true{% else %}false{% endif %}) {
+                    setupConferenceControls();
+                }
+            } catch (error) {
+                console.error('Ошибка инициализации Jitsi:', error);
+                container.innerHTML = `
+                    <div style="padding: 20px; text-align: center;">
+                        <h3>Ошибка подключения к видеоконференции</h3>
+                        <p>${error.message}</p>
+                        <button class="btn" onclick="startConference('${roomName}')">
+                            <i class="fas fa-sync-alt"></i> Попробовать снова
+                        </button>
+                    </div>
+                `;
             }
-        };
-
-        // Инициализация Jitsi конференции
-        function initJitsiConference(roomName) {
-            document.getElementById('conferenceSection').style.display = 'block';
-            document.getElementById('conferenceSection').scrollIntoView({ behavior: 'smooth' });
-            
-            // Если уже есть активная конференция, завершаем ее
-            if (jitsiApi) {
-                jitsiApi.dispose();
-            }
-            
-            // Создаем новую конференцию
-            jitsiApi = new JitsiMeetExternalAPI(domain, {
-                ...options,
-                roomName: roomName
+        }
+        
+        function setupConferenceControls() {
+            // Управление камерой
+            document.getElementById('toggleVideo').addEventListener('click', () => {
+                jitsiApi.executeCommand('toggleVideo');
+                const icon = document.querySelector('#toggleVideo i');
+                if (icon.classList.contains('fa-video')) {
+                    icon.classList.remove('fa-video');
+                    icon.classList.add('fa-video-slash');
+                    document.getElementById('toggleVideo').innerHTML = '<i class="fas fa-video-slash"></i> Включить камеру';
+                } else {
+                    icon.classList.remove('fa-video-slash');
+                    icon.classList.add('fa-video');
+                    document.getElementById('toggleVideo').innerHTML = '<i class="fas fa-video"></i> Выключить камеру';
+                }
             });
             
-            // Обработчики событий Jitsi
-            jitsiApi.on('readyToClose', () => {
-                leaveConference();
+            // Управление микрофоном
+            document.getElementById('toggleAudio').addEventListener('click', () => {
+                jitsiApi.executeCommand('toggleAudio');
+                const icon = document.querySelector('#toggleAudio i');
+                if (icon.classList.contains('fa-microphone')) {
+                    icon.classList.remove('fa-microphone');
+                    icon.classList.add('fa-microphone-slash');
+                    document.getElementById('toggleAudio').innerHTML = '<i class="fas fa-microphone-slash"></i> Включить микрофон';
+                } else {
+                    icon.classList.remove('fa-microphone-slash');
+                    icon.classList.add('fa-microphone');
+                    document.getElementById('toggleAudio').innerHTML = '<i class="fas fa-microphone"></i> Выключить микрофон';
+                }
             });
             
-            jitsiApi.on('participantJoined', (data) => {
-                console.log('Participant joined:', data);
+            // Демонстрация экрана
+            document.getElementById('shareScreen').addEventListener('click', () => {
+                jitsiApi.executeCommand('toggleShareScreen');
             });
             
-            jitsiApi.on('participantLeft', (data) => {
-                console.log('Participant left:', data);
+            // Завершение конференции
+            document.getElementById('endMeeting').addEventListener('click', () => {
+                if (confirm('Вы уверены, что хотите завершить конференцию для всех участников?')) {
+                    jitsiApi.executeCommand('endConference');
+                    endConference();
+                }
             });
         }
-
-        // Выход из конференции
-        function leaveConference() {
+        
+        function endConference() {
             if (jitsiApi) {
                 jitsiApi.dispose();
                 jitsiApi = null;
             }
+            document.getElementById('jitsi-container').innerHTML = `
+                <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                    <p>Конференция завершена</p>
+                </div>
+            `;
+            document.getElementById('conferenceLink').textContent = 'Конференция не активна';
+        }
+        
+        function copyConferenceLink() {
+            if (!currentRoomName) {
+                alert('Сначала создайте или присоединитесь к конференции');
+                return;
+            }
             
-            document.getElementById('conferenceSection').style.display = 'none';
+            const link = document.getElementById('conferenceLink').textContent;
+            navigator.clipboard.writeText(link)
+                .then(() => alert('Ссылка скопирована в буфер обмена!'))
+                .catch(err => console.error('Ошибка копирования: ', err));
         }
 
-        // Обработчики кнопок
-        document.getElementById('leaveConference').addEventListener('click', function() {
-            if (confirm('Вы уверены, что хотите покинуть конференцию?')) {
-                leaveConference();
-            }
-        });
-
-        // Для учителя: загрузка данных
+        // Загрузка данных для учителя
         if ({% if is_teacher %}true{% else %}false{% endif %}) {
             // Функция для добавления пользователя
             function addUser(userData) {
@@ -944,21 +1004,45 @@
                         const tableBody = document.getElementById('lessonsTable');
                         tableBody.innerHTML = '';
                         
+                        // Группируем по дате
+                        const lessonsByDate = {};
                         data.lessons.forEach(lesson => {
-                            const row = document.createElement('tr');
-                            row.innerHTML = `
-                                <td>${lesson.title}</td>
-                                <td>${lesson.description || '-'}</td>
-                                <td>${lesson.schedule}</td>
-                                <td>${lesson.duration} мин</td>
-                                <td>${lesson.students?.join(', ') || 'нет'}</td>
-                                <td>
-                                    <button class="btn btn-danger" onclick="deleteLesson('${lesson.id}')">
-                                        <i class="fas fa-trash"></i> Удалить
-                                    </button>
-                                </td>
-                            `;
-                            tableBody.appendChild(row);
+                            const date = lesson.schedule.split('T')[0];
+                            if (!lessonsByDate[date]) lessonsByDate[date] = [];
+                            lessonsByDate[date].push(lesson);
+                        });
+                        
+                        // Сортируем даты
+                        const sortedDates = Object.keys(lessonsByDate).sort();
+                        
+                        // Отображаем
+                        sortedDates.forEach(date => {
+                            // Заголовок с датой
+                            const dateRow = document.createElement('tr');
+                            dateRow.innerHTML = `<td colspan="6" style="background: #f0f0f0; font-weight: bold;">
+                                ${new Date(date).toLocaleDateString('ru-RU', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                            </td>`;
+                            tableBody.appendChild(dateRow);
+                            
+                            // Занятия в этот день
+                            lessonsByDate[date].forEach(lesson => {
+                                const time = new Date(lesson.schedule).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                                
+                                const row = document.createElement('tr');
+                                row.innerHTML = `
+                                    <td>${lesson.title}</td>
+                                    <td>${lesson.description || '-'}</td>
+                                    <td>${time}</td>
+                                    <td>${lesson.duration} мин</td>
+                                    <td>${lesson.students?.join(', ') || 'нет'}</td>
+                                    <td>
+                                        <button class="btn btn-danger" onclick="deleteLesson('${lesson.id}')">
+                                            <i class="fas fa-trash"></i> Удалить
+                                        </button>
+                                    </td>
+                                `;
+                                tableBody.appendChild(row);
+                            });
                         });
                     })
                     .catch(error => {
@@ -1038,7 +1122,7 @@
                         data.lessons.forEach(lesson => {
                             const option = document.createElement('option');
                             option.value = lesson.id;
-                            option.textContent = `${lesson.title} (${lesson.schedule})`;
+                            option.textContent = `${lesson.title} (${lesson.formatted_schedule || lesson.schedule})`;
                             select.appendChild(option);
                         });
                     })
@@ -1048,38 +1132,8 @@
                     });
             }
             
-            // Загрузка отправленных приглашений
-            async function loadTeacherInvites() {
-                const response = await fetch('/api/conference/invites');
-                const data = await response.json();
-                
-                const invitesList = document.getElementById('invitesList');
-                invitesList.innerHTML = '<h4>Отправленные приглашения:</h4>';
-                
-                if (data.invites.length === 0) {
-                    invitesList.innerHTML += '<p>Нет отправленных приглашений</p>';
-                    return;
-                }
-                
-                data.invites.forEach(invite => {
-                    const inviteCard = document.createElement('div');
-                    inviteCard.className = 'invite-card';
-                    inviteCard.innerHTML = `
-                        <div class="invite-info">
-                            <p><strong>Ученик:</strong> ${invite.student}</p>
-                            <p><strong>Статус:</strong> <span class="status-${invite.status}">${
-                                invite.status === 'pending' ? 'Ожидает ответа' : 
-                                invite.status === 'accepted' ? 'Принято' : 'Отклонено'
-                            }</span></p>
-                            <p><small>Отправлено: ${new Date(invite.created_at).toLocaleString()}</small></p>
-                        </div>
-                    `;
-                    invitesList.appendChild(inviteCard);
-                });
-            }
-            
             // Управление пользователями
-            window.toggleUserStatus = function(username, activate) {
+            function toggleUserStatus(username, activate) {
                 if (confirm(`Вы уверены, что хотите ${activate ? 'активировать' : 'деактивировать'} пользователя ${username}?`)) {
                     fetch(`/api/users/${username}/status`, {
                         method: 'PUT',
@@ -1097,9 +1151,9 @@
                         }
                     });
                 }
-            };
+            }
             
-            window.deleteUser = function(username) {
+            function deleteUser(username) {
                 if (confirm(`Вы уверены, что хотите удалить пользователя ${username}?`)) {
                     fetch(`/api/users/${username}`, {
                         method: 'DELETE'
@@ -1113,7 +1167,7 @@
                         }
                     });
                 }
-            };
+            }
             
             // Управление занятиями
             function addLesson(lessonData) {
@@ -1136,7 +1190,7 @@
                 });
             }
             
-            window.deleteLesson = function(lessonId) {
+            function deleteLesson(lessonId) {
                 if (confirm('Вы уверены, что хотите удалить это занятие?')) {
                     fetch(`/api/lessons/${lessonId}`, {
                         method: 'DELETE'
@@ -1150,18 +1204,20 @@
                         }
                     });
                 }
-            };
+            }
             
             // Назначение домашнего задания
             function assignHomework(homeworkData) {
                 const formData = new FormData();
                 
+                // Добавляем данные
                 formData.append('lesson_id', homeworkData.lesson_id);
                 formData.append('title', homeworkData.title);
                 formData.append('description', homeworkData.description);
                 formData.append('deadline', homeworkData.deadline);
                 formData.append('students', JSON.stringify(homeworkData.students));
                 
+                // Добавляем файлы
                 for (let i = 0; i < homeworkData.files.length; i++) {
                     formData.append('files', homeworkData.files[i]);
                 }
@@ -1197,47 +1253,6 @@
                 loadLessonsForHomework();
                 loadStudentsForSelect('homeworkStudents');
                 document.getElementById('assignHomeworkModal').style.display = 'flex';
-            });
-            
-            // Начало конференции
-            document.getElementById('startConferenceBtn').addEventListener('click', function() {
-                const roomName = `ZindakiRoom_{{ user.username }}`;
-                initJitsiConference(roomName);
-            });
-            
-            // Отправка приглашения
-            document.getElementById('inviteStudentBtn').addEventListener('click', function() {
-                loadStudentsForSelect('inviteStudent');
-                document.getElementById('inviteStudentModal').style.display = 'flex';
-            });
-            
-            // Форма отправки приглашения
-            document.getElementById('inviteStudentForm').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const studentUsername = document.getElementById('inviteStudent').value;
-                const roomName = document.getElementById('inviteRoomName').value;
-                
-                const response = await fetch('/api/conference/invite', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        student_username: studentUsername,
-                        room_name: roomName
-                    })
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    alert('Приглашение отправлено!');
-                    document.getElementById('inviteStudentModal').style.display = 'none';
-                    document.getElementById('inviteStudentForm').reset();
-                    loadTeacherInvites();
-                } else {
-                    alert(data.error || 'Ошибка отправки приглашения');
-                }
             });
             
             document.querySelectorAll('.close-modal').forEach(btn => {
@@ -1279,12 +1294,60 @@
                 const studentsSelect = document.getElementById('lessonStudents');
                 const students = Array.from(studentsSelect.selectedOptions).map(option => option.value);
                 
-                addLesson({
-                    title,
-                    description,
-                    schedule: new Date(`${date}T${time}:00`).toISOString(),
-                    duration,
-                    students
+                // Получаем параметры повторения
+                const recurrenceType = document.querySelector('input[name="recurrence"]:checked').value;
+                const weekdays = Array.from(document.querySelectorAll('input[name="weekdays"]:checked')).map(el => el.value);
+                const endType = document.getElementById('recurrenceEndType').value;
+                const endValue = endType === 'count' 
+                    ? document.getElementById('recurrenceCountValue').value
+                    : document.getElementById('recurrenceEndDateValue').value;
+                
+                // Создаем массив всех занятий
+                const lessonsToCreate = [];
+                const startDate = new Date(`${date}T${time}:00`);
+                
+                if (recurrenceType === 'none') {
+                    // Одно занятие
+                    lessonsToCreate.push({
+                        title, description, duration, students,
+                        schedule: startDate.toISOString()
+                    });
+                } else {
+                    // Повторяющиеся занятия
+                    const interval = recurrenceType === 'weekly' ? 1 : 2;
+                    let currentDate = new Date(startDate);
+                    let createdCount = 0;
+                    const maxLessons = endType === 'count' ? parseInt(endValue) : Infinity;
+                    const endDate = endType === 'date' ? new Date(endValue) : null;
+                    
+                    while (createdCount < maxLessons && (!endDate || currentDate <= endDate)) {
+                        if (weekdays.length === 0 || weekdays.includes(currentDate.getDay().toString())) {
+                            lessonsToCreate.push({
+                                title, description, duration, students,
+                                schedule: new Date(currentDate).toISOString()
+                            });
+                            createdCount++;
+                        }
+                        
+                        currentDate.setDate(currentDate.getDate() + (interval * 7));
+                    }
+                }
+                
+                // Отправляем все занятия на сервер
+                Promise.all(lessonsToCreate.map(lesson => 
+                    fetch('/api/lessons', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(lesson)
+                    }).then(res => res.json())
+                )).then(results => {
+                    if (results.every(r => r.success)) {
+                        alert(`Успешно создано ${lessonsToCreate.length} занятий!`);
+                        loadLessons();
+                        document.getElementById('addLessonModal').style.display = 'none';
+                    } else {
+                        alert('Ошибка при создании некоторых занятий');
+                    }
                 });
             });
             
@@ -1326,81 +1389,42 @@
                 }
             });
             
+            // Обработчики для формы повторяющихся занятий
+            document.querySelectorAll('input[name="recurrence"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    document.getElementById('weeklyOptions').style.display = 
+                        this.value === 'weekly' || this.value === 'biweekly' ? 'block' : 'none';
+                    document.getElementById('recurrenceEndOptions').style.display = 
+                        this.value !== 'none' ? 'block' : 'none';
+                });
+            });
+            
+            document.getElementById('recurrenceEndType').addEventListener('change', function() {
+                document.getElementById('recurrenceCount').style.display = 
+                    this.value === 'count' ? 'block' : 'none';
+                document.getElementById('recurrenceEndDate').style.display = 
+                    this.value === 'date' ? 'block' : 'none';
+            });
+            
             // Загрузка начальных данных
             loadUsers();
             loadLessons();
             loadHomeworks();
-            loadTeacherInvites();
+            
+            // Автоматически запускаем конференцию для учителя
+            window.addEventListener('load', function() {
+                const roomName = `ZindakiRoom_{{ user.username }}_${Date.now()}`;
+                startConference(roomName);
+            });
         } else {
             // Для учеников
-            window.openSubmitHomeworkModal = function(homeworkId, title, description, deadline) {
+            function openSubmitHomeworkModal(homeworkId, title, description, deadline) {
                 document.getElementById('homeworkId').value = homeworkId;
                 document.getElementById('homeworkSubmissionTitle').value = title;
                 document.getElementById('homeworkSubmissionDescription').value = description;
                 document.getElementById('homeworkSubmissionDeadline').value = deadline;
                 document.getElementById('submitHomeworkModal').style.display = 'flex';
-            };
-            
-            // Загрузка приглашений для студента
-            async function loadStudentInvites() {
-                const response = await fetch('/api/conference/invites');
-                const data = await response.json();
-                
-                const invitesList = document.getElementById('studentInvitesList');
-                invitesList.innerHTML = '';
-                
-                if (data.invites.length === 0) {
-                    invitesList.innerHTML = '<p>Нет новых приглашений</p>';
-                    return;
-                }
-                
-                data.invites.forEach(invite => {
-                    const inviteCard = document.createElement('div');
-                    inviteCard.className = 'invite-card';
-                    inviteCard.innerHTML = `
-                        <div class="invite-info">
-                            <p><strong>Преподаватель:</strong> ${invite.teacher}</p>
-                            <p><strong>Статус:</strong> <span class="status-${invite.status}">${
-                                invite.status === 'pending' ? 'Ожидает вашего ответа' : 
-                                invite.status === 'accepted' ? 'Принято' : 'Отклонено'
-                            }</span></p>
-                            <p><small>Получено: ${new Date(invite.created_at).toLocaleString()}</small></p>
-                        </div>
-                        <div class="invite-actions">
-                            ${invite.status === 'pending' ? `
-                            <button class="btn btn-success" onclick="respondToInvite(${invite.id}, 'accept')">
-                                <i class="fas fa-check"></i> Принять
-                            </button>
-                            <button class="btn btn-danger" onclick="respondToInvite(${invite.id}, 'decline')">
-                                <i class="fas fa-times"></i> Отклонить
-                            </button>
-                            ` : ''}
-                        </div>
-                    `;
-                    invitesList.appendChild(inviteCard);
-                });
             }
-            
-            // Функция для ответа на приглашение
-            window.respondToInvite = async function(inviteId, action) {
-                const response = await fetch(`/api/conference/invite/${inviteId}/respond`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ action })
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    if (action === 'accept') {
-                        initJitsiConference(data.room_name);
-                    }
-                    loadStudentInvites();
-                } else {
-                    alert(data.error || 'Ошибка при обработке приглашения');
-                }
-            };
             
             // Форма сдачи домашнего задания
             document.getElementById('submitHomeworkForm').addEventListener('submit', function(e) {
@@ -1451,31 +1475,35 @@
                 }
             });
             
-            // Обработка присоединения к уроку
-            document.querySelectorAll('.join-lesson-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const lessonId = this.getAttribute('data-lesson-id');
-                    
-                    fetch(`/api/lesson/${lessonId}/join`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                initJitsiConference(data.room_name);
-                            } else {
-                                alert(data.error || 'Ошибка подключения к конференции');
-                            }
-                        });
-                });
-            });
+            // Обновляем расписание при изменениях
+            function checkForUpdates() {
+                fetch('/api/lessons')
+                    .then(response => response.json())
+                    .then(data => {
+                        // Здесь можно добавить логику обновления интерфейса
+                    });
+                
+                setTimeout(checkForUpdates, 10000); // Проверка каждые 10 секунд
+            }
             
-            // Инициализация
-            loadStudentInvites();
+            checkForUpdates();
         }
 
-        // Закрытие модальных окон при клике вне их
-        window.addEventListener('click', function(e) {
-            if (e.target.classList.contains('modal')) {
-                e.target.style.display = 'none';
+        // Обработка присоединения к уроку
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.closest('a[href^="/api/lesson/"]')) {
+                e.preventDefault();
+                const lessonId = e.target.closest('a').href.split('/').slice(-2, -1)[0];
+                
+                fetch(`/api/lesson/${lessonId}/join`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            startConference(data.room_name);
+                        } else {
+                            alert(data.error || 'Ошибка подключения к конференции');
+                        }
+                    });
             }
         });
     </script>
