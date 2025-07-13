@@ -174,23 +174,132 @@
             font-weight: 600;
         }
         
-        /* Jitsi контейнер */
-        #jitsi-container {
+        /* Формы */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #e0e0e0;
+            border-radius: var(--rounded-md);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        /* Модальные окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: var(--rounded-lg);
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        /* Jitsi конференция */
+        #jitsiConference {
             width: 100%;
             height: 600px;
             margin-bottom: 1rem;
             border-radius: var(--rounded-md);
             overflow: hidden;
-            background: #f0f0f0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: none;
         }
         
-        #jitsi-placeholder {
-            text-align: center;
+        /* Домашние задания */
+        .homework-status {
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--rounded-md);
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .homework-status-not-submitted {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        
+        .homework-status-submitted {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        /* Загрузка файлов */
+        .file-upload {
+            margin-top: 1rem;
+        }
+        
+        .file-upload-preview {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
             color: var(--text-light);
-            padding: 2rem;
+        }
+        
+        /* Приглашения */
+        .invite-card {
+            background: white;
+            border-radius: var(--rounded-md);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .invite-info {
+            flex: 1;
+        }
+        
+        .invite-actions {
+            display: flex;
+            gap: 0.5rem;
         }
         
         /* Адаптивность */
@@ -201,7 +310,34 @@
                 gap: 1rem;
             }
             
-            #jitsi-container {
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+            
+            .section-title {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .section-title .actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+            
+            .invite-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .invite-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+            
+            #jitsiConference {
                 height: 400px;
             }
         }
@@ -220,10 +356,93 @@
         </div>
 
         {% if is_teacher %}
-        <!-- Управление конференциями -->
-        <div class="section" id="conferenceSection">
+        <!-- Управление пользователями -->
+        <div class="section">
             <h2 class="section-title">
-                Видеоконференция
+                Управление пользователями
+                <div class="actions">
+                    <button class="btn" id="addUserBtn">
+                        <i class="fas fa-plus"></i> Добавить пользователя
+                    </button>
+                </div>
+            </h2>
+            
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Имя пользователя</th>
+                            <th>Email</th>
+                            <th>Роль</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTable">
+                        <!-- Данные будут загружены через JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Расписание занятий -->
+        <div class="section">
+            <h2 class="section-title">
+                Расписание занятий
+                <div class="actions">
+                    <button class="btn" id="addLessonBtn">
+                        <i class="fas fa-plus"></i> Добавить занятие
+                    </button>
+                    <button class="btn" id="assignHomeworkBtn">
+                        <i class="fas fa-book"></i> Назначить ДЗ
+                    </button>
+                </div>
+            </h2>
+            
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Название</th>
+                            <th>Описание</th>
+                            <th>Дата/время</th>
+                            <th>Длительность</th>
+                            <th>Ученики</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lessonsTable">
+                        <!-- Данные будут загружены через JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Домашние задания (для учителя) -->
+        <div class="section">
+            <h2 class="section-title">Назначенные домашние задания</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Урок</th>
+                            <th>Задание</th>
+                            <th>Срок сдачи</th>
+                            <th>Ученики</th>
+                            <th>Статус</th>
+                        </tr>
+                    </thead>
+                    <tbody id="homeworksTable">
+                        <!-- Данные будут загружены через JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Управление конференциями (для учителя) -->
+        <div class="section" id="conferenceManagementSection">
+            <h2 class="section-title">
+                Управление конференциями
                 <div class="actions">
                     <button class="btn" id="startConferenceBtn">
                         <i class="fas fa-video"></i> Начать конференцию
@@ -234,38 +453,335 @@
                 </div>
             </h2>
             
-            <div id="jitsi-container">
-                <div id="jitsi-placeholder">
-                    <i class="fas fa-video fa-3x" style="margin-bottom: 1rem;"></i>
-                    <p>Конференция не активна. Нажмите "Начать конференцию"</p>
-                </div>
-            </div>
-            
-            <div class="conference-controls">
-                <button class="btn btn-danger" id="leaveConference" style="display: none;">
-                    <i class="fas fa-phone-slash"></i> Завершить конференцию
-                </button>
+            <div id="invitesList">
+                <h4>Отправленные приглашения:</h4>
+                <!-- Список приглашений будет загружен через JavaScript -->
             </div>
         </div>
-        {% else %}
-        <!-- Для студентов -->
+
+        <!-- Контейнер для Jitsi конференции -->
         <div class="section" id="conferenceSection" style="display: none;">
             <h2 class="section-title">Видеоконференция</h2>
-            
-            <div id="jitsi-container">
-                <div id="jitsi-placeholder">
-                    <i class="fas fa-video fa-3x" style="margin-bottom: 1rem;"></i>
-                    <p>Ожидание подключения к конференции...</p>
-                </div>
-            </div>
-            
+            <div id="jitsiConference"></div>
             <div class="conference-controls">
                 <button class="btn btn-danger" id="leaveConference">
                     <i class="fas fa-phone-slash"></i> Покинуть конференцию
                 </button>
             </div>
         </div>
+        {% else %}
+        <!-- Для студентов -->
+        <div class="section">
+            <h2 class="section-title">Мои курсы</h2>
+            
+            {% if lessons %}
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Название</th>
+                            <th>Описание</th>
+                            <th>Дата/время</th>
+                            <th>Длительность</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lesson in lessons %}
+                        <tr>
+                            <td>{{ lesson.title }}</td>
+                            <td>{{ lesson.description }}</td>
+                            <td>{{ lesson.schedule }}</td>
+                            <td>{{ lesson.duration }} мин</td>
+                            <td>
+                                <button class="btn join-lesson-btn" data-lesson-id="{{ lesson.id }}">
+                                    <i class="fas fa-video"></i> Присоединиться
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p>Вы пока не записаны ни на один курс</p>
+            {% endif %}
+        </div>
+
+        <!-- Приглашения на конференции (для студента) -->
+        <div class="section" id="invitesSection">
+            <h2 class="section-title">Приглашения на конференции</h2>
+            <div id="studentInvitesList">
+                <!-- Приглашения будут загружены через JavaScript -->
+            </div>
+        </div>
+
+        <!-- Контейнер для Jitsi конференции -->
+        <div class="section" id="conferenceSection" style="display: none;">
+            <h2 class="section-title">Видеоконференция</h2>
+            <div id="jitsiConference"></div>
+            <div class="conference-controls">
+                <button class="btn btn-danger" id="leaveConference">
+                    <i class="fas fa-phone-slash"></i> Покинуть конференцию
+                </button>
+            </div>
+        </div>
+
+        <!-- Домашние задания (для студента) -->
+        <div class="section">
+            <h2 class="section-title">Домашние задания</h2>
+            {% if homework %}
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Название</th>
+                            <th>Описание</th>
+                            <th>Срок сдачи</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentHomeworkTable">
+                        {% for hw in homework %}
+                        <tr>
+                            <td>{{ hw.title }}</td>
+                            <td>{{ hw.description }}</td>
+                            <td>{{ hw.deadline }}</td>
+                            <td>
+                                <span class="homework-status homework-status-{{ 'submitted' if hw.status == 'submitted' else 'not-submitted' }}">
+                                    {{ 'Сдано' if hw.status == 'submitted' else 'Не сдано' }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if hw.status != 'submitted' %}
+                                <button class="btn" onclick="openSubmitHomeworkModal('{{ hw.id }}', '{{ hw.title }}', '{{ hw.description }}', '{{ hw.deadline }}')">
+                                    <i class="fas fa-upload"></i> Сдать
+                                </button>
+                                {% else %}
+                                <button class="btn btn-secondary">
+                                    <i class="fas fa-check"></i> Проверено
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p>Нет активных заданий</p>
+            {% endif %}
+        </div>
         {% endif %}
+    </div>
+
+    <!-- Модальные окна -->
+    <div class="modal" id="addUserModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Добавить нового пользователя</h2>
+            <form id="addUserForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newUsername">Имя пользователя</label>
+                        <input type="text" id="newUsername" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newEmail">Email</label>
+                        <input type="email" id="newEmail" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newPassword">Пароль</label>
+                        <input type="password" id="newPassword" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Подтвердите пароль</label>
+                        <input type="password" id="confirmPassword" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="userRole">Роль</label>
+                    <select id="userRole" class="form-control" required>
+                        <option value="student">Ученик</option>
+                        <option value="teacher">Преподаватель</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" style="margin-top: 2rem;">
+                    <button type="submit" class="btn">
+                        <i class="fas fa-save"></i> Сохранить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="addLessonModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Добавить новое занятие</h2>
+            <form id="addLessonForm">
+                <div class="form-group">
+                    <label for="lessonTitle">Название занятия</label>
+                    <input type="text" id="lessonTitle" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="lessonDescription">Описание</label>
+                    <textarea id="lessonDescription" class="form-control" rows="3"></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="lessonDate">Дата начала</label>
+                        <input type="date" id="lessonDate" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lessonTime">Время</label>
+                        <input type="time" id="lessonTime" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lessonDuration">Длительность (мин)</label>
+                        <input type="number" id="lessonDuration" class="form-control" value="60" min="30" step="15" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="lessonStudents">Выберите учеников</label>
+                    <select id="lessonStudents" class="form-control" multiple style="height: 150px;">
+                        <!-- Список учеников будет загружен через JavaScript -->
+                    </select>
+                </div>
+                
+                <div class="form-group" style="margin-top: 2rem;">
+                    <button type="submit" class="btn">
+                        <i class="fas fa-save"></i> Сохранить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="assignHomeworkModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Назначить домашнее задание</h2>
+            <form id="assignHomeworkForm">
+                <div class="form-group">
+                    <label for="homeworkLesson">Урок</label>
+                    <select id="homeworkLesson" class="form-control" required>
+                        <!-- Список уроков будет загружен через JavaScript -->
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkTitle">Название задания</label>
+                    <input type="text" id="homeworkTitle" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkDescription">Описание</label>
+                    <textarea id="homeworkDescription" class="form-control" rows="3" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkDeadline">Срок сдачи</label>
+                    <input type="date" id="homeworkDeadline" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkStudents">Ученики</label>
+                    <select id="homeworkStudents" class="form-control" multiple style="height: 150px;" required>
+                        <!-- Список учеников будет загружен через JavaScript -->
+                    </select>
+                </div>
+                
+                <div class="form-group file-upload">
+                    <label for="homeworkFiles">Прикрепленные файлы</label>
+                    <input type="file" id="homeworkFiles" class="form-control" multiple>
+                    <div class="file-upload-preview" id="homeworkFilesPreview"></div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 2rem;">
+                    <button type="submit" class="btn">
+                        <i class="fas fa-save"></i> Назначить задание
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="submitHomeworkModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Сдать домашнее задание</h2>
+            <form id="submitHomeworkForm">
+                <input type="hidden" id="homeworkId">
+                
+                <div class="form-group">
+                    <label for="homeworkSubmissionTitle">Название задания</label>
+                    <input type="text" id="homeworkSubmissionTitle" class="form-control" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkSubmissionDescription">Описание</label>
+                    <textarea id="homeworkSubmissionDescription" class="form-control" rows="3" readonly></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkSubmissionDeadline">Срок сдачи</label>
+                    <input type="text" id="homeworkSubmissionDeadline" class="form-control" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkSubmissionComment">Комментарий</label>
+                    <textarea id="homeworkSubmissionComment" class="form-control" rows="3"></textarea>
+                </div>
+                
+                <div class="form-group file-upload">
+                    <label for="homeworkSubmissionFiles">Прикрепите файлы</label>
+                    <input type="file" id="homeworkSubmissionFiles" class="form-control" multiple>
+                    <div class="file-upload-preview" id="homeworkSubmissionFilesPreview"></div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 2rem;">
+                    <button type="submit" class="btn">
+                        <i class="fas fa-upload"></i> Отправить задание
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="inviteStudentModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Пригласить ученика на конференцию</h2>
+            <form id="inviteStudentForm">
+                <div class="form-group">
+                    <label for="inviteRoomName">Название комнаты</label>
+                    <input type="text" id="inviteRoomName" class="form-control" value="ZindakiRoom_{{ user.username }}" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="inviteStudent">Выберите ученика</label>
+                    <select id="inviteStudent" class="form-control" required>
+                        <!-- Список учеников будет загружен через JavaScript -->
+                    </select>
+                </div>
+                
+                <div class="form-group" style="margin-top: 2rem;">
+                    <button type="submit" class="btn">
+                        <i class="fas fa-paper-plane"></i> Отправить приглашение
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Подключаем Jitsi Meet API -->
@@ -286,81 +802,682 @@
         // Jitsi Meet API
         let jitsiApi = null;
         const domain = 'meet.jit.si'; // Замените на свой домен, если используете собственный сервер Jitsi
-        
-        // Функция для запуска конференции
-        function startJitsiConference(roomName, displayName) {
-            const jitsiContainer = document.getElementById('jitsi-container');
-            const placeholder = document.getElementById('jitsi-placeholder');
-            
-            // Очищаем контейнер
-            jitsiContainer.innerHTML = '';
-            
-            // Создаем iframe для Jitsi
-            const iframe = document.createElement('iframe');
-            iframe.style.width = '100%';
-            iframe.style.height = '100%';
-            iframe.style.border = 'none';
-            iframe.allow = 'camera; microphone; display-capture';
-            iframe.src = `https://${domain}/${roomName}?jwt=&userInfo.displayName=${encodeURIComponent(displayName)}`;
-            
-            jitsiContainer.appendChild(iframe);
-            
-            // Показываем кнопку завершения
-            document.getElementById('leaveConference').style.display = 'inline-block';
-            
-            // Для учителя скрываем кнопку старта
-            if (document.getElementById('startConferenceBtn')) {
-                document.getElementById('startConferenceBtn').style.display = 'none';
+        const options = {
+            width: '100%',
+            height: '100%',
+            parentNode: document.querySelector('#jitsiConference'),
+            configOverwrite: {
+                disableSimulcast: false,
+                startWithAudioMuted: false,
+                startWithVideoMuted: false,
+                enableWelcomePage: false,
+                prejoinPageEnabled: false
+            },
+            interfaceConfigOverwrite: {
+                DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
+                SHOW_CHROME_EXTENSION_BANNER: false,
+                MOBILE_APP_PROMO: false,
+                HIDE_INVITE_MORE_HEADER: true
+            },
+            userInfo: {
+                displayName: '{{ user.username }}',
+                email: '{{ user.email }}'
             }
-        }
+        };
 
-        // Функция для завершения конференции
-        function leaveJitsiConference() {
-            const jitsiContainer = document.getElementById('jitsi-container');
-            jitsiContainer.innerHTML = `
-                <div id="jitsi-placeholder">
-                    <i class="fas fa-video fa-3x" style="margin-bottom: 1rem;"></i>
-                    <p>${ {% if is_teacher %} 'Конференция не активна. Нажмите "Начать конференцию"' {% else %} 'Ожидание подключения к конференции...' {% endif %}</p>
-                </div>
-            `;
+        // Инициализация Jitsi конференции
+        function initJitsiConference(roomName) {
+            document.getElementById('conferenceSection').style.display = 'block';
+            document.getElementById('conferenceSection').scrollIntoView({ behavior: 'smooth' });
             
-            // Скрываем кнопку завершения
-            document.getElementById('leaveConference').style.display = 'none';
-            
-            // Для учителя показываем кнопку старта
-            if (document.getElementById('startConferenceBtn')) {
-                document.getElementById('startConferenceBtn').style.display = 'inline-block';
+            // Если уже есть активная конференция, завершаем ее
+            if (jitsiApi) {
+                jitsiApi.dispose();
             }
-        }
-
-        // Для учителя: кнопка начала конференции
-        if ({% if is_teacher %}true{% else %}false{% endif %}) {
-            document.getElementById('startConferenceBtn').addEventListener('click', function() {
-                const roomName = `ZindakiRoom_{{ user.username }}_${Math.random().toString(36).substring(2, 8)}`;
-                startJitsiConference(roomName, 'Преподаватель {{ user.username }}');
+            
+            // Создаем новую конференцию
+            jitsiApi = new JitsiMeetExternalAPI(domain, {
+                ...options,
+                roomName: roomName
+            });
+            
+            // Обработчики событий Jitsi
+            jitsiApi.on('readyToClose', () => {
+                leaveConference();
+            });
+            
+            jitsiApi.on('participantJoined', (data) => {
+                console.log('Participant joined:', data);
+            });
+            
+            jitsiApi.on('participantLeft', (data) => {
+                console.log('Participant left:', data);
             });
         }
 
-        // Кнопка завершения конференции
+        // Выход из конференции
+        function leaveConference() {
+            if (jitsiApi) {
+                jitsiApi.dispose();
+                jitsiApi = null;
+            }
+            
+            document.getElementById('conferenceSection').style.display = 'none';
+        }
+
+        // Обработчики кнопок
         document.getElementById('leaveConference').addEventListener('click', function() {
-            if (confirm('Вы уверены, что хотите завершить конференцию?')) {
-                leaveJitsiConference();
+            if (confirm('Вы уверены, что хотите покинуть конференцию?')) {
+                leaveConference();
             }
         });
 
-        // Для студентов: автоматический вход при наличии приглашения
-        if ({% if not is_teacher %}true{% else %}false{% endif %}) {
-            // Проверяем, есть ли активное приглашение
-            fetch('/api/conference/invites')
+        // Для учителя: загрузка данных
+        if ({% if is_teacher %}true{% else %}false{% endif %}) {
+            // Функция для добавления пользователя
+            function addUser(userData) {
+                fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(userData)
+                })
                 .then(response => response.json())
                 .then(data => {
-                    if (data.invites && data.invites.length > 0 && data.invites[0].status === 'accepted') {
-                        const roomName = data.invites[0].room_name;
-                        document.getElementById('conferenceSection').style.display = 'block';
-                        startJitsiConference(roomName, 'Студент {{ user.username }}');
+                    if (data.success) {
+                        loadUsers();
+                        document.getElementById('addUserModal').style.display = 'none';
+                        document.getElementById('addUserForm').reset();
+                    } else {
+                        alert(data.error || 'Ошибка при добавлении пользователя');
                     }
                 });
+            }
+            
+            // Загрузка списка пользователей
+            function loadUsers() {
+                fetch('/api/users')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Ошибка загрузки пользователей');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const tableBody = document.getElementById('usersTable');
+                        tableBody.innerHTML = '';
+                        
+                        data.users.forEach(user => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${user.username}</td>
+                                <td>${user.email}</td>
+                                <td>${user.role === 'teacher' ? 'Преподаватель' : 'Ученик'}</td>
+                                <td class="${user.is_active ? 'status-active' : 'status-inactive'}">
+                                    ${user.is_active ? 'Активен' : 'Неактивен'}
+                                </td>
+                                <td>
+                                    <button class="btn btn-secondary" onclick="toggleUserStatus('${user.username}', ${!user.is_active})">
+                                        ${user.is_active ? 'Деактивировать' : 'Активировать'}
+                                    </button>
+                                    <button class="btn btn-danger" onclick="deleteUser('${user.username}')">
+                                        <i class="fas fa-trash"></i> Удалить
+                                    </button>
+                                </td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Ошибка загрузки пользователей');
+                    });
+            }
+            
+            // Загрузка списка занятий
+            function loadLessons() {
+                fetch('/api/lessons')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Ошибка загрузки занятий');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const tableBody = document.getElementById('lessonsTable');
+                        tableBody.innerHTML = '';
+                        
+                        data.lessons.forEach(lesson => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${lesson.title}</td>
+                                <td>${lesson.description || '-'}</td>
+                                <td>${lesson.schedule}</td>
+                                <td>${lesson.duration} мин</td>
+                                <td>${lesson.students?.join(', ') || 'нет'}</td>
+                                <td>
+                                    <button class="btn btn-danger" onclick="deleteLesson('${lesson.id}')">
+                                        <i class="fas fa-trash"></i> Удалить
+                                    </button>
+                                </td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Ошибка загрузки занятий');
+                    });
+            }
+            
+            // Загрузка домашних заданий
+            function loadHomeworks() {
+                fetch('/api/homework')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Ошибка загрузки домашних заданий');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const tableBody = document.getElementById('homeworksTable');
+                        tableBody.innerHTML = '';
+                        
+                        data.homeworks.forEach(hw => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${hw.title}</td>
+                                <td>${hw.description}</td>
+                                <td>${hw.deadline}</td>
+                                <td>${hw.students.join(', ')}</td>
+                                <td>
+                                    <span class="homework-status homework-status-${hw.status || 'not-submitted'}">
+                                        ${hw.status === 'submitted' ? 'Сдано' : 'Не сдано'}
+                                    </span>
+                                </td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Ошибка загрузки домашних заданий');
+                    });
+            }
+            
+            // Загрузка списка учеников для выбора
+            function loadStudentsForSelect(selectId) {
+                fetch('/api/users?role=student')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Ошибка загрузки учеников');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const select = document.getElementById(selectId);
+                        select.innerHTML = '';
+                        
+                        data.users.forEach(student => {
+                            const option = document.createElement('option');
+                            option.value = student.username;
+                            option.textContent = student.username;
+                            select.appendChild(option);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Ошибка загрузки списка учеников');
+                    });
+            }
+            
+            // Загрузка уроков для назначения ДЗ
+            function loadLessonsForHomework() {
+                fetch('/api/lessons')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Ошибка загрузки уроков');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const select = document.getElementById('homeworkLesson');
+                        select.innerHTML = '';
+                        
+                        data.lessons.forEach(lesson => {
+                            const option = document.createElement('option');
+                            option.value = lesson.id;
+                            option.textContent = `${lesson.title} (${lesson.schedule})`;
+                            select.appendChild(option);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Ошибка загрузки списка уроков');
+                    });
+            }
+            
+            // Загрузка отправленных приглашений
+            async function loadTeacherInvites() {
+                const response = await fetch('/api/conference/invites');
+                const data = await response.json();
+                
+                const invitesList = document.getElementById('invitesList');
+                invitesList.innerHTML = '<h4>Отправленные приглашения:</h4>';
+                
+                if (data.invites.length === 0) {
+                    invitesList.innerHTML += '<p>Нет отправленных приглашений</p>';
+                    return;
+                }
+                
+                data.invites.forEach(invite => {
+                    const inviteCard = document.createElement('div');
+                    inviteCard.className = 'invite-card';
+                    inviteCard.innerHTML = `
+                        <div class="invite-info">
+                            <p><strong>Ученик:</strong> ${invite.student}</p>
+                            <p><strong>Статус:</strong> <span class="status-${invite.status}">${
+                                invite.status === 'pending' ? 'Ожидает ответа' : 
+                                invite.status === 'accepted' ? 'Принято' : 'Отклонено'
+                            }</span></p>
+                            <p><small>Отправлено: ${new Date(invite.created_at).toLocaleString()}</small></p>
+                        </div>
+                    `;
+                    invitesList.appendChild(inviteCard);
+                });
+            }
+            
+            // Управление пользователями
+            window.toggleUserStatus = function(username, activate) {
+                if (confirm(`Вы уверены, что хотите ${activate ? 'активировать' : 'деактивировать'} пользователя ${username}?`)) {
+                    fetch(`/api/users/${username}/status`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ is_active: activate })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            loadUsers();
+                        } else {
+                            alert(data.error || 'Ошибка обновления статуса');
+                        }
+                    });
+                }
+            };
+            
+            window.deleteUser = function(username) {
+                if (confirm(`Вы уверены, что хотите удалить пользователя ${username}?`)) {
+                    fetch(`/api/users/${username}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            loadUsers();
+                        } else {
+                            alert(data.error || 'Ошибка удаления пользователя');
+                        }
+                    });
+                }
+            };
+            
+            // Управление занятиями
+            function addLesson(lessonData) {
+                fetch('/api/lessons', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(lessonData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loadLessons();
+                        document.getElementById('addLessonModal').style.display = 'none';
+                        document.getElementById('addLessonForm').reset();
+                    } else {
+                        alert(data.error || 'Ошибка создания занятия');
+                    }
+                });
+            }
+            
+            window.deleteLesson = function(lessonId) {
+                if (confirm('Вы уверены, что хотите удалить это занятие?')) {
+                    fetch(`/api/lessons/${lessonId}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            loadLessons();
+                        } else {
+                            alert(data.error || 'Ошибка удаления занятия');
+                        }
+                    });
+                }
+            };
+            
+            // Назначение домашнего задания
+            function assignHomework(homeworkData) {
+                const formData = new FormData();
+                
+                formData.append('lesson_id', homeworkData.lesson_id);
+                formData.append('title', homeworkData.title);
+                formData.append('description', homeworkData.description);
+                formData.append('deadline', homeworkData.deadline);
+                formData.append('students', JSON.stringify(homeworkData.students));
+                
+                for (let i = 0; i < homeworkData.files.length; i++) {
+                    formData.append('files', homeworkData.files[i]);
+                }
+                
+                fetch('/api/homework', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loadHomeworks();
+                        document.getElementById('assignHomeworkModal').style.display = 'none';
+                        document.getElementById('assignHomeworkForm').reset();
+                        document.getElementById('homeworkFilesPreview').innerHTML = '';
+                    } else {
+                        alert(data.error || 'Ошибка назначения домашнего задания');
+                    }
+                });
+            }
+            
+            // Модальные окна
+            document.getElementById('addUserBtn').addEventListener('click', () => {
+                document.getElementById('addUserModal').style.display = 'flex';
+            });
+            
+            document.getElementById('addLessonBtn').addEventListener('click', () => {
+                loadStudentsForSelect('lessonStudents');
+                document.getElementById('addLessonModal').style.display = 'flex';
+            });
+            
+            document.getElementById('assignHomeworkBtn').addEventListener('click', () => {
+                loadLessonsForHomework();
+                loadStudentsForSelect('homeworkStudents');
+                document.getElementById('assignHomeworkModal').style.display = 'flex';
+            });
+            
+            // Начало конференции
+            document.getElementById('startConferenceBtn').addEventListener('click', function() {
+                const roomName = `ZindakiRoom_{{ user.username }}`;
+                initJitsiConference(roomName);
+            });
+            
+            // Отправка приглашения
+            document.getElementById('inviteStudentBtn').addEventListener('click', function() {
+                loadStudentsForSelect('inviteStudent');
+                document.getElementById('inviteStudentModal').style.display = 'flex';
+            });
+            
+            // Форма отправки приглашения
+            document.getElementById('inviteStudentForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const studentUsername = document.getElementById('inviteStudent').value;
+                const roomName = document.getElementById('inviteRoomName').value;
+                
+                const response = await fetch('/api/conference/invite', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        student_username: studentUsername,
+                        room_name: roomName
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert('Приглашение отправлено!');
+                    document.getElementById('inviteStudentModal').style.display = 'none';
+                    document.getElementById('inviteStudentForm').reset();
+                    loadTeacherInvites();
+                } else {
+                    alert(data.error || 'Ошибка отправки приглашения');
+                }
+            });
+            
+            document.querySelectorAll('.close-modal').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.modal').forEach(modal => {
+                        modal.style.display = 'none';
+                    });
+                });
+            });
+            
+            // Форма добавления пользователя
+            document.getElementById('addUserForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const username = document.getElementById('newUsername').value;
+                const email = document.getElementById('newEmail').value;
+                const password = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                const role = document.getElementById('userRole').value;
+                
+                if (password !== confirmPassword) {
+                    alert('Пароли не совпадают!');
+                    return;
+                }
+                
+                addUser({ username, email, password, role });
+            });
+            
+            // Форма добавления занятия
+            document.getElementById('addLessonForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const title = document.getElementById('lessonTitle').value;
+                const description = document.getElementById('lessonDescription').value;
+                const date = document.getElementById('lessonDate').value;
+                const time = document.getElementById('lessonTime').value;
+                const duration = document.getElementById('lessonDuration').value;
+                
+                const studentsSelect = document.getElementById('lessonStudents');
+                const students = Array.from(studentsSelect.selectedOptions).map(option => option.value);
+                
+                addLesson({
+                    title,
+                    description,
+                    schedule: new Date(`${date}T${time}:00`).toISOString(),
+                    duration,
+                    students
+                });
+            });
+            
+            // Форма назначения домашнего задания
+            document.getElementById('assignHomeworkForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const lessonId = document.getElementById('homeworkLesson').value;
+                const title = document.getElementById('homeworkTitle').value;
+                const description = document.getElementById('homeworkDescription').value;
+                const deadline = document.getElementById('homeworkDeadline').value;
+                
+                const studentsSelect = document.getElementById('homeworkStudents');
+                const students = Array.from(studentsSelect.selectedOptions).map(option => option.value);
+                
+                const filesInput = document.getElementById('homeworkFiles');
+                const files = filesInput.files;
+                
+                assignHomework({
+                    lesson_id: lessonId,
+                    title,
+                    description,
+                    deadline,
+                    students,
+                    files
+                });
+            });
+            
+            // Превью загружаемых файлов (ДЗ)
+            document.getElementById('homeworkFiles').addEventListener('change', function() {
+                const preview = document.getElementById('homeworkFilesPreview');
+                preview.innerHTML = '';
+                
+                if (this.files.length > 0) {
+                    preview.innerHTML = `Выбрано файлов: ${this.files.length}<br>`;
+                    for (let i = 0; i < this.files.length; i++) {
+                        preview.innerHTML += `${i+1}. ${this.files[i].name}<br>`;
+                    }
+                }
+            });
+            
+            // Загрузка начальных данных
+            loadUsers();
+            loadLessons();
+            loadHomeworks();
+            loadTeacherInvites();
+        } else {
+            // Для учеников
+            window.openSubmitHomeworkModal = function(homeworkId, title, description, deadline) {
+                document.getElementById('homeworkId').value = homeworkId;
+                document.getElementById('homeworkSubmissionTitle').value = title;
+                document.getElementById('homeworkSubmissionDescription').value = description;
+                document.getElementById('homeworkSubmissionDeadline').value = deadline;
+                document.getElementById('submitHomeworkModal').style.display = 'flex';
+            };
+            
+            // Загрузка приглашений для студента
+            async function loadStudentInvites() {
+                const response = await fetch('/api/conference/invites');
+                const data = await response.json();
+                
+                const invitesList = document.getElementById('studentInvitesList');
+                invitesList.innerHTML = '';
+                
+                if (data.invites.length === 0) {
+                    invitesList.innerHTML = '<p>Нет новых приглашений</p>';
+                    return;
+                }
+                
+                data.invites.forEach(invite => {
+                    const inviteCard = document.createElement('div');
+                    inviteCard.className = 'invite-card';
+                    inviteCard.innerHTML = `
+                        <div class="invite-info">
+                            <p><strong>Преподаватель:</strong> ${invite.teacher}</p>
+                            <p><strong>Статус:</strong> <span class="status-${invite.status}">${
+                                invite.status === 'pending' ? 'Ожидает вашего ответа' : 
+                                invite.status === 'accepted' ? 'Принято' : 'Отклонено'
+                            }</span></p>
+                            <p><small>Получено: ${new Date(invite.created_at).toLocaleString()}</small></p>
+                        </div>
+                        <div class="invite-actions">
+                            ${invite.status === 'pending' ? `
+                            <button class="btn btn-success" onclick="respondToInvite(${invite.id}, 'accept')">
+                                <i class="fas fa-check"></i> Принять
+                            </button>
+                            <button class="btn btn-danger" onclick="respondToInvite(${invite.id}, 'decline')">
+                                <i class="fas fa-times"></i> Отклонить
+                            </button>
+                            ` : ''}
+                        </div>
+                    `;
+                    invitesList.appendChild(inviteCard);
+                });
+            }
+            
+            // Функция для ответа на приглашение
+            window.respondToInvite = async function(inviteId, action) {
+                const response = await fetch(`/api/conference/invite/${inviteId}/respond`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ action })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    if (action === 'accept') {
+                        initJitsiConference(data.room_name);
+                    }
+                    loadStudentInvites();
+                } else {
+                    alert(data.error || 'Ошибка при обработке приглашения');
+                }
+            };
+            
+            // Форма сдачи домашнего задания
+            document.getElementById('submitHomeworkForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const homeworkId = document.getElementById('homeworkId').value;
+                const comment = document.getElementById('homeworkSubmissionComment').value;
+                
+                const filesInput = document.getElementById('homeworkSubmissionFiles');
+                const files = filesInput.files;
+                
+                const formData = new FormData();
+                formData.append('homework_id', homeworkId);
+                formData.append('comment', comment);
+                
+                for (let i = 0; i < files.length; i++) {
+                    formData.append('files', files[i]);
+                }
+                
+                fetch('/api/homework/submit', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Домашнее задание успешно отправлено!');
+                        document.getElementById('submitHomeworkModal').style.display = 'none';
+                        document.getElementById('submitHomeworkForm').reset();
+                        document.getElementById('homeworkSubmissionFilesPreview').innerHTML = '';
+                        window.location.reload();
+                    } else {
+                        alert(data.error || 'Ошибка при отправке домашнего задания');
+                    }
+                });
+            });
+            
+            // Превью загружаемых файлов (сдача ДЗ)
+            document.getElementById('homeworkSubmissionFiles').addEventListener('change', function() {
+                const preview = document.getElementById('homeworkSubmissionFilesPreview');
+                preview.innerHTML = '';
+                
+                if (this.files.length > 0) {
+                    preview.innerHTML = `Выбрано файлов: ${this.files.length}<br>`;
+                    for (let i = 0; i < this.files.length; i++) {
+                        preview.innerHTML += `${i+1}. ${this.files[i].name}<br>`;
+                    }
+                }
+            });
+            
+            // Обработка присоединения к уроку
+            document.querySelectorAll('.join-lesson-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lessonId = this.getAttribute('data-lesson-id');
+                    
+                    fetch(`/api/lesson/${lessonId}/join`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                initJitsiConference(data.room_name);
+                            } else {
+                                alert(data.error || 'Ошибка подключения к конференции');
+                            }
+                        });
+                });
+            });
+            
+            // Инициализация
+            loadStudentInvites();
         }
+
+        // Закрытие модальных окон при клике вне их
+        window.addEventListener('click', function(e) {
+            if (e.target.classList.contains('modal')) {
+                e.target.style.display = 'none';
+            }
+        });
     </script>
 </body>
 </html>
