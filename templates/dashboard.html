@@ -1320,7 +1320,7 @@
             const selfItem = document.createElement('div');
             selfItem.className = 'participant-item';
             selfItem.innerHTML = `
-                <div class="participant-avatar">{{ user.username[0].toUpperCase() }}</div>
+                <div class="participant-avatar">{{ user.username[0] | upper }}</div>
                 <div>{{ user.username }} (Вы)</div>
             `;
             participantsList.appendChild(selfItem);
