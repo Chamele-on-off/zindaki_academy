@@ -20,8 +20,8 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Конфигурация Jitsi
-JITSI_DOMAIN = 'jitsi.zindaki-edu.ru'  # Замените на ваш домен Jitsi
+# Конфигурация Jitsi (ЗАМЕНИТЕ НА ВАШ ДОМЕН ИЛИ IP:PORT)
+JITSI_DOMAIN = 'your-server-ip:8443'  # Например: '123.123.123.123:8443' или 'jitsi.yourdomain.com'
 JITSI_OPTIONS = {
     'roomName': 'ZindakiRoom',
     'width': '100%',
@@ -31,7 +31,8 @@ JITSI_OPTIONS = {
         'startWithAudioMuted': False,
         'startWithVideoMuted': False,
         'enableWelcomePage': False,
-        'enableClosePage': False
+        'enableClosePage': False,
+        'disableDeepLinking': True
     },
     'interfaceConfigOverwrite': {
         'DISABLE_JOIN_LEAVE_NOTIFICATIONS': True,
@@ -505,9 +506,9 @@ def api_join_lesson(lesson_id):
         return jsonify({'error': 'Access denied'}), 403
     
     if session['user']['role'] == 'teacher':
-        room_name = f"ZindakiRoom_{session['user']['username']}"
+        room_name = f"ZindakiRoom_{session['user']['username']}_{lesson_id}"
     else:
-        room_name = f"ZindakiRoom_{lesson['teacher']}"
+        room_name = f"ZindakiRoom_{lesson['teacher']}_{lesson_id}"
     
     return jsonify({
         'success': True,
@@ -515,6 +516,7 @@ def api_join_lesson(lesson_id):
         'room_name': room_name,
         'jitsi_domain': JITSI_DOMAIN,
         'jitsi_options': JITSI_OPTIONS,
+        'jitsi_script_url': f'https://{JITSI_DOMAIN}/external_api.js',
         'lesson': lesson
     })
 
@@ -586,7 +588,8 @@ def respond_to_invite(invite_id):
                     'conference_url': f'/conference/{invite["room_name"]}',
                     'room_name': invite["room_name"],
                     'jitsi_domain': JITSI_DOMAIN,
-                    'jitsi_options': JITSI_OPTIONS
+                    'jitsi_options': JITSI_OPTIONS,
+                    'jitsi_script_url': f'https://{JITSI_DOMAIN}/external_api.js'
                 })
         logger.info(f"Invite {invite_id} {status} by {session['user']['username']}")
         return jsonify({'success': True})
@@ -603,7 +606,7 @@ def conference(room_name):
         if not room_name.endswith(session['user']['username']):
             return "Доступ запрещен", 403
     else:
-        teacher_username = room_name.replace('ZindakiRoom_', '')
+        teacher_username = room_name.split('_')[1]
         lessons = DB.get_lessons()
         has_access = any(
             session['user']['username'] in lesson.get('students', []) and 
@@ -623,7 +626,26 @@ def conference(room_name):
                          user=session['user'],
                          is_teacher=session['user']['role'] == 'teacher',
                          jitsi_domain=JITSI_DOMAIN,
-                         jitsi_options=JITSI_OPTIONS)
+                         jitsi_options=JITSI_OPTIONS,
+                         jitsi_script_url=f'https://{JITSI_DOMAIN}/external_api.js')
+
+# Проверка доступности Jitsi сервера
+@app.route('/api/jitsi/check')
+def check_jitsi():
+    try:
+        import requests
+        response = requests.get(f'https://{JITSI_DOMAIN}/', verify=False, timeout=5)
+        return jsonify({
+            'success': True,
+            'status': 'Jitsi server is available',
+            'status_code': response.status_code
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'message': 'Jitsi server is not available'
+        }), 500
 
 # Домашние задания
 @app.route('/api/homework', methods=['GET', 'POST'])
@@ -741,7 +763,8 @@ def dashboard():
                          homeworks=homeworks,
                          is_teacher=session['user']['role'] == 'teacher',
                          jitsi_domain=JITSI_DOMAIN,
-                         jitsi_options=JITSI_OPTIONS)
+                         jitsi_options=JITSI_OPTIONS,
+                         jitsi_script_url=f'https://{JITSI_DOMAIN}/external_api.js')
 
 # Обработка контактной формы
 @app.route('/api/contact', methods=['POST'])
