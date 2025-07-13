@@ -21,7 +21,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Конфигурация Jitsi (ЗАМЕНИТЕ НА ВАШ ДОМЕН ИЛИ IP:PORT)
-JITSI_DOMAIN = 'your-server-ip:8443'  # Например: '123.123.123.123:8443' или 'jitsi.yourdomain.com'
+JITSI_DOMAIN = '109.172.101.94:8443'  # Например: '123.123.123.123:8443' или 'jitsi.yourdomain.com'
 JITSI_OPTIONS = {
     'roomName': 'ZindakiRoom',
     'width': '100%',
