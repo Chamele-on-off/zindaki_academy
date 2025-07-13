@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, session, redirect, jsonify, send_from_directory, Response
-from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask_socketio import SocketIO
 from werkzeug.security import generate_password_hash, check_password_hash
 import json
 import os
@@ -13,7 +13,7 @@ import uuid
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 
-# Настройка SocketIO
+# Настройка SocketIO (оставляем для других функций, но не для видеоконференций)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 # Настройка логирования
@@ -30,10 +30,6 @@ os.makedirs(INVITES_FOLDER, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
-
-# Глобальные переменные для видеоконференций
-active_conferences = defaultdict(dict)  # Активные конференции
-user_rooms = {}  # Соответствие пользователей и комнат
 
 class DB:
     @staticmethod
@@ -335,296 +331,6 @@ if not os.path.exists(f'{INVITES_FOLDER}/invites.json'):
     with open(f'{INVITES_FOLDER}/invites.json', 'w') as f:
         json.dump([], f)
 
-# SocketIO обработчики
-@socketio.on('connect')
-def handle_connect():
-    logger.info(f'Client connected: {request.sid}')
-    if 'user' in session:
-        emit('connection-response', {'status': 'connected', 'user': session['user']['username']})
-
-@socketio.on('disconnect')
-def handle_disconnect():
-    logger.info(f'Client disconnected: {request.sid}')
-    if request.sid in user_rooms:
-        room = user_rooms[request.sid]
-        leave_room(room)
-        emit('user-left', {'user': session.get('user', {}).get('username')}, room=room)
-        del user_rooms[request.sid]
-
-@socketio.on('join')
-def handle_join(data):
-    if 'user' not in session:
-        emit('error', {'message': 'Unauthorized'})
-        return
-    
-    room = data.get('room')
-    if not room:
-        emit('error', {'message': 'Room not specified'})
-        return
-    
-    user = session['user']['username']
-    join_room(room)
-    user_rooms[request.sid] = room
-    
-    # Добавляем пользователя в активную конференцию
-    if room not in active_conferences:
-        active_conferences[room] = {
-            'teacher': user if session['user']['role'] == 'teacher' else None,
-            'started_at': datetime.now().isoformat(),
-            'participants': []
-        }
-    
-    if user not in active_conferences[room]['participants']:
-        active_conferences[room]['participants'].append(user)
-    
-    emit('user-joined', {'user': user, 'participants': active_conferences[room]['participants']}, room=room)
-    logger.info(f'User {user} joined room {room}')
-
-@socketio.on('leave')
-def handle_leave(data):
-    if 'user' not in session:
-        return
-    
-    room = data.get('room')
-    if not room or room not in active_conferences:
-        return
-    
-    user = session['user']['username']
-    leave_room(room)
-    
-    if request.sid in user_rooms:
-        del user_rooms[request.sid]
-    
-    if user in active_conferences[room]['participants']:
-        active_conferences[room]['participants'].remove(user)
-    
-    emit('user-left', {'user': user, 'participants': active_conferences[room]['participants']}, room=room)
-    logger.info(f'User {user} left room {room}')
-    
-    # Если комната пуста, удаляем ее
-    if not active_conferences[room]['participants']:
-        del active_conferences[room]
-
-@socketio.on('offer')
-def handle_offer(data):
-    if 'user' not in session:
-        return
-    
-    room = data.get('room')
-    if not room or room not in active_conferences:
-        return
-    
-    emit('offer', {
-        'sdp': data['sdp'],
-        'from': session['user']['username']
-    }, room=room, include_self=False)
-    logger.info(f'Offer forwarded from {session["user"]["username"]} in room {room}')
-
-@socketio.on('answer')
-def handle_answer(data):
-    if 'user' not in session:
-        return
-    
-    room = data.get('room')
-    if not room or room not in active_conferences:
-        return
-    
-    emit('answer', {
-        'sdp': data['sdp'],
-        'from': session['user']['username']
-    }, room=room, include_self=False)
-    logger.info(f'Answer forwarded from {session["user"]["username"]} in room {room}')
-
-@socketio.on('ice-candidate')
-def handle_ice_candidate(data):
-    if 'user' not in session:
-        return
-    
-    room = data.get('room')
-    if not room or room not in active_conferences:
-        return
-    
-    emit('ice-candidate', {
-        'candidate': data['candidate'],
-        'from': session['user']['username']
-    }, room=room, include_self=False)
-    logger.info(f'ICE candidate forwarded from {session["user"]["username"]} in room {room}')
-
-@socketio.on('end-conference')
-def handle_end_conference(data):
-    if 'user' not in session or session['user']['role'] != 'teacher':
-        return
-    
-    room = data.get('room')
-    if not room or room not in active_conferences:
-        return
-    
-    emit('conference-ended', {}, room=room)
-    logger.info(f'Conference {room} ended by teacher {session["user"]["username"]}')
-    
-    if room in active_conferences:
-        del active_conferences[room]
-
-# API для видеоконференций
-@app.route('/api/conference/<room_name>/join', methods=['POST'])
-def join_conference(room_name):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    user_id = session['user']['username']
-    
-    # Добавляем пользователя в активную конференцию
-    if room_name not in active_conferences:
-        active_conferences[room_name] = {
-            'teacher': user_id if session['user']['role'] == 'teacher' else None,
-            'started_at': datetime.now().isoformat(),
-            'participants': [user_id]
-        }
-    elif user_id not in active_conferences[room_name]['participants']:
-        active_conferences[room_name]['participants'].append(user_id)
-    
-    logger.info(f"User {user_id} joined room {room_name}")
-    
-    return jsonify({
-        'success': True,
-        'room_name': room_name,
-        'participants': active_conferences[room_name]['participants']
-    })
-
-@app.route('/api/conference/<room_name>/leave', methods=['POST'])
-def leave_conference(room_name):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    user_id = session['user']['username']
-    if room_name in active_conferences and user_id in active_conferences[room_name]['participants']:
-        active_conferences[room_name]['participants'].remove(user_id)
-        logger.info(f"User {user_id} left room {room_name}")
-        
-        # Если комната пуста, удаляем ее
-        if not active_conferences[room_name]['participants']:
-            del active_conferences[room_name]
-    
-    return jsonify({'success': True})
-
-@app.route('/api/conference/<room_name>/end', methods=['POST'])
-def end_conference(room_name):
-    if 'user' not in session or session['user']['role'] != 'teacher':
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    if room_name in active_conferences:
-        del active_conferences[room_name]
-    
-    logger.info(f"Conference in room {room_name} ended by teacher")
-    
-    return jsonify({'success': True})
-
-@app.route('/api/conference/<room_name>/start', methods=['POST'])
-def start_conference(room_name):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    if session['user']['role'] != 'teacher':
-        return jsonify({'error': 'Only teacher can start conference'}), 403
-    
-    active_conferences[room_name] = {
-        'teacher': session['user']['username'],
-        'started_at': datetime.now().isoformat(),
-        'participants': []
-    }
-    
-    logger.info(f"Conference started in room {room_name} by {session['user']['username']}")
-    
-    return jsonify({'success': True, 'room_name': room_name})
-
-@app.route('/api/conference/<room_name>/status', methods=['GET'])
-def get_conference_status(room_name):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    is_active = room_name in active_conferences
-    conference_data = active_conferences.get(room_name, {})
-    
-    return jsonify({
-        'success': True,
-        'is_active': is_active,
-        'teacher': conference_data.get('teacher'),
-        'started_at': conference_data.get('started_at'),
-        'participants': conference_data.get('participants', [])
-    })
-
-@app.route('/api/conference/invite', methods=['POST'])
-def send_conference_invite():
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    if session['user']['role'] != 'teacher':
-        return jsonify({'error': 'Only teacher can send invites'}), 403
-    
-    data = request.json
-    student_username = data.get('student_username')
-    room_name = data.get('room_name')
-    
-    if not student_username or not room_name:
-        return jsonify({'error': 'Missing required fields'}), 400
-    
-    student = DB.get_user(student_username)
-    if not student or student['role'] != 'student':
-        return jsonify({'error': 'Student not found'}), 404
-    
-    invite = DB.save_invite(
-        teacher_username=session['user']['username'],
-        student_username=student_username,
-        room_name=room_name
-    )
-    
-    logger.info(f"Invite sent to {student_username} for room {room_name}")
-    
-    return jsonify({'success': True, 'invite': invite})
-
-@app.route('/api/conference/invites', methods=['GET'])
-def get_user_invites():
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    if session['user']['role'] == 'student':
-        invites = DB.get_user_invites(session['user']['username'])
-    else:
-        invites = DB.get_teacher_invites(session['user']['username'])
-    
-    return jsonify({'success': True, 'invites': invites})
-
-@app.route('/api/conference/invite/<int:invite_id>/respond', methods=['POST'])
-def respond_to_invite(invite_id):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    if session['user']['role'] != 'student':
-        return jsonify({'error': 'Only student can respond to invites'}), 403
-    
-    data = request.json
-    action = data.get('action')
-    
-    if action not in ['accept', 'decline']:
-        return jsonify({'error': 'Invalid action'}), 400
-    
-    status = 'accepted' if action == 'accept' else 'declined'
-    if DB.update_invite_status(invite_id, status):
-        if action == 'accept':
-            invites = DB.get_invites()
-            invite = next((i for i in invites if i['id'] == invite_id), None)
-            if invite:
-                logger.info(f"Invite {invite_id} accepted by {session['user']['username']}")
-                return jsonify({
-                    'success': True,
-                    'conference_url': f'/conference/{invite["room_name"]}',
-                    'room_name': invite["room_name"]
-                })
-        logger.info(f"Invite {invite_id} {status} by {session['user']['username']}")
-        return jsonify({'success': True})
-    
-    return jsonify({'error': 'Invite not found'}), 404
-
 # Главная страница и все SPA-роуты
 @app.route('/')
 @app.route('/about')
@@ -790,7 +496,80 @@ def api_join_lesson(lesson_id):
         'lesson': lesson
     })
 
-# Видеоконференции
+# API для конференций (упрощенный вариант для Jitsi)
+@app.route('/api/conference/invite', methods=['POST'])
+def send_conference_invite():
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Only teacher can send invites'}), 403
+    
+    data = request.json
+    student_username = data.get('student_username')
+    room_name = data.get('room_name')
+    
+    if not student_username or not room_name:
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    student = DB.get_user(student_username)
+    if not student or student['role'] != 'student':
+        return jsonify({'error': 'Student not found'}), 404
+    
+    invite = DB.save_invite(
+        teacher_username=session['user']['username'],
+        student_username=student_username,
+        room_name=room_name
+    )
+    
+    logger.info(f"Invite sent to {student_username} for room {room_name}")
+    
+    return jsonify({'success': True, 'invite': invite})
+
+@app.route('/api/conference/invites', methods=['GET'])
+def get_user_invites():
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if session['user']['role'] == 'student':
+        invites = DB.get_user_invites(session['user']['username'])
+    else:
+        invites = DB.get_teacher_invites(session['user']['username'])
+    
+    return jsonify({'success': True, 'invites': invites})
+
+@app.route('/api/conference/invite/<int:invite_id>/respond', methods=['POST'])
+def respond_to_invite(invite_id):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if session['user']['role'] != 'student':
+        return jsonify({'error': 'Only student can respond to invites'}), 403
+    
+    data = request.json
+    action = data.get('action')
+    
+    if action not in ['accept', 'decline']:
+        return jsonify({'error': 'Invalid action'}), 400
+    
+    status = 'accepted' if action == 'accept' else 'declined'
+    if DB.update_invite_status(invite_id, status):
+        if action == 'accept':
+            invites = DB.get_invites()
+            invite = next((i for i in invites if i['id'] == invite_id), None)
+            if invite:
+                logger.info(f"Invite {invite_id} accepted by {session['user']['username']}")
+                return jsonify({
+                    'success': True,
+                    'conference_url': f'/conference/{invite["room_name"]}',
+                    'room_name': invite["room_name"]
+                })
+        logger.info(f"Invite {invite_id} {status} by {session['user']['username']}")
+        return jsonify({'success': True})
+    
+    return jsonify({'error': 'Invite not found'}), 404
+
+# Видеоконференции (Jitsi)
 @app.route('/conference/<room_name>')
 def conference(room_name):
     if 'user' not in session:
@@ -815,7 +594,7 @@ def conference(room_name):
             if not has_invite:
                 return "Доступ запрещен", 403
     
-    return render_template('conference.html', 
+    return render_template('dashboard.html', 
                          room_name=room_name,
                          user=session['user'],
                          is_teacher=session['user']['role'] == 'teacher')
