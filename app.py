@@ -20,7 +20,27 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Конфигурация
+# Конфигурация Jitsi
+JITSI_DOMAIN = 'jitsi.zindaki-edu.ru'  # Замените на ваш домен Jitsi
+JITSI_OPTIONS = {
+    'roomName': 'ZindakiRoom',
+    'width': '100%',
+    'height': 500,
+    'parentNode': None,
+    'configOverwrite': {
+        'startWithAudioMuted': False,
+        'startWithVideoMuted': False,
+        'enableWelcomePage': False,
+        'enableClosePage': False
+    },
+    'interfaceConfigOverwrite': {
+        'DISABLE_JOIN_LEAVE_NOTIFICATIONS': True,
+        'SHOW_JITSI_WATERMARK': False,
+        'SHOW_WATERMARK_FOR_GUESTS': False
+    }
+}
+
+# Конфигурация приложения
 UPLOAD_FOLDER = 'uploads'
 DB_FOLDER = 'data'
 INVITES_FOLDER = 'invites'
@@ -56,7 +76,7 @@ class DB:
     @staticmethod
     def get_user(username):
         users = DB.get_users()
-        return next((u for u in users if u['username'] == username), None)
+        return next((u for u in users if u['username'] == username), None
 
     @staticmethod
     def save_user(username, email, password, role='student', is_active=True):
@@ -104,7 +124,7 @@ class DB:
     @staticmethod
     def get_lesson(lesson_id):
         lessons = DB.get_lessons()
-        return next((l for l in lessons if l['id'] == lesson_id), None)
+        return next((l for l in lessons if l['id'] == lesson_id), None
 
     @staticmethod
     def save_lesson(title, description, teacher, schedule, duration=60, subject=None, students=None):
@@ -144,7 +164,7 @@ class DB:
     @staticmethod
     def get_homework(homework_id):
         homeworks = DB.get_homeworks()
-        return next((h for h in homeworks if h['id'] == homework_id), None)
+        return next((h for h in homeworks if h['id'] == homework_id), None
 
     @staticmethod
     def save_homework(lesson_id, title, description, deadline, teacher, students=None, files=None):
@@ -493,10 +513,12 @@ def api_join_lesson(lesson_id):
         'success': True,
         'conference_url': f'/conference/{room_name}',
         'room_name': room_name,
+        'jitsi_domain': JITSI_DOMAIN,
+        'jitsi_options': JITSI_OPTIONS,
         'lesson': lesson
     })
 
-# API для конференций (упрощенный вариант для Jitsi)
+# API для конференций
 @app.route('/api/conference/invite', methods=['POST'])
 def send_conference_invite():
     if 'user' not in session:
@@ -562,14 +584,16 @@ def respond_to_invite(invite_id):
                 return jsonify({
                     'success': True,
                     'conference_url': f'/conference/{invite["room_name"]}',
-                    'room_name': invite["room_name"]
+                    'room_name': invite["room_name"],
+                    'jitsi_domain': JITSI_DOMAIN,
+                    'jitsi_options': JITSI_OPTIONS
                 })
         logger.info(f"Invite {invite_id} {status} by {session['user']['username']}")
         return jsonify({'success': True})
     
     return jsonify({'error': 'Invite not found'}), 404
 
-# Видеоконференции (Jitsi)
+# Видеоконференции
 @app.route('/conference/<room_name>')
 def conference(room_name):
     if 'user' not in session:
@@ -597,7 +621,9 @@ def conference(room_name):
     return render_template('dashboard.html', 
                          room_name=room_name,
                          user=session['user'],
-                         is_teacher=session['user']['role'] == 'teacher')
+                         is_teacher=session['user']['role'] == 'teacher',
+                         jitsi_domain=JITSI_DOMAIN,
+                         jitsi_options=JITSI_OPTIONS)
 
 # Домашние задания
 @app.route('/api/homework', methods=['GET', 'POST'])
@@ -713,7 +739,9 @@ def dashboard():
                          user=session['user'],
                          lessons=lessons,
                          homeworks=homeworks,
-                         is_teacher=session['user']['role'] == 'teacher')
+                         is_teacher=session['user']['role'] == 'teacher',
+                         jitsi_domain=JITSI_DOMAIN,
+                         jitsi_options=JITSI_OPTIONS)
 
 # Обработка контактной формы
 @app.route('/api/contact', methods=['POST'])
