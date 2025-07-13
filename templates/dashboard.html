@@ -754,7 +754,6 @@
         </div>
     </div>
 
-    <script src="https://jitsi.zindaki-edu.ru/external_api.js"></script>
     <script>
         // Обработка выхода
         document.getElementById('logoutBtn').addEventListener('click', function() {
@@ -771,61 +770,77 @@
         let jitsiApi = null;
         let currentRoomName = '';
         
-        function startConference(roomName) {
-            // Используем ваш домен для Jitsi
-            const domain = 'jitsi.zindaki-edu.ru';
-            
-            // Очищаем контейнер перед созданием новой конференции
-            const container = document.getElementById('jitsi-container');
-            container.innerHTML = '';
-            
-            const options = {
-                roomName: roomName,
-                width: '100%',
-                height: 500,
-                parentNode: container,
-                userInfo: {
-                    displayName: '{{ user.username }}',
-                    email: '{{ user.email }}'
-                },
-                configOverwrite: {
-                    startWithAudioMuted: false,
-                    startWithVideoMuted: false,
-                    enableWelcomePage: false,
-                    enableNoAudioDetection: true,
-                    enableNoisyMicDetection: true,
-                    prejoinPageEnabled: false,
-                    disableSimulcast: false,
-                    startAudioOnly: false,
-                    enableClosePage: false,
-                    disableBeforeUnloadHandlers: true,
-                    // Оптимизации для долгих конференций
-                    p2p: {
-                        enabled: false
-                    },
-                    analytics: {
-                        disabled: true
-                    },
-                    testing: {
-                        noAutoPlayVideo: false
-                    }
-                },
-                interfaceConfigOverwrite: {
-                    DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
-                    SHOW_JITSI_WATERMARK: false,
-                    SHOW_WATERMARK_FOR_GUESTS: false,
-                    TOOLBAR_BUTTONS: [
-                        'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-                        'fodeviceselection', 'hangup', 'profile', 'info', 'chat', 'recording',
-                        'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
-                        'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
-                        'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
-                        'security'
-                    ]
+        function loadJitsiScript() {
+            return new Promise((resolve, reject) => {
+                if (window.JitsiMeetExternalAPI) {
+                    resolve();
+                    return;
                 }
-            };
-            
+                
+                const script = document.createElement('script');
+                script.src = 'https://jitsi.zindaki-edu.ru/external_api.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+        
+        async function startConference(roomName) {
             try {
+                await loadJitsiScript();
+                
+                // Используем ваш домен для Jitsi
+                const domain = 'jitsi.zindaki-edu.ru';
+                
+                // Очищаем контейнер перед созданием новой конференции
+                const container = document.getElementById('jitsi-container');
+                container.innerHTML = '';
+                
+                const options = {
+                    roomName: roomName,
+                    width: '100%',
+                    height: 500,
+                    parentNode: container,
+                    userInfo: {
+                        displayName: '{{ user.username }}',
+                        email: '{{ user.email }}'
+                    },
+                    configOverwrite: {
+                        startWithAudioMuted: false,
+                        startWithVideoMuted: false,
+                        enableWelcomePage: false,
+                        enableNoAudioDetection: true,
+                        enableNoisyMicDetection: true,
+                        prejoinPageEnabled: false,
+                        disableSimulcast: false,
+                        startAudioOnly: false,
+                        enableClosePage: false,
+                        disableBeforeUnloadHandlers: true,
+                        p2p: {
+                            enabled: false
+                        },
+                        analytics: {
+                            disabled: true
+                        },
+                        testing: {
+                            noAutoPlayVideo: false
+                        }
+                    },
+                    interfaceConfigOverwrite: {
+                        DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
+                        SHOW_JITSI_WATERMARK: false,
+                        SHOW_WATERMARK_FOR_GUESTS: false,
+                        TOOLBAR_BUTTONS: [
+                            'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
+                            'fodeviceselection', 'hangup', 'profile', 'info', 'chat', 'recording',
+                            'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
+                            'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
+                            'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
+                            'security'
+                        ]
+                    }
+                };
+                
                 jitsiApi = new JitsiMeetExternalAPI(domain, options);
                 
                 // Обновляем ссылку на конференцию
@@ -850,6 +865,7 @@
                 }
             } catch (error) {
                 console.error('Ошибка инициализации Jitsi:', error);
+                const container = document.getElementById('jitsi-container');
                 container.innerHTML = `
                     <div style="padding: 20px; text-align: center;">
                         <h3>Ошибка подключения к видеоконференции</h3>
