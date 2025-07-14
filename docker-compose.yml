@@ -4,8 +4,8 @@ services:
   web:
     build: .
     ports:
-      - "80:8000"  # HTTP порт
-      - "443:8443"  # HTTPS порт
+      - "8080:8000"  # HTTP порт
+      - "8443:8443"  # HTTPS порт
     volumes:
       - .:/app
       - ./uploads:/app/uploads
