@@ -17,10 +17,11 @@ app.secret_key = os.environ.get('SECRET_KEY', 'your-very-secret-key-12345')
 # Настройка SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
-# Конфигурация LiveKit
-LIVEKIT_API_KEY = os.environ.get('LIVEKIT_API_KEY', 'APIkey')
-LIVEKIT_API_SECRET = os.environ.get('LIVEKIT_API_SECRET', 'APISecret')
-LIVEKIT_WS_URL = os.environ.get('LIVEKIT_WS_URL', 'ws://localhost:7880')
+# Конфигурация PeerJS
+PEERJS_HOST = os.environ.get('PEERJS_HOST', 'peerjs.zindaki.academy')
+PEERJS_PORT = os.environ.get('PEERJS_PORT', '443')
+PEERJS_SECURE = os.environ.get('PEERJS_SECURE', 'true').lower() == 'true'
+PEERJS_PATH = os.environ.get('PEERJS_PATH', '/peerjs')
 
 # Конфигурация приложения
 UPLOAD_FOLDER = 'uploads'
@@ -261,6 +262,74 @@ class DB:
         invites = DB.get_invites()
         return [i for i in invites if i['teacher'] == username]
 
+    # Конференции
+    @staticmethod
+    def get_conferences():
+        return DB._get_db('conferences')
+
+    @staticmethod
+    def get_conference(room_name):
+        conferences = DB.get_conferences()
+        return next((c for c in conferences if c['room_name'] == room_name), None)
+
+    @staticmethod
+    def save_conference(room_name, host_username, is_active=True):
+        conferences = DB.get_conferences()
+        conference = next((c for c in conferences if c['room_name'] == room_name), None)
+        
+        if conference:
+            conference['is_active'] = is_active
+            conference['updated_at'] = datetime.now().isoformat()
+        else:
+            conference = {
+                'room_name': room_name,
+                'host': host_username,
+                'participants': [],
+                'is_active': is_active,
+                'created_at': datetime.now().isoformat(),
+                'updated_at': datetime.now().isoformat()
+            }
+            conferences.append(conference)
+        
+        DB._save_db('conferences', conferences)
+        return conference
+
+    @staticmethod
+    def add_participant(room_name, username):
+        conferences = DB.get_conferences()
+        conference = next((c for c in conferences if c['room_name'] == room_name), None)
+        
+        if conference and username not in conference['participants']:
+            conference['participants'].append(username)
+            conference['updated_at'] = datetime.now().isoformat()
+            DB._save_db('conferences', conferences)
+            return True
+        return False
+
+    @staticmethod
+    def remove_participant(room_name, username):
+        conferences = DB.get_conferences()
+        conference = next((c for c in conferences if c['room_name'] == room_name), None)
+        
+        if conference and username in conference['participants']:
+            conference['participants'].remove(username)
+            conference['updated_at'] = datetime.now().isoformat()
+            DB._save_db('conferences', conferences)
+            return True
+        return False
+
+    @staticmethod
+    def end_conference(room_name):
+        conferences = DB.get_conferences()
+        conference = next((c for c in conferences if c['room_name'] == room_name), None)
+        
+        if conference:
+            conference['is_active'] = False
+            conference['updated_at'] = datetime.now().isoformat()
+            DB._save_db('conferences', conferences)
+            return True
+        return False
+
 # Инициализация базы данных
 if not os.path.exists(f'{DB_FOLDER}/users.json'):
     initial_users = [
@@ -310,7 +379,7 @@ if not os.path.exists(f'{DB_FOLDER}/users.json'):
     ]
     
     initial_homeworks = []
-    
+    initial_conferences = []
     initial_testimonials = [
         {
             "id": 1,
@@ -331,36 +400,12 @@ if not os.path.exists(f'{DB_FOLDER}/users.json'):
     DB._save_db('users', initial_users)
     DB._save_db('lessons', initial_lessons)
     DB._save_db('homeworks', initial_homeworks)
+    DB._save_db('conferences', initial_conferences)
     DB._save_db('testimonials', initial_testimonials)
 
 if not os.path.exists(f'{INVITES_FOLDER}/invites.json'):
     with open(f'{INVITES_FOLDER}/invites.json', 'w') as f:
         json.dump([], f)
-
-# Генерация токена LiveKit
-def generate_livekit_token(room_name, participant_name, is_admin=False):
-    payload = {
-        'exp': datetime.utcnow() + timedelta(hours=3),
-        'iat': datetime.utcnow(),
-        'iss': LIVEKIT_API_KEY,
-        'sub': participant_name,
-        'room': room_name,
-        'video': {
-            'can_publish': True,
-            'can_subscribe': True
-        },
-        'audio': {
-            'can_publish': True,
-            'can_subscribe': True
-        },
-        'screen': {
-            'can_publish': is_admin,
-            'can_subscribe': True
-        },
-        'can_publish_data': is_admin,
-        'can_update_metadata': is_admin
-    }
-    return jwt.encode(payload, LIVEKIT_API_SECRET, algorithm='HS256')
 
 # Главная страница и все SPA-роуты
 @app.route('/')
@@ -517,19 +562,21 @@ def api_join_lesson(lesson_id):
     
     if session['user']['role'] == 'teacher':
         room_name = f"ZindakiRoom_{session['user']['username']}"
+        # Учитель создает конференцию
+        conference = DB.save_conference(room_name, session['user']['username'], is_active=True)
     else:
         room_name = f"ZindakiRoom_{lesson['teacher']}"
     
-    token = generate_livekit_token(
-        room_name=room_name,
-        participant_name=session['user']['username'],
-        is_admin=(session['user']['role'] == 'teacher'))
-    
+    # Возвращаем конфигурацию PeerJS
     return jsonify({
         'success': True,
         'room_name': room_name,
-        'livekit_token': token,
-        'livekit_ws_url': LIVEKIT_WS_URL,
+        'peerjs_config': {
+            'host': PEERJS_HOST,
+            'port': PEERJS_PORT,
+            'secure': PEERJS_SECURE,
+            'path': PEERJS_PATH
+        },
         'lesson': lesson
     })
 
@@ -593,20 +640,138 @@ def respond_to_invite(invite_id):
             invites = DB.get_invites()
             invite = next((i for i in invites if i['id'] == invite_id), None)
             if invite:
-                token = generate_livekit_token(
-                    room_name=invite["room_name"],
-                    participant_name=session['user']['username'],
-                    is_admin=False)
+                # Добавляем участника в конференцию
+                DB.add_participant(invite['room_name'], session['user']['username'])
                 
                 return jsonify({
                     'success': True,
                     'room_name': invite["room_name"],
-                    'livekit_token': token,
-                    'livekit_ws_url': LIVEKIT_WS_URL
+                    'peerjs_config': {
+                        'host': PEERJS_HOST,
+                        'port': PEERJS_PORT,
+                        'secure': PEERJS_SECURE,
+                        'path': PEERJS_PATH
+                    }
                 })
         return jsonify({'success': True})
     
     return jsonify({'error': 'Invite not found'}), 404
+
+@app.route('/api/conference/<room_name>/start', methods=['POST'])
+def start_conference(room_name):
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json
+    peer_id = data.get('peerId')
+    
+    if not peer_id:
+        return jsonify({'error': 'Peer ID is required'}), 400
+    
+    # Создаем/обновляем конференцию
+    conference = DB.save_conference(room_name, session['user']['username'], is_active=True)
+    
+    return jsonify({
+        'success': True,
+        'conference': conference,
+        'peerjs_config': {
+            'host': PEERJS_HOST,
+            'port': PEERJS_PORT,
+            'secure': PEERJS_SECURE,
+            'path': PEERJS_PATH
+        }
+    })
+
+@app.route('/api/conference/<room_name>/join', methods=['POST'])
+def join_conference(room_name):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    # Проверяем доступ к конференции
+    conference = DB.get_conference(room_name)
+    if not conference or not conference['is_active']:
+        return jsonify({'error': 'Conference not found or inactive'}), 404
+    
+    if session['user']['role'] == 'student':
+        # Проверяем, есть ли у студента доступ через уроки или приглашения
+        teacher_username = room_name.replace('ZindakiRoom_', '')
+        lessons = DB.get_lessons()
+        has_access = any(
+            session['user']['username'] in lesson.get('students', []) and 
+            lesson['teacher'] == teacher_username 
+            for lesson in lessons
+        )
+        
+        if not has_access:
+            invites = DB.get_user_invites(session['user']['username'])
+            has_invite = any(invite['room_name'] == room_name for invite in invites)
+            
+            if not has_invite:
+                return jsonify({'error': 'Access denied'}), 403
+    
+    # Добавляем участника в конференцию
+    DB.add_participant(room_name, session['user']['username'])
+    
+    return jsonify({
+        'success': True,
+        'conference': conference,
+        'participants': conference['participants'],
+        'peerjs_config': {
+            'host': PEERJS_HOST,
+            'port': PEERJS_PORT,
+            'secure': PEERJS_SECURE,
+            'path': PEERJS_PATH
+        }
+    })
+
+@app.route('/api/conference/<room_name>/leave', methods=['POST'])
+def leave_conference(room_name):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    DB.remove_participant(room_name, session['user']['username'])
+    return jsonify({'success': True})
+
+@app.route('/api/conference/<room_name>/end', methods=['POST'])
+def end_conference(room_name):
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    conference = DB.get_conference(room_name)
+    if not conference or conference['host'] != session['user']['username']:
+        return jsonify({'error': 'Conference not found or access denied'}), 404
+    
+    DB.end_conference(room_name)
+    return jsonify({'success': True})
+
+@app.route('/api/conference/<room_name>/status', methods=['GET'])
+def get_conference_status(room_name):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    conference = DB.get_conference(room_name)
+    if not conference:
+        return jsonify({'error': 'Conference not found'}), 404
+    
+    return jsonify({
+        'success': True,
+        'is_active': conference['is_active'],
+        'participants': conference['participants'],
+        'host': conference['host'],
+        'started_at': conference['created_at']
+    })
+
+@app.route('/api/conference/<room_name>/host', methods=['GET'])
+def get_conference_host(room_name):
+    conference = DB.get_conference(room_name)
+    if not conference:
+        return jsonify({'error': 'Conference not found'}), 404
+    
+    return jsonify({
+        'success': True,
+        'host': conference['host'],
+        'peerId': f"{conference['host']}_{room_name}"  # Генерируем Peer ID для хоста
+    })
 
 # Видеоконференции
 @app.route('/conference/<room_name>')
@@ -633,17 +798,16 @@ def conference(room_name):
             if not has_invite:
                 return "Доступ запрещен", 403
     
-    token = generate_livekit_token(
-        room_name=room_name,
-        participant_name=session['user']['username'],
-        is_admin=(session['user']['role'] == 'teacher'))
-    
     return render_template('dashboard.html', 
                          room_name=room_name,
                          user=session['user'],
                          is_teacher=session['user']['role'] == 'teacher',
-                         livekit_token=token,
-                         livekit_ws_url=LIVEKIT_WS_URL)
+                         peerjs_config={
+                             'host': PEERJS_HOST,
+                             'port': PEERJS_PORT,
+                             'secure': PEERJS_SECURE,
+                             'path': PEERJS_PATH
+                         })
 
 # Домашние задания
 @app.route('/api/homework', methods=['GET', 'POST'])
@@ -760,7 +924,12 @@ def dashboard():
                          lessons=lessons,
                          homeworks=homeworks,
                          is_teacher=session['user']['role'] == 'teacher',
-                         livekit_ws_url=LIVEKIT_WS_URL)
+                         peerjs_config={
+                             'host': PEERJS_HOST,
+                             'port': PEERJS_PORT,
+                             'secure': PEERJS_SECURE,
+                             'path': PEERJS_PATH
+                         })
 
 # Обработка контактной формы
 @app.route('/api/contact', methods=['POST'])
