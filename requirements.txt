@@ -12,4 +12,3 @@ opencv-python-headless==4.8.0.76
 Pillow==10.0.0
 Flask-SocketIO==5.3.6
 pyjwt==2.1.0
-eventlet==0.33.0
