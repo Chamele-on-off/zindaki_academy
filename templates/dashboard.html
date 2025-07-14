@@ -3,73 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zindaki Academy - Dashboard</title>
+    <title>Dashboard - Zindaki Academy</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 0;
+            padding: 20px;
             background-color: #f5f5f5;
         }
         .container {
             max-width: 1200px;
             margin: 0 auto;
+            background: white;
             padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        header {
-            background-color: #4a76a8;
-            color: white;
-            padding: 15px 0;
-            margin-bottom: 20px;
-        }
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        h1 {
+            color: #333;
         }
         .user-info {
-            display: flex;
-            align-items: center;
-        }
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            margin-right: 10px;
-        }
-        .logout-btn {
-            background-color: #f44336;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .card {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            padding: 20px;
             margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
         }
         .conference-section {
             margin-top: 30px;
-        }
-        .btn {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-right: 10px;
-            margin-bottom: 10px;
-        }
-        .btn-blue {
-            background-color: #2196F3;
-        }
-        .btn-red {
-            background-color: #f44336;
         }
         .video-container {
             display: flex;
@@ -77,222 +37,333 @@
             gap: 20px;
             margin-top: 20px;
         }
-        .video-box {
+        video {
+            background: #000;
             width: 300px;
             height: 225px;
-            background-color: #e0e0e0;
             border-radius: 4px;
-            position: relative;
         }
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
             border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #cccccc;
         }
         .controls {
-            margin-top: 20px;
+            margin: 20px 0;
         }
-        .invites-list {
-            margin-top: 15px;
-        }
-        .invite-item {
-            padding: 10px;
+        #messages {
+            height: 200px;
+            overflow-y: auto;
             border: 1px solid #ddd;
-            border-radius: 4px;
-            margin-bottom: 10px;
+            padding: 10px;
+            margin-top: 20px;
+            background: #f9f9f9;
         }
     </style>
 </head>
 <body>
-    <header>
-        <div class="container header-content">
-            <h1>Zindaki Academy</h1>
-            <div class="user-info">
-                <img id="user-avatar" class="user-avatar" src="https://i.pravatar.cc/150" alt="User Avatar">
-                <span id="username">Гость</span>
-                <button class="logout-btn" onclick="logout()">Выйти</button>
-            </div>
-        </div>
-    </header>
-
     <div class="container">
-        <div class="card">
-            <h2>Личный кабинет</h2>
-            <div id="user-role-info"></div>
+        <div class="user-info">
+            <h1>Личный кабинет</h1>
+            <p>Добро пожаловать, <strong id="username">{{ user.username }}</strong> ({{ 'Учитель' if user.role == 'teacher' else 'Студент' }})</p>
+            <button onclick="logout()">Выйти</button>
         </div>
 
-        <div class="card conference-section">
-            <h2>Видеоконференции</h2>
-            
-            <div id="teacher-controls" style="display: none;">
-                <h3>Управление конференцией</h3>
-                <button class="btn" onclick="startConference()">Начать конференцию</button>
-                <button class="btn btn-blue" onclick="sendInvite()">Пригласить студента</button>
-                <button class="btn btn-red" onclick="endConference()">Завершить конференцию</button>
-                
-                <div id="invite-form" style="margin-top: 20px; display: none;">
-                    <input type="text" id="student-username" placeholder="Имя студента">
-                    <button class="btn" onclick="submitInvite()">Отправить приглашение</button>
-                </div>
+        <div class="conference-section">
+            <h2>Видеоконференция</h2>
+            <div class="controls">
+                <input type="text" id="roomName" placeholder="Название комнаты" value="ZindakiRoom_{{ user.username if user.role == 'teacher' else 'admin' }}">
+                <button onclick="startConference()" id="startBtn" {{ 'disabled' if user.role != 'teacher' }}>Начать конференцию</button>
+                <button onclick="joinConference()" id="joinBtn">Присоединиться</button>
+                <button onclick="leaveConference()" id="leaveBtn" disabled>Покинуть</button>
+                <button onclick="endConference()" id="endBtn" {{ 'disabled' if user.role != 'teacher' }}>Завершить</button>
             </div>
-            
-            <div id="student-controls" style="display: none;">
-                <h3>Приглашения</h3>
-                <div id="invites-list" class="invites-list">
-                    <!-- Сюда будут добавляться приглашения -->
-                </div>
+
+            <div class="video-container">
+                <video id="localVideo" autoplay muted></video>
+                <video id="remoteVideo" autoplay></video>
             </div>
-            
-            <div>
-                <h3>Текущая конференция</h3>
-                <input type="text" id="room-name" placeholder="Название комнаты" value="ZindakiRoom_admin">
-                <button class="btn" onclick="joinConference()">Присоединиться</button>
-                <button class="btn btn-red" onclick="leaveConference()">Покинуть</button>
-                
-                <div class="video-container">
-                    <div class="video-box">
-                        <video id="local-video" autoplay muted></video>
-                    </div>
-                    <div class="video-box">
-                        <video id="remote-video" autoplay></video>
-                    </div>
-                </div>
-                
-                <div class="controls">
-                    <button class="btn" onclick="toggleVideo()">Выключить видео</button>
-                    <button class="btn" onclick="toggleAudio()">Выключить звук</button>
-                </div>
+
+            <div class="controls">
+                <input type="text" id="messageInput" placeholder="Сообщение">
+                <button onclick="sendMessage()">Отправить</button>
             </div>
+            <div id="messages"></div>
         </div>
     </div>
 
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
-        // Инициализация
         const socket = io();
         let localStream;
         let peerConnection;
         let roomName;
         const configuration = {
-            iceServers: [
-                { urls: "stun:stun.l.google.com:19302" },
-                { urls: "stun:stun1.l.google.com:19302" }
-            ]
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
         };
 
-        // Проверка авторизации
-        function checkAuth() {
-            fetch('/api/users')
-                .then(response => {
-                    if (response.ok) {
-                        return response.json();
-                    } else {
-                        window.location.href = '/#login';
-                    }
-                })
-                .then(data => {
-                    const user = data.users.find(u => u.username === localStorage.getItem('username'));
-                    if (user) {
-                        updateUI(user);
-                    } else {
-                        window.location.href = '/#login';
-                    }
-                })
-                .catch(() => window.location.href = '/#login');
-        }
+        // Элементы интерфейса
+        const localVideo = document.getElementById('localVideo');
+        const remoteVideo = document.getElementById('remoteVideo');
+        const messagesDiv = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        const roomNameInput = document.getElementById('roomName');
+        const startBtn = document.getElementById('startBtn');
+        const joinBtn = document.getElementById('joinBtn');
+        const leaveBtn = document.getElementById('leaveBtn');
+        const endBtn = document.getElementById('endBtn');
 
-        // Обновление интерфейса
-        function updateUI(user) {
-            document.getElementById('username').textContent = user.username;
-            document.getElementById('user-avatar').src = user.avatar;
-            
-            if (user.role === 'teacher') {
-                document.getElementById('teacher-controls').style.display = 'block';
-                document.getElementById('user-role-info').textContent = 'Вы преподаватель';
-            } else {
-                document.getElementById('student-controls').style.display = 'block';
-                document.getElementById('user-role-info').textContent = 'Вы студент';
-                loadInvites();
+        // Инициализация медиаустройств
+        async function initLocalStream() {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                localVideo.srcObject = localStream;
+            } catch (err) {
+                console.error('Ошибка доступа к медиаустройствам:', err);
+                alert('Не удалось получить доступ к камере/микрофону');
             }
         }
 
-        // Выход
-        function logout() {
-            fetch('/api/logout')
-                .then(() => window.location.href = '/');
-        }
-
-        // Управление конференцией
+        // Начать конференцию (для учителя)
         async function startConference() {
-            roomName = `ZindakiRoom_${document.getElementById('username').textContent}`;
-            document.getElementById('room-name').value = roomName;
+            roomName = roomNameInput.value.trim();
+            if (!roomName) {
+                alert('Введите название комнаты');
+                return;
+            }
+
+            await initLocalStream();
             
             try {
-                await initLocalStream();
-                await joinConference();
-                
-                fetch(`/api/conference/${roomName}/start`, {
+                const response = await fetch(`/api/conference/${roomName}/start`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     }
                 });
                 
-                alert(`Конференция "${roomName}" начата`);
-            } catch (error) {
-                console.error('Ошибка при старте конференции:', error);
+                const data = await response.json();
+                if (data.success) {
+                    addMessage(`Конференция "${roomName}" начата`);
+                    joinConference();
+                } else {
+                    alert(data.error || 'Ошибка начала конференции');
+                }
+            } catch (err) {
+                console.error('Ошибка начала конференции:', err);
+                alert('Ошибка начала конференции');
             }
         }
 
+        // Присоединиться к конференции
         async function joinConference() {
-            roomName = document.getElementById('room-name').value.trim();
+            roomName = roomNameInput.value.trim();
             if (!roomName) {
                 alert('Введите название комнаты');
                 return;
             }
+
+            await initLocalStream();
             
             try {
-                await initLocalStream();
-                
-                // Проверка статуса конференции
-                const response = await fetch(`/api/conference/${roomName}/status`);
-                const data = await response.json();
-                
-                if (!data.is_active && document.getElementById('user-role-info').textContent !== 'Вы преподаватель') {
-                    alert('Конференция не активна или не существует');
-                    return;
-                }
-                
-                // Подключение к комнате через Socket.IO
-                socket.emit('join', { room: roomName });
-                
-                // Создание PeerConnection
-                createPeerConnection();
-                
-                // Добавление локального потока
-                localStream.getTracks().forEach(track => {
-                    peerConnection.addTrack(track, localStream);
+                const response = await fetch(`/api/conference/${roomName}/join`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
                 });
                 
-                // Обработчики событий WebRTC
-                peerConnection.onicecandidate = event => {
-                    if (event.candidate) {
-                        socket.emit('ice-candidate', {
-                            candidate: event.candidate,
-                            room: roomName
-                        });
+                const data = await response.json();
+                if (data.success) {
+                    addMessage(`Вы присоединились к конференции "${roomName}"`);
+                    setupSocketConnection();
+                    startBtn.disabled = true;
+                    joinBtn.disabled = true;
+                    leaveBtn.disabled = false;
+                    endBtn.disabled = false;
+                } else {
+                    alert(data.error || 'Ошибка присоединения к конференции');
+                }
+            } catch (err) {
+                console.error('Ошибка присоединения к конференции:', err);
+                alert('Ошибка присоединения к конференции');
+            }
+        }
+
+        // Покинуть конференцию
+        async function leaveConference() {
+            try {
+                const response = await fetch(`/api/conference/${roomName}/leave`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
                     }
-                };
+                });
                 
-                peerConnection.ontrack = event => {
-                    const remoteVideo = document.getElementById('remote-video');
-                    if (remoteVideo.srcObject !== event.streams[0]) {
-                        remoteVideo.srcObject = event.streams[0];
+                const data = await response.json();
+                if (data.success) {
+                    addMessage(`Вы покинули конференцию "${roomName}"`);
+                    if (peerConnection) {
+                        peerConnection.close();
+                        peerConnection = null;
                     }
-                };
+                    remoteVideo.srcObject = null;
+                    startBtn.disabled = false;
+                    joinBtn.disabled = false;
+                    leaveBtn.disabled = true;
+                    endBtn.disabled = true;
+                }
+            } catch (err) {
+                console.error('Ошибка при выходе из конференции:', err);
+            }
+        }
+
+        // Завершить конференцию (для учителя)
+        async function endConference() {
+            try {
+                const response = await fetch(`/api/conference/${roomName}/end`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
                 
-                // Отправка offer
+                const data = await response.json();
+                if (data.success) {
+                    addMessage(`Конференция "${roomName}" завершена`);
+                    if (peerConnection) {
+                        peerConnection.close();
+                        peerConnection = null;
+                    }
+                    remoteVideo.srcObject = null;
+                    startBtn.disabled = false;
+                    joinBtn.disabled = false;
+                    leaveBtn.disabled = true;
+                    endBtn.disabled = true;
+                }
+            } catch (err) {
+                console.error('Ошибка завершения конференции:', err);
+            }
+        }
+
+        // Настройка WebRTC соединения
+        function setupSocketConnection() {
+            socket.emit('join', { room: roomName });
+
+            // Обработчики событий Socket.IO
+            socket.on('offer', async (data) => {
+                if (data.from === '{{ user.username }}') return;
+                
+                try {
+                    if (!peerConnection) {
+                        createPeerConnection();
+                    }
+                    
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                    
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    
+                    socket.emit('answer', {
+                        sdp: peerConnection.localDescription,
+                        room: roomName
+                    });
+                } catch (err) {
+                    console.error('Ошибка обработки offer:', err);
+                }
+            });
+
+            socket.on('answer', async (data) => {
+                if (data.from === '{{ user.username }}') return;
+                
+                try {
+                    if (peerConnection) {
+                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                    }
+                } catch (err) {
+                    console.error('Ошибка обработки answer:', err);
+                }
+            });
+
+            socket.on('ice-candidate', async (data) => {
+                if (data.from === '{{ user.username }}') return;
+                
+                try {
+                    if (peerConnection && data.candidate) {
+                        await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                    }
+                } catch (err) {
+                    console.error('Ошибка обработки ICE candidate:', err);
+                }
+            });
+
+            socket.on('user-joined', (data) => {
+                addMessage(`Пользователь ${data.user} присоединился`);
+            });
+
+            socket.on('user-left', (data) => {
+                addMessage(`Пользователь ${data.user} покинул конференцию`);
+            });
+
+            socket.on('conference-ended', () => {
+                addMessage('Конференция завершена учителем');
+                if (peerConnection) {
+                    peerConnection.close();
+                    peerConnection = null;
+                }
+                remoteVideo.srcObject = null;
+                startBtn.disabled = false;
+                joinBtn.disabled = false;
+                leaveBtn.disabled = true;
+                endBtn.disabled = true;
+            });
+
+            socket.on('message', (data) => {
+                addMessage(`${data.user}: ${data.text}`);
+            });
+
+            // Создаем peer connection и отправляем offer
+            if ('{{ user.role }}' === 'teacher') {
+                createPeerConnection();
+                sendOffer();
+            }
+        }
+
+        function createPeerConnection() {
+            peerConnection = new RTCPeerConnection(configuration);
+
+            // Добавляем локальный поток
+            localStream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, localStream);
+            });
+
+            // Обработчик получения удаленного потока
+            peerConnection.ontrack = (event) => {
+                remoteVideo.srcObject = event.streams[0];
+            };
+
+            // Обработчик ICE кандидатов
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    socket.emit('ice-candidate', {
+                        candidate: event.candidate,
+                        room: roomName
+                    });
+                }
+            };
+        }
+
+        async function sendOffer() {
+            try {
                 const offer = await peerConnection.createOffer();
                 await peerConnection.setLocalDescription(offer);
                 
@@ -300,228 +371,50 @@
                     sdp: peerConnection.localDescription,
                     room: roomName
                 });
-                
-                console.log('Joined conference:', roomName);
-            } catch (error) {
-                console.error('Ошибка при присоединении:', error);
+            } catch (err) {
+                console.error('Ошибка создания offer:', err);
             }
         }
 
-        function leaveConference() {
-            if (!roomName) return;
-            
-            socket.emit('leave', { room: roomName });
-            
-            if (peerConnection) {
-                peerConnection.close();
-                peerConnection = null;
-            }
-            
-            const remoteVideo = document.getElementById('remote-video');
-            if (remoteVideo.srcObject) {
-                remoteVideo.srcObject.getTracks().forEach(track => track.stop());
-                remoteVideo.srcObject = null;
-            }
-            
-            console.log('Left conference:', roomName);
-        }
-
-        function endConference() {
-            if (!roomName) return;
-            
-            fetch(`/api/conference/${roomName}/end`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-            
-            leaveConference();
-            alert(`Конференция "${roomName}" завершена`);
-        }
-
-        // Инициализация локального потока
-        async function initLocalStream() {
-            if (!localStream) {
-                localStream = await navigator.mediaDevices.getUserMedia({
-                    video: true,
-                    audio: true
+        // Отправить сообщение в чат
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message && roomName) {
+                socket.emit('message', {
+                    text: message,
+                    room: roomName,
+                    user: '{{ user.username }}'
                 });
-                document.getElementById('local-video').srcObject = localStream;
-            }
-            return localStream;
-        }
-
-        // Создание PeerConnection
-        function createPeerConnection() {
-            if (peerConnection) return;
-            
-            peerConnection = new RTCPeerConnection(configuration);
-            
-            // Обработчики событий для отладки
-            peerConnection.oniceconnectionstatechange = () => {
-                console.log('ICE connection state:', peerConnection.iceConnectionState);
-            };
-            
-            peerConnection.onsignalingstatechange = () => {
-                console.log('Signaling state:', peerConnection.signalingState);
-            };
-        }
-
-        // Управление медиа
-        function toggleVideo() {
-            const videoTrack = localStream.getVideoTracks()[0];
-            if (videoTrack) {
-                videoTrack.enabled = !videoTrack.enabled;
-                const btn = event.target;
-                btn.textContent = videoTrack.enabled ? 'Выключить видео' : 'Включить видео';
+                addMessage(`Вы: ${message}`);
+                messageInput.value = '';
             }
         }
 
-        function toggleAudio() {
-            const audioTrack = localStream.getAudioTracks()[0];
-            if (audioTrack) {
-                audioTrack.enabled = !audioTrack.enabled;
-                const btn = event.target;
-                btn.textContent = audioTrack.enabled ? 'Выключить звук' : 'Включить звук';
-            }
+        // Добавить сообщение в чат
+        function addMessage(message) {
+            const messageElement = document.createElement('div');
+            messageElement.textContent = message;
+            messagesDiv.appendChild(messageElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
 
-        // Управление приглашениями
-        function sendInvite() {
-            document.getElementById('invite-form').style.display = 'block';
-        }
-
-        function submitInvite() {
-            const studentUsername = document.getElementById('student-username').value.trim();
-            if (!studentUsername) {
-                alert('Введите имя студента');
-                return;
-            }
-            
-            fetch('/api/conference/invite', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    student_username: studentUsername,
-                    room_name: roomName
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(`Приглашение отправлено студенту ${studentUsername}`);
-                    document.getElementById('invite-form').style.display = 'none';
-                    document.getElementById('student-username').value = '';
-                } else {
-                    alert('Ошибка при отправке приглашения');
-                }
-            });
-        }
-
-        function loadInvites() {
-            fetch('/api/conference/invites')
+        // Выйти из системы
+        function logout() {
+            fetch('/api/logout')
                 .then(response => response.json())
                 .then(data => {
-                    const invitesList = document.getElementById('invites-list');
-                    invitesList.innerHTML = '';
-                    
-                    if (data.invites.length === 0) {
-                        invitesList.innerHTML = '<p>У вас нет новых приглашений</p>';
-                        return;
+                    if (data.success) {
+                        window.location.href = '/';
                     }
-                    
-                    data.invites.forEach(invite => {
-                        const inviteItem = document.createElement('div');
-                        inviteItem.className = 'invite-item';
-                        inviteItem.innerHTML = `
-                            <p>Преподаватель ${invite.teacher} приглашает вас на конференцию</p>
-                            <p>Комната: ${invite.room_name}</p>
-                            <button class="btn" onclick="respondToInvite(${invite.id}, 'accept')">Принять</button>
-                            <button class="btn btn-red" onclick="respondToInvite(${invite.id}, 'decline')">Отклонить</button>
-                        `;
-                        invitesList.appendChild(inviteItem);
-                    });
                 });
         }
 
-        function respondToInvite(inviteId, action) {
-            fetch(`/api/conference/invite/${inviteId}/respond`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ action })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    if (action === 'accept' && data.room_name) {
-                        document.getElementById('room-name').value = data.room_name;
-                        joinConference();
-                    }
-                    loadInvites();
-                }
-            });
-        }
-
-        // Обработчики Socket.IO
-        socket.on('offer', async data => {
-            if (!peerConnection) createPeerConnection();
-            
-            try {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
-                
-                const answer = await peerConnection.createAnswer();
-                await peerConnection.setLocalDescription(answer);
-                
-                socket.emit('answer', {
-                    sdp: peerConnection.localDescription,
-                    room: roomName
-                });
-            } catch (error) {
-                console.error('Ошибка при обработке offer:', error);
+        // Проверка статуса конференции при загрузке
+        window.addEventListener('load', () => {
+            if ('{{ user.role }}' === 'student') {
+                startBtn.disabled = true;
+                endBtn.disabled = true;
             }
-        });
-
-        socket.on('answer', async data => {
-            try {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
-            } catch (error) {
-                console.error('Ошибка при обработке answer:', error);
-            }
-        });
-
-        socket.on('ice-candidate', data => {
-            if (peerConnection) {
-                peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate))
-                    .catch(error => console.error('Ошибка при добавлении ICE candidate:', error));
-            }
-        });
-
-        socket.on('user-joined', data => {
-            console.log('User joined:', data.user);
-        });
-
-        socket.on('user-left', data => {
-            console.log('User left:', data.user);
-            const remoteVideo = document.getElementById('remote-video');
-            if (remoteVideo.srcObject) {
-                remoteVideo.srcObject.getTracks().forEach(track => track.stop());
-                remoteVideo.srcObject = null;
-            }
-        });
-
-        socket.on('conference-ended', () => {
-            alert('Преподаватель завершил конференцию');
-            leaveConference();
-        });
-
-        // Инициализация при загрузке
-        document.addEventListener('DOMContentLoaded', () => {
-            checkAuth();
         });
     </script>
 </body>
