@@ -1,47 +1,26 @@
-from flask import Flask, render_template, request, session, redirect, jsonify, send_from_directory, Response
+import os
+from flask import Flask, render_template, request, session, redirect, jsonify, send_from_directory
 from flask_socketio import SocketIO
 from werkzeug.security import generate_password_hash, check_password_hash
 import json
-import os
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
-import time
 import logging
+import jwt
 from collections import defaultdict, deque
 import uuid
 
+# Инициализация приложения
 app = Flask(__name__, static_folder='static', template_folder='templates')
-app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
+app.secret_key = os.environ.get('SECRET_KEY', 'your-very-secret-key-12345')
 
-# Настройка SocketIO (оставляем для других функций, но не для видеоконференций)
+# Настройка SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
-# Настройка логирования
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Конфигурация Jitsi (ЗАМЕНИТЕ НА ВАШ ДОМЕН ИЛИ IP:PORT)
-JITSI_DOMAIN = '109.172.101.94:8001'  # Например: '123.123.123.123:8443' или 'jitsi.yourdomain.com'
-JITSI_OPTIONS = {
-    'useSSL': False,
-    'serviceUrl': 'http://109.172.101.94:8001/http-bind',
-    'roomName': 'ZindakiRoom',
-    'width': '100%',
-    'height': 500,
-    'parentNode': None,
-    'configOverwrite': {
-        'startWithAudioMuted': False,
-        'startWithVideoMuted': False,
-        'enableWelcomePage': False,
-        'enableClosePage': False,
-        'disableDeepLinking': True
-    },
-    'interfaceConfigOverwrite': {
-        'DISABLE_JOIN_LEAVE_NOTIFICATIONS': True,
-        'SHOW_JITSI_WATERMARK': False,
-        'SHOW_WATERMARK_FOR_GUESTS': False
-    }
-}
+# Конфигурация LiveKit
+LIVEKIT_API_KEY = os.environ.get('LIVEKIT_API_KEY', 'APIkey')
+LIVEKIT_API_SECRET = os.environ.get('LIVEKIT_API_SECRET', 'APISecret')
+LIVEKIT_WS_URL = os.environ.get('LIVEKIT_WS_URL', 'ws://localhost:7880')
 
 # Конфигурация приложения
 UPLOAD_FOLDER = 'uploads'
@@ -53,6 +32,10 @@ os.makedirs(INVITES_FOLDER, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
+
+# Настройка логирования
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class DB:
     @staticmethod
@@ -354,6 +337,31 @@ if not os.path.exists(f'{INVITES_FOLDER}/invites.json'):
     with open(f'{INVITES_FOLDER}/invites.json', 'w') as f:
         json.dump([], f)
 
+# Генерация токена LiveKit
+def generate_livekit_token(room_name, participant_name, is_admin=False):
+    payload = {
+        'exp': datetime.utcnow() + timedelta(hours=3),
+        'iat': datetime.utcnow(),
+        'iss': LIVEKIT_API_KEY,
+        'sub': participant_name,
+        'room': room_name,
+        'video': {
+            'can_publish': True,
+            'can_subscribe': True
+        },
+        'audio': {
+            'can_publish': True,
+            'can_subscribe': True
+        },
+        'screen': {
+            'can_publish': is_admin,
+            'can_subscribe': True
+        },
+        'can_publish_data': is_admin,
+        'can_update_metadata': is_admin
+    }
+    return jwt.encode(payload, LIVEKIT_API_SECRET, algorithm='HS256')
+
 # Главная страница и все SPA-роуты
 @app.route('/')
 @app.route('/about')
@@ -508,17 +516,20 @@ def api_join_lesson(lesson_id):
         return jsonify({'error': 'Access denied'}), 403
     
     if session['user']['role'] == 'teacher':
-        room_name = f"ZindakiRoom_{session['user']['username']}_{lesson_id}"
+        room_name = f"ZindakiRoom_{session['user']['username']}"
     else:
-        room_name = f"ZindakiRoom_{lesson['teacher']}_{lesson_id}"
+        room_name = f"ZindakiRoom_{lesson['teacher']}"
+    
+    token = generate_livekit_token(
+        room_name=room_name,
+        participant_name=session['user']['username'],
+        is_admin=(session['user']['role'] == 'teacher'))
     
     return jsonify({
         'success': True,
-        'conference_url': f'/conference/{room_name}',
         'room_name': room_name,
-        'jitsi_domain': JITSI_DOMAIN,
-        'jitsi_options': JITSI_OPTIONS,
-        'jitsi_script_url': f'https://{JITSI_DOMAIN}/external_api.js',
+        'livekit_token': token,
+        'livekit_ws_url': LIVEKIT_WS_URL,
         'lesson': lesson
     })
 
@@ -547,8 +558,6 @@ def send_conference_invite():
         student_username=student_username,
         room_name=room_name
     )
-    
-    logger.info(f"Invite sent to {student_username} for room {room_name}")
     
     return jsonify({'success': True, 'invite': invite})
 
@@ -584,16 +593,17 @@ def respond_to_invite(invite_id):
             invites = DB.get_invites()
             invite = next((i for i in invites if i['id'] == invite_id), None)
             if invite:
-                logger.info(f"Invite {invite_id} accepted by {session['user']['username']}")
+                token = generate_livekit_token(
+                    room_name=invite["room_name"],
+                    participant_name=session['user']['username'],
+                    is_admin=False)
+                
                 return jsonify({
                     'success': True,
-                    'conference_url': f'/conference/{invite["room_name"]}',
                     'room_name': invite["room_name"],
-                    'jitsi_domain': JITSI_DOMAIN,
-                    'jitsi_options': JITSI_OPTIONS,
-                    'jitsi_script_url': f'https://{JITSI_DOMAIN}/external_api.js'
+                    'livekit_token': token,
+                    'livekit_ws_url': LIVEKIT_WS_URL
                 })
-        logger.info(f"Invite {invite_id} {status} by {session['user']['username']}")
         return jsonify({'success': True})
     
     return jsonify({'error': 'Invite not found'}), 404
@@ -608,7 +618,7 @@ def conference(room_name):
         if not room_name.endswith(session['user']['username']):
             return "Доступ запрещен", 403
     else:
-        teacher_username = room_name.split('_')[1]
+        teacher_username = room_name.replace('ZindakiRoom_', '')
         lessons = DB.get_lessons()
         has_access = any(
             session['user']['username'] in lesson.get('students', []) and 
@@ -623,31 +633,17 @@ def conference(room_name):
             if not has_invite:
                 return "Доступ запрещен", 403
     
+    token = generate_livekit_token(
+        room_name=room_name,
+        participant_name=session['user']['username'],
+        is_admin=(session['user']['role'] == 'teacher'))
+    
     return render_template('dashboard.html', 
                          room_name=room_name,
                          user=session['user'],
                          is_teacher=session['user']['role'] == 'teacher',
-                         jitsi_domain=JITSI_DOMAIN,
-                         jitsi_options=JITSI_OPTIONS,
-                         jitsi_script_url=f'https://{JITSI_DOMAIN}/external_api.js')
-
-# Проверка доступности Jitsi сервера
-@app.route('/api/jitsi/check')
-def check_jitsi():
-    try:
-        import requests
-        response = requests.get(f'https://{JITSI_DOMAIN}/', verify=False, timeout=5)
-        return jsonify({
-            'success': True,
-            'status': 'Jitsi server is available',
-            'status_code': response.status_code
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'message': 'Jitsi server is not available'
-        }), 500
+                         livekit_token=token,
+                         livekit_ws_url=LIVEKIT_WS_URL)
 
 # Домашние задания
 @app.route('/api/homework', methods=['GET', 'POST'])
@@ -764,9 +760,7 @@ def dashboard():
                          lessons=lessons,
                          homeworks=homeworks,
                          is_teacher=session['user']['role'] == 'teacher',
-                         jitsi_domain=JITSI_DOMAIN,
-                         jitsi_options=JITSI_OPTIONS,
-                         jitsi_script_url=f'https://{JITSI_DOMAIN}/external_api.js')
+                         livekit_ws_url=LIVEKIT_WS_URL)
 
 # Обработка контактной формы
 @app.route('/api/contact', methods=['POST'])
