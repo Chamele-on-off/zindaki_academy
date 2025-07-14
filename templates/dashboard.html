@@ -6,6 +6,7 @@
     <title>Личный кабинет | Zindaki Academy</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
         :root {
             --primary: #4361ee;
@@ -285,7 +286,7 @@
             aspect-ratio: 16/9;
         }
         
-        .video-container img {
+        .video-container video {
             width: 100%;
             height: 100%;
             object-fit: cover;
@@ -366,7 +367,7 @@
             display: none;
         }
         
-        .screen-container img {
+        .screen-container video {
             width: 100%;
             height: 100%;
             object-fit: contain;
@@ -680,9 +681,9 @@
                             <td>{{ lesson.title }}</td>
                             <td>{{ lesson.description }}</td>
                             <td>
-                                <a href="/api/lesson/{{ lesson.id }}/join" class="btn">
+                                <button class="btn join-lesson-btn" data-lesson-id="{{ lesson.id }}">
                                     <i class="fas fa-video"></i> Присоединиться
-                                </a>
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -813,8 +814,8 @@
             
             <div class="conference-container" id="conferenceContainer">
                 <!-- Основное видео (удаленный участник) -->
-                <div class="video-container" id="remoteVideoContainer" style="display: none;">
-                    <img id="remoteVideo" alt="Video feed">
+                <div class="video-container" id="remoteVideoContainer">
+                    <video id="remoteVideo" autoplay playsinline></video>
                     <div class="video-label" id="remoteVideoLabel">Участник</div>
                     <div class="video-controls">
                         <button class="video-control-btn" onclick="toggleFullscreen('remoteVideo')">
@@ -830,8 +831,8 @@
             </div>
             
             <!-- Маленькое окно с локальным видео (в правом нижнем углу) -->
-            <div class="local-video-container" id="localVideoContainer" style="display: none;">
-                <video id="localVideo" autoplay muted></video>
+            <div class="local-video-container" id="localVideoContainer">
+                <video id="localVideo" autoplay muted playsinline></video>
                 <div class="video-label">Вы ({{ user.username }})</div>
                 <div class="video-controls">
                     <button class="video-control-btn" id="toggleVideoBtn">
@@ -852,7 +853,7 @@
             {% if is_teacher %}
             <!-- Демонстрация экрана -->
             <div class="screen-container" id="screenContainer">
-                <img id="screenShare" alt="Screen share">
+                <video id="screenShare" autoplay playsinline></video>
                 <div class="video-label">Демонстрация экрана</div>
                 <div class="video-controls">
                     <button class="video-control-btn" onclick="stopScreenSharing()">
@@ -1017,38 +1018,80 @@
     </div>
 
     <script>
-        // Обработка выхода
-        document.getElementById('logoutBtn').addEventListener('click', function() {
-            fetch('/api/logout')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        window.location.href = '/';
-                    }
-                });
-        });
-
-        // Видеоконференция с оптимизациями
+        // PeerJS конфигурация
+        let peer = null;
+        let currentPeerId = null;
+        let connections = {};
         let localStream = null;
+        let screenStream = null;
         let currentRoom = null;
         let isVideoEnabled = true;
         let isAudioEnabled = true;
-        let videoInterval = null;
-        let audioInterval = null;
-        let screenSharingInterval = null;
         let isScreenSharing = false;
-        let audioContext = null;
-        let audioProcessor = null;
-        let audioDestination = null;
-        let audioIntervalId = null;
 
-        // Инициализация видеоконференции с оптимизированными настройками
-        async function initConference(roomName) {
-            console.log('Initializing optimized conference...');
+        // Инициализация PeerJS
+        function initPeerJS() {
+            // Генерируем уникальный ID для пользователя
+            const userId = '{{ user.username }}_' + Math.random().toString(36).substr(2, 9);
+            currentPeerId = userId;
+            
+            // Создаем Peer объект
+            peer = new Peer(userId, {
+                host: 'peerjs.zindaki.academy', // Ваш сервер PeerJS
+                port: 443,
+                secure: true,
+                path: '/peerjs',
+                debug: 3
+            });
+            
+            peer.on('open', (id) => {
+                console.log('PeerJS подключен с ID:', id);
+                currentPeerId = id;
+            });
+            
+            peer.on('error', (err) => {
+                console.error('PeerJS ошибка:', err);
+            });
+            
+            // Обработка входящих соединений
+            peer.on('call', (call) => {
+                // Принимаем вызов и отвечаем своим потоком
+                call.answer(localStream);
+                
+                call.on('stream', (remoteStream) => {
+                    // Отображаем удаленный поток
+                    handleRemoteStream(remoteStream, call.peer);
+                });
+                
+                call.on('close', () => {
+                    removeRemoteStream(call.peer);
+                });
+                
+                call.on('error', (err) => {
+                    console.error('Ошибка вызова:', err);
+                    removeRemoteStream(call.peer);
+                });
+            });
+            
+            // Обработка входящих данных
+            peer.on('connection', (conn) => {
+                conn.on('data', (data) => {
+                    handlePeerData(conn.peer, data);
+                });
+                
+                conn.on('close', () => {
+                    removePeerConnection(conn.peer);
+                });
+            });
+        }
+
+        // Инициализация видеоконференции с PeerJS
+        async function initConference(roomName, isInitiator = false) {
+            console.log('Initializing conference with PeerJS...');
             currentRoom = roomName;
             
             try {
-                // Получаем доступ к камере и микрофону с пониженным качеством
+                // Получаем доступ к камере и микрофону
                 const constraints = {
                     video: {
                         width: { ideal: 640 },
@@ -1056,9 +1099,6 @@
                         frameRate: { ideal: 15, max: 20 }
                     },
                     audio: {
-                        sampleRate: 16000,
-                        channelCount: 1,
-                        volume: 1.0,
                         echoCancellation: true,
                         noiseSuppression: true,
                         autoGainControl: true
@@ -1072,35 +1112,26 @@
                 localVideo.srcObject = localStream;
                 document.getElementById('localVideoContainer').style.display = 'block';
                 
-                // Инициализация аудио
-                initAudio();
-                
-                // Присоединяемся к комнате
-                const response = await fetch(`/api/conference/${roomName}/join`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
+                // Подключаемся к другим участникам
+                if (isInitiator) {
+                    // Учитель ожидает подключения студентов
+                    document.getElementById('waitingMessage').style.display = 'flex';
+                } else {
+                    // Студент подключается к учителю
+                    const teacherId = await getTeacherPeerId(roomName);
+                    if (teacherId) {
+                        connectToPeer(teacherId);
+                    } else {
+                        alert('Преподаватель не найден в комнате');
                     }
-                });
+                }
                 
-                const data = await response.json();
-                if (data.success) {
-                    // Начинаем отправку видео с пониженным качеством
-                    startSendingVideo(roomName);
-                    // Начинаем отправку аудио
-                    startSendingAudio(roomName);
-                    // Начинаем получение видео других участников
-                    startReceivingVideo(roomName);
-                    // Начинаем получение аудио других участников
-                    startReceivingAudio(roomName);
-                    
-                    document.getElementById('conferenceSection').style.display = 'block';
-                    document.getElementById('conferenceSection').scrollIntoView({ behavior: 'smooth' });
-                    
-                    // Для учителя показываем кнопку завершения конференции
-                    if ({% if is_teacher %}true{% else %}false{% endif %}) {
-                        document.getElementById('endConferenceBtn').style.display = 'inline-block';
-                    }
+                document.getElementById('conferenceSection').style.display = 'block';
+                document.getElementById('conferenceSection').scrollIntoView({ behavior: 'smooth' });
+                
+                // Для учителя показываем кнопку завершения конференции
+                if ({% if is_teacher %}true{% else %}false{% endif %}) {
+                    document.getElementById('endConferenceBtn').style.display = 'inline-block';
                 }
             } catch (error) {
                 console.error('Error initializing conference:', error);
@@ -1108,272 +1139,246 @@
             }
         }
 
-        // Инициализация аудио
-        function initAudio() {
+        // Получение Peer ID преподавателя
+        async function getTeacherPeerId(roomName) {
             try {
-                if (!window.AudioContext && !window.webkitAudioContext) {
-                    console.warn('Web Audio API не поддерживается в этом браузере. Аудио может не работать.');
-                    return;
-                }
-                
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const source = audioContext.createMediaStreamSource(localStream);
-                
-                // Создаем процессор для обработки аудио
-                audioProcessor = audioContext.createScriptProcessor(4096, 1, 1);
-                
-                source.connect(audioProcessor);
-                audioProcessor.connect(audioContext.destination);
-                
-                audioDestination = audioContext.createMediaStreamDestination();
-                source.connect(audioDestination);
-                
+                const response = await fetch(`/api/conference/${roomName}/host`);
+                const data = await response.json();
+                return data.peerId;
             } catch (error) {
-                console.error('Error initializing audio:', error);
+                console.error('Error getting teacher peer ID:', error);
+                return null;
             }
         }
 
-        // Отправка видео на сервер с оптимизацией
-        function startSendingVideo(roomName) {
-            const videoTrack = localStream.getVideoTracks()[0];
-            if (!videoTrack) return;
+        // Подключение к другому участнику
+        function connectToPeer(peerId) {
+            if (connections[peerId]) return;
             
-            const video = document.getElementById('localVideo');
-            const canvas = document.createElement('canvas');
-            canvas.width = 640;  // Фиксированная ширина
-            canvas.height = 480; // Фиксированная высота
-            const ctx = canvas.getContext('2d');
+            // Устанавливаем соединение для передачи данных
+            const conn = peer.connect(peerId);
+            connections[peerId] = conn;
             
-            videoInterval = setInterval(async () => {
-                if (!isVideoEnabled) return;
-                
-                try {
-                    // Рисуем кадр с уменьшенным размером
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    
-                    // Конвертируем в JPEG с пониженным качеством (50%)
-                    const frame = canvas.toDataURL('image/jpeg', 0.5);
-                    
-                    await fetch(`/api/conference/${roomName}/video`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            frame: frame,
-                            timestamp: Date.now()
-                        })
-                    });
-                } catch (error) {
-                    console.error('Error sending video frame:', error);
-                }
-            }, 1000 / 15); // 15 FPS
+            conn.on('open', () => {
+                console.log('Соединение установлено с', peerId);
+                // Отправляем информацию о себе
+                conn.send({
+                    type: 'user-info',
+                    username: '{{ user.username }}',
+                    isTeacher: {% if is_teacher %}true{% else %}false{% endif %}
+                });
+            });
+            
+            conn.on('data', (data) => {
+                handlePeerData(peerId, data);
+            });
+            
+            conn.on('close', () => {
+                removePeerConnection(peerId);
+            });
+            
+            conn.on('error', (err) => {
+                console.error('Ошибка соединения:', err);
+                removePeerConnection(peerId);
+            });
+            
+            // Устанавливаем видеозвонок
+            const call = peer.call(peerId, localStream);
+            call.on('stream', (remoteStream) => {
+                handleRemoteStream(remoteStream, peerId);
+            });
+            
+            call.on('close', () => {
+                removeRemoteStream(peerId);
+            });
+            
+            call.on('error', (err) => {
+                console.error('Ошибка видеозвонка:', err);
+                removeRemoteStream(peerId);
+            });
         }
 
-        // Отправка аудио на сервер
-        function startSendingAudio(roomName) {
-            if (!audioProcessor) return;
-            
-            audioProcessor.onaudioprocess = async (e) => {
-                if (!isAudioEnabled) return;
-                
-                try {
-                    const audioData = e.inputBuffer.getChannelData(0);
-                    const audioArray = Array.from(audioData);
-                    
-                    await fetch(`/api/conference/${roomName}/audio`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            audio: audioArray,
-                            timestamp: Date.now()
-                        })
-                    });
-                } catch (error) {
-                    console.error('Error sending audio:', error);
-                }
-            };
-        }
-
-        // Получение видео с сервера с оптимизацией
-        function startReceivingVideo(roomName) {
-            const userId = '{{ user.username }}';
+        // Обработка удаленного потока
+        function handleRemoteStream(stream, peerId) {
             const remoteVideo = document.getElementById('remoteVideo');
-            const remoteVideoContainer = document.getElementById('remoteVideoContainer');
-            const waitingMessage = document.getElementById('waitingMessage');
+            remoteVideo.srcObject = stream;
+            document.getElementById('remoteVideoContainer').style.display = 'block';
+            document.getElementById('waitingMessage').style.display = 'none';
             
-            // Функция для обновления видео других участников
-            async function updateRemoteVideo() {
-                try {
-                    // Получаем список участников
-                    const participantsResponse = await fetch(`/api/conference/${roomName}/join`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        }
-                    });
-                    
-                    const participantsData = await participantsResponse.json();
-                    
-                    if (participantsData.success) {
-                        // Для каждого участника (кроме себя) получаем видео
-                        for (const participant of participantsData.participants) {
-                            if (participant === userId) continue;
-                            
-                            // Устанавливаем источник видео с сервера с параметром для избежания кэширования
-                            remoteVideo.src = `/video_feed/${roomName}/${participant}?t=${Date.now()}`;
-                            waitingMessage.style.display = 'none';
-                            remoteVideoContainer.style.display = 'block';
-                            break; // Показываем только одного участника
-                        }
-                        
-                        if (participantsData.participants.length <= 1) {
-                            waitingMessage.style.display = 'flex';
-                            remoteVideoContainer.style.display = 'none';
-                        }
-                    }
-                    
-                    // Обновляем список участников
-                    updateParticipantsList(roomName);
-                    
-                    // Повторяем запрос через 1 секунду
-                    setTimeout(updateRemoteVideo, 1000);
-                } catch (error) {
-                    console.error('Error updating remote video:', error);
-                    // Повторяем запрос через 1 секунду в случае ошибки
-                    setTimeout(updateRemoteVideo, 1000);
-                }
-            }
-            
-            // Запускаем процесс обновления
-            updateRemoteVideo();
+            // Добавляем участника в список
+            updateParticipantList(peerId, true);
         }
 
-        // Получение аудио с сервера
-        function startReceivingAudio(roomName) {
-            const userId = '{{ user.username }}';
-            
-            async function updateRemoteAudio() {
-                try {
-                    // Получаем список участников
-                    const participantsResponse = await fetch(`/api/conference/${roomName}/join`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        }
-                    });
-                    
-                    const participantsData = await participantsResponse.json();
-                    
-                    if (participantsData.success) {
-                        // Для каждого участника (кроме себя) получаем аудио
-                        for (const participant of participantsData.participants) {
-                            if (participant === userId) continue;
-                            
-                            // Получаем аудио данные с сервера
-                            const audioResponse = await fetch(`/api/conference/${roomName}/audio/${participant}`);
-                            const audioData = await audioResponse.json();
-                            
-                            if (audioData.success && audioData.audio) {
-                                playAudio(audioData.audio);
-                            }
-                        }
-                    }
-                    
-                    // Повторяем запрос через 100 мс для плавного звука
-                    setTimeout(updateRemoteAudio, 100);
-                } catch (error) {
-                    console.error('Error updating remote audio:', error);
-                    // Повторяем запрос через 100 мс в случае ошибки
-                    setTimeout(updateRemoteAudio, 100);
-                }
+        // Удаление удаленного потока
+        function removeRemoteStream(peerId) {
+            const remoteVideo = document.getElementById('remoteVideo');
+            if (remoteVideo.srcObject) {
+                remoteVideo.srcObject.getTracks().forEach(track => track.stop());
+                remoteVideo.srcObject = null;
             }
             
-            // Запускаем процесс обновления
-            updateRemoteAudio();
+            document.getElementById('remoteVideoContainer').style.display = 'none';
+            document.getElementById('waitingMessage').style.display = 'flex';
+            
+            // Удаляем участника из списка
+            updateParticipantList(peerId, false);
         }
 
-        // Воспроизведение полученного аудио
-        function playAudio(audioArray) {
-            if (!audioContext) return;
-            
-            try {
-                const audioBuffer = audioContext.createBuffer(1, audioArray.length, audioContext.sampleRate);
-                const channelData = audioBuffer.getChannelData(0);
-                
-                for (let i = 0; i < audioArray.length; i++) {
-                    channelData[i] = audioArray[i];
-                }
-                
-                const source = audioContext.createBufferSource();
-                source.buffer = audioBuffer;
-                source.connect(audioContext.destination);
-                source.start();
-            } catch (error) {
-                console.error('Error playing audio:', error);
+        // Обработка данных от других участников
+        function handlePeerData(peerId, data) {
+            switch (data.type) {
+                case 'user-info':
+                    updateParticipantList(peerId, true, data.username, data.isTeacher);
+                    break;
+                case 'screen-sharing':
+                    if (data.active) {
+                        document.getElementById('screenContainer').style.display = 'block';
+                        const screenVideo = document.getElementById('screenShare');
+                        screenVideo.srcObject = data.stream;
+                    } else {
+                        document.getElementById('screenContainer').style.display = 'none';
+                    }
+                    break;
+                case 'conference-end':
+                    alert('Конференция завершена преподавателем');
+                    leaveConference();
+                    break;
             }
+        }
+
+        // Удаление соединения с участником
+        function removePeerConnection(peerId) {
+            if (connections[peerId]) {
+                connections[peerId].close();
+                delete connections[peerId];
+            }
+            removeRemoteStream(peerId);
         }
 
         // Обновление списка участников
-        async function updateParticipantsList(roomName) {
+        function updateParticipantList(peerId, isConnected, username = null, isTeacher = false) {
+            const participantsList = document.getElementById('participantsList');
+            const participantItem = document.getElementById(`participant-${peerId}`);
+            
+            if (isConnected) {
+                if (!participantItem) {
+                    const item = document.createElement('div');
+                    item.className = 'participant-item';
+                    item.id = `participant-${peerId}`;
+                    item.innerHTML = `
+                        <div class="participant-avatar">${(username || peerId).charAt(0).toUpperCase()}</div>
+                        <div>${username || peerId} ${isTeacher ? '(Преподаватель)' : ''}</div>
+                    `;
+                    participantsList.appendChild(item);
+                }
+            } else if (participantItem) {
+                participantItem.remove();
+            }
+        }
+
+        // Демонстрация экрана (для учителя)
+        async function startScreenSharing() {
+            if (isScreenSharing) {
+                stopScreenSharing();
+                return;
+            }
+            
             try {
-                const response = await fetch(`/api/conference/${roomName}/join`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
+                screenStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 10, max: 15 }
+                    },
+                    audio: false
                 });
                 
-                const data = await response.json();
-                if (data.success) {
-                    const participantsList = document.getElementById('participantsList');
-                    participantsList.innerHTML = '<h4>Участники:</h4>';
-                    
-                    data.participants.forEach(participant => {
-                        const item = document.createElement('div');
-                        item.className = 'participant-item';
-                        item.innerHTML = `
-                            <div class="participant-avatar">${participant.charAt(0).toUpperCase()}</div>
-                            <div>${participant}</div>
-                        `;
-                        participantsList.appendChild(item);
+                isScreenSharing = true;
+                document.getElementById('screenContainer').style.display = 'block';
+                document.getElementById('teacherShareScreenBtn').innerHTML = '<i class="fas fa-stop"></i> Остановить демонстрацию';
+                
+                const screenVideo = document.getElementById('screenShare');
+                screenVideo.srcObject = screenStream;
+                
+                // Отправляем информацию о демонстрации экрана всем участникам
+                Object.keys(connections).forEach(peerId => {
+                    const call = peer.call(peerId, screenStream);
+                    call.on('stream', (remoteStream) => {
+                        // Участник получит наш экран
                     });
-                }
+                    
+                    connections[peerId].send({
+                        type: 'screen-sharing',
+                        active: true
+                    });
+                });
+                
+                screenStream.getVideoTracks()[0].onended = () => {
+                    stopScreenSharing();
+                };
+                
             } catch (error) {
-                console.error('Error updating participants list:', error);
+                console.error('Error starting screen sharing:', error);
+                isScreenSharing = false;
+                document.getElementById('screenContainer').style.display = 'none';
+                document.getElementById('teacherShareScreenBtn').innerHTML = '<i class="fas fa-desktop"></i> Демонстрация экрана';
             }
+        }
+
+        // Остановка демонстрации экрана
+        function stopScreenSharing() {
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+                screenStream = null;
+            }
+            
+            isScreenSharing = false;
+            document.getElementById('screenContainer').style.display = 'none';
+            document.getElementById('teacherShareScreenBtn').innerHTML = '<i class="fas fa-desktop"></i> Демонстрация экрана';
+            
+            // Уведомляем участников об остановке демонстрации
+            Object.keys(connections).forEach(peerId => {
+                connections[peerId].send({
+                    type: 'screen-sharing',
+                    active: false
+                });
+            });
         }
 
         // Выход из конференции
         async function leaveConference() {
+            // Останавливаем все медиапотоки
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
                 localStream = null;
             }
             
-            if (videoInterval) clearInterval(videoInterval);
-            if (audioInterval) clearInterval(audioInterval);
-            if (screenSharingInterval) clearInterval(screenSharingInterval);
-            if (audioIntervalId) clearInterval(audioIntervalId);
-            
-            if (audioProcessor) {
-                audioProcessor.disconnect();
-                audioProcessor = null;
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+                screenStream = null;
             }
             
-            if (audioContext) {
-                await audioContext.close();
-                audioContext = null;
-            }
+            // Закрываем все соединения
+            Object.keys(connections).forEach(peerId => {
+                connections[peerId].close();
+            });
+            connections = {};
+            
+            // Очищаем видеоэлементы
+            document.getElementById('remoteVideo').srcObject = null;
+            document.getElementById('localVideo').srcObject = null;
+            document.getElementById('screenShare').srcObject = null;
             
             document.getElementById('waitingMessage').style.display = 'flex';
             document.getElementById('remoteVideoContainer').style.display = 'none';
             document.getElementById('localVideoContainer').style.display = 'none';
             document.getElementById('screenContainer').style.display = 'none';
             
+            // Очищаем список участников
+            document.getElementById('participantsList').innerHTML = '<h4>Участники:</h4>';
+            
             if (currentRoom) {
+                // Уведомляем сервер о выходе из комнаты
                 await fetch(`/api/conference/${currentRoom}/leave`, {
                     method: 'POST',
                     headers: {
@@ -1390,6 +1395,13 @@
         // Завершение конференции (для учителя)
         async function endConference() {
             if (confirm('Вы уверены, что хотите завершить конференцию для всех участников?')) {
+                // Уведомляем всех участников о завершении
+                Object.keys(connections).forEach(peerId => {
+                    connections[peerId].send({
+                        type: 'conference-end'
+                    });
+                });
+                
                 await leaveConference();
                 
                 if (currentRoom) {
@@ -1402,29 +1414,6 @@
                 }
                 
                 window.location.reload();
-            }
-        }
-
-        // Полноэкранный режим
-        function toggleFullscreen(elementId) {
-            const element = document.getElementById(elementId);
-            
-            if (!document.fullscreenElement) {
-                if (element.requestFullscreen) {
-                    element.requestFullscreen();
-                } else if (element.webkitRequestFullscreen) {
-                    element.webkitRequestFullscreen();
-                } else if (element.msRequestFullscreen) {
-                    element.msRequestFullscreen();
-                }
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
-                } else if (document.msExitFullscreen) {
-                    document.msExitFullscreen();
-                }
             }
         }
 
@@ -1464,89 +1453,26 @@
             }
         }
 
-        // Демонстрация экрана (для учителя)
-        async function startScreenSharing() {
-            if (isScreenSharing) {
-                stopScreenSharing();
-                return;
-            }
+        // Полноэкранный режим
+        function toggleFullscreen(elementId) {
+            const element = document.getElementById(elementId);
             
-            try {
-                const stream = await navigator.mediaDevices.getDisplayMedia({
-                    video: {
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                        frameRate: { ideal: 10, max: 15 }
-                    },
-                    audio: false
-                });
-                
-                isScreenSharing = true;
-                document.getElementById('screenContainer').style.display = 'block';
-                document.getElementById('teacherShareScreenBtn').innerHTML = '<i class="fas fa-stop"></i> Остановить демонстрацию';
-                
-                const screenVideo = document.getElementById('screenShare');
-                screenVideo.srcObject = stream;
-                
-                const canvas = document.createElement('canvas');
-                canvas.width = 1280;  // Фиксированная ширина
-                canvas.height = 720;  // Фиксированная высота
-                const ctx = canvas.getContext('2d');
-                
-                screenSharingInterval = setInterval(async () => {
-                    try {
-                        ctx.drawImage(screenVideo, 0, 0, canvas.width, canvas.height);
-                        
-                        // Конвертируем в JPEG с пониженным качеством (60%)
-                        const frame = canvas.toDataURL('image/jpeg', 0.6);
-                        
-                        await fetch(`/api/conference/${currentRoom}/screen`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                frame: frame,
-                                timestamp: Date.now(),
-                                is_screen: true
-                            })
-                        });
-                    } catch (error) {
-                        console.error('Error sending screen frame:', error);
-                    }
-                }, 1000 / 10); // 10 FPS для демонстрации экрана
-                
-                stream.getVideoTracks()[0].onended = () => {
-                    stopScreenSharing();
-                };
-                
-            } catch (error) {
-                console.error('Error starting screen sharing:', error);
-                isScreenSharing = false;
-                document.getElementById('screenContainer').style.display = 'none';
-                document.getElementById('teacherShareScreenBtn').innerHTML = '<i class="fas fa-desktop"></i> Демонстрация экрана';
-            }
-        }
-
-        // Остановка демонстрации экрана
-        function stopScreenSharing() {
-            if (screenSharingInterval) {
-                clearInterval(screenSharingInterval);
-                screenSharingInterval = null;
-            }
-            
-            isScreenSharing = false;
-            document.getElementById('screenContainer').style.display = 'none';
-            document.getElementById('teacherShareScreenBtn').innerHTML = '<i class="fas fa-desktop"></i> Демонстрация экрана';
-            
-            // Отправляем запрос на сервер для остановки демонстрации экрана
-            if (currentRoom) {
-                fetch(`/api/conference/${currentRoom}/leave`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
+            if (!document.fullscreenElement) {
+                if (element.requestFullscreen) {
+                    element.requestFullscreen();
+                } else if (element.webkitRequestFullscreen) {
+                    element.webkitRequestFullscreen();
+                } else if (element.msRequestFullscreen) {
+                    element.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
             }
         }
 
@@ -1630,12 +1556,15 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                    }
+                    },
+                    body: JSON.stringify({
+                        peerId: currentPeerId
+                    })
                 });
                 
                 const data = await response.json();
                 if (data.success) {
-                    initConference(roomName);
+                    initConference(roomName, true);
                     updateConferenceStatus();
                 } else {
                     alert(data.error || 'Ошибка при запуске конференции');
@@ -1745,6 +1674,24 @@
                 alert(data.error || 'Ошибка при обработке приглашения');
             }
         };
+
+        // Обработка присоединения к уроку
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.classList.contains('join-lesson-btn')) {
+                e.preventDefault();
+                const lessonId = e.target.getAttribute('data-lesson-id');
+                
+                fetch(`/api/lesson/${lessonId}/join`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            initConference(data.room_name);
+                        } else {
+                            alert(data.error || 'Ошибка подключения к конференции');
+                        }
+                    });
+            }
+        });
 
         // Для учителя: загрузка данных
         if ({% if is_teacher %}true{% else %}false{% endif %}) {
@@ -1995,24 +1942,6 @@
             });
         }
 
-        // Обработка присоединения к уроку
-        document.addEventListener('click', function(e) {
-            if (e.target && e.target.closest('a[href^="/api/lesson/"]')) {
-                e.preventDefault();
-                const lessonId = e.target.closest('a').href.split('/').slice(-2, -1)[0];
-                
-                fetch(`/api/lesson/${lessonId}/join`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            initConference(data.room_name);
-                        } else {
-                            alert(data.error || 'Ошибка подключения к конференции');
-                        }
-                    });
-            }
-        });
-
         // Получение VPN QR-кода
         document.getElementById('getVpnBtn').addEventListener('click', function() {
             // В реальной реализации здесь будет запрос к серверу для получения QR-кода
@@ -2034,10 +1963,21 @@
             }
         });
 
-        // Проверка поддержки Web Audio API
-        if (!window.AudioContext && !window.webkitAudioContext) {
-            console.warn('Ваш браузер не поддерживает Web Audio API. Аудио может не работать.');
-        }
+        // Обработка выхода
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            fetch('/api/logout')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = '/';
+                    }
+                });
+        });
+
+        // Инициализация PeerJS при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            initPeerJS();
+        });
     </script>
 </body>
 </html>
