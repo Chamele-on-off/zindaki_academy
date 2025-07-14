@@ -704,7 +704,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="https://teams.live.com/meet/9480976290023?p=wqOkR5Ze8VJMKmpq" target="_blank" class="btn btn-secondary" style="display: inline-flex; align-items: center;">
+                        <a href="https://teams.live.com/meet/9480976290023?p=wqOkR5Ye8VJMKmpq" target="_blank" class="btn btn-secondary" style="display: inline-flex; align-items: center;">
                             <i class="fab fa-microsoft" style="margin-right: 0.5rem;"></i> Microsoft Teams
                         </a>
                     </li>
@@ -1028,6 +1028,7 @@
         let isVideoEnabled = true;
         let isAudioEnabled = true;
         let isScreenSharing = false;
+        let inviteCheckInterval = null;
 
         // Инициализация PeerJS
         function initPeerJS() {
@@ -1035,11 +1036,11 @@
             const userId = '{{ user.username }}_' + Math.random().toString(36).substr(2, 9);
             currentPeerId = userId;
             
-            // Создаем Peer объект
+            // Создаем Peer объект с настройкой для локального сервера PeerJS
             peer = new Peer(userId, {
-                host: 'peerjs.zindaki.academy', // Ваш сервер PeerJS
-                port: 443,
-                secure: true,
+                host: 'localhost',
+                port: 9001,
+                secure: false,
                 path: '/peerjs',
                 debug: 3
             });
@@ -1047,6 +1048,11 @@
             peer.on('open', (id) => {
                 console.log('PeerJS подключен с ID:', id);
                 currentPeerId = id;
+                
+                // Для студента: запускаем проверку новых приглашений
+                if (!{{ 'true' if is_teacher else 'false' }}) {
+                    startCheckingInvites();
+                }
             });
             
             peer.on('error', (err) => {
@@ -1083,6 +1089,20 @@
                     removePeerConnection(conn.peer);
                 });
             });
+        }
+
+        // Для студента: периодическая проверка новых приглашений
+        function startCheckingInvites() {
+            // Останавливаем предыдущий интервал, если он был
+            if (inviteCheckInterval) {
+                clearInterval(inviteCheckInterval);
+            }
+            
+            // Загружаем приглашения сразу
+            loadStudentInvites();
+            
+            // Устанавливаем интервал проверки каждые 10 секунд
+            inviteCheckInterval = setInterval(loadStudentInvites, 10000);
         }
 
         // Инициализация видеоконференции с PeerJS
@@ -1130,7 +1150,7 @@
                 document.getElementById('conferenceSection').scrollIntoView({ behavior: 'smooth' });
                 
                 // Для учителя показываем кнопку завершения конференции
-                if ({% if is_teacher %}true{% else %}false{% endif %}) {
+                if ({{ 'true' if is_teacher else 'false' }}) {
                     document.getElementById('endConferenceBtn').style.display = 'inline-block';
                 }
             } catch (error) {
@@ -1165,7 +1185,7 @@
                 conn.send({
                     type: 'user-info',
                     username: '{{ user.username }}',
-                    isTeacher: {% if is_teacher %}true{% else %}false{% endif %}
+                    isTeacher: {{ 'true' if is_teacher else 'false' }}
                 });
             });
             
@@ -1496,7 +1516,7 @@
         document.getElementById('endConferenceBtn').addEventListener('click', endConference);
 
         // Для учителя: кнопка демонстрации экрана
-        if ({% if is_teacher %}true{% else %}false{% endif %}) {
+        if ({{ 'true' if is_teacher else 'false' }}) {
             document.getElementById('teacherShareScreenBtn').addEventListener('click', startScreenSharing);
             
             // Обновление статуса конференции
@@ -1612,42 +1632,46 @@
         } else {
             // Для студентов: загрузка приглашений
             async function loadStudentInvites() {
-                const response = await fetch('/api/conference/invites');
-                const data = await response.json();
-                
-                const invitesList = document.getElementById('studentInvitesList');
-                invitesList.innerHTML = '';
-                
-                if (data.invites.length === 0) {
-                    invitesList.innerHTML = '<p>Нет новых приглашений</p>';
-                    return;
+                try {
+                    const response = await fetch('/api/conference/invites');
+                    const data = await response.json();
+                    
+                    const invitesList = document.getElementById('studentInvitesList');
+                    invitesList.innerHTML = '';
+                    
+                    if (data.invites.length === 0) {
+                        invitesList.innerHTML = '<p>Нет новых приглашений</p>';
+                        return;
+                    }
+                    
+                    data.invites.forEach(invite => {
+                        const inviteCard = document.createElement('div');
+                        inviteCard.className = 'invite-card';
+                        inviteCard.innerHTML = `
+                            <div class="invite-info">
+                                <p><strong>Преподаватель:</strong> ${invite.teacher}</p>
+                                <p><strong>Статус:</strong> <span class="status-${invite.status}">${
+                                    invite.status === 'pending' ? 'Ожидает вашего ответа' : 
+                                    invite.status === 'accepted' ? 'Принято' : 'Отклонено'
+                                }</span></p>
+                                <p><small>Получено: ${new Date(invite.created_at).toLocaleString()}</small></p>
+                            </div>
+                            <div class="invite-actions">
+                                ${invite.status === 'pending' ? `
+                                <button class="btn btn-success" onclick="respondToInvite(${invite.id}, 'accept')">
+                                    <i class="fas fa-check"></i> Принять
+                                </button>
+                                <button class="btn btn-danger" onclick="respondToInvite(${invite.id}, 'decline')">
+                                    <i class="fas fa-times"></i> Отклонить
+                                </button>
+                                ` : ''}
+                            </div>
+                        `;
+                        invitesList.appendChild(inviteCard);
+                    });
+                } catch (error) {
+                    console.error('Error loading invites:', error);
                 }
-                
-                data.invites.forEach(invite => {
-                    const inviteCard = document.createElement('div');
-                    inviteCard.className = 'invite-card';
-                    inviteCard.innerHTML = `
-                        <div class="invite-info">
-                            <p><strong>Преподаватель:</strong> ${invite.teacher}</p>
-                            <p><strong>Статус:</strong> <span class="status-${invite.status}">${
-                                invite.status === 'pending' ? 'Ожидает вашего ответа' : 
-                                invite.status === 'accepted' ? 'Принято' : 'Отклонено'
-                            }</span></p>
-                            <p><small>Получено: ${new Date(invite.created_at).toLocaleString()}</small></p>
-                        </div>
-                        <div class="invite-actions">
-                            ${invite.status === 'pending' ? `
-                            <button class="btn btn-success" onclick="respondToInvite(${invite.id}, 'accept')">
-                                <i class="fas fa-check"></i> Принять
-                            </button>
-                            <button class="btn btn-danger" onclick="respondToInvite(${invite.id}, 'decline')">
-                                <i class="fas fa-times"></i> Отклонить
-                            </button>
-                            ` : ''}
-                        </div>
-                    `;
-                    invitesList.appendChild(inviteCard);
-                });
             }
             
             // Инициализация
@@ -1694,7 +1718,7 @@
         });
 
         // Для учителя: загрузка данных
-        if ({% if is_teacher %}true{% else %}false{% endif %}) {
+        if ({{ 'true' if is_teacher else 'false' }}) {
             // Функция для добавления пользователя
             function addUser(userData) {
                 fetch('/api/register', {
