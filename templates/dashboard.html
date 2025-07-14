@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Zindaki Academy</title>
+    <title>Dashboard - Video Conference</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         body {
@@ -43,6 +43,19 @@
             height: 225px;
             border-radius: 4px;
         }
+        .remote-video-container {
+            position: relative;
+        }
+        .remote-username {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
         button {
             background: #4CAF50;
             color: white;
@@ -69,34 +82,44 @@
             margin-top: 20px;
             background: #f9f9f9;
         }
+        .message {
+            margin-bottom: 8px;
+        }
+        .message-username {
+            font-weight: bold;
+            color: #333;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="user-info">
-            <h1>Личный кабинет</h1>
-            <p>Добро пожаловать, <strong id="username">{{ user.username }}</strong> ({{ 'Учитель' if user.role == 'teacher' else 'Студент' }})</p>
-            <button onclick="logout()">Выйти</button>
+            <h1>Video Conference</h1>
+            <p>Welcome, <strong id="username">{{ user.username }}</strong> ({{ 'Teacher' if user.role == 'teacher' else 'Student' }})</p>
+            <button onclick="logout()">Logout</button>
         </div>
 
         <div class="conference-section">
-            <h2>Видеоконференция</h2>
+            <h2>Video Conference</h2>
             <div class="controls">
-                <input type="text" id="roomName" placeholder="Название комнаты" value="ZindakiRoom_{{ user.username if user.role == 'teacher' else 'admin' }}">
-                <button onclick="startConference()" id="startBtn" {{ 'disabled' if user.role != 'teacher' }}>Начать конференцию</button>
-                <button onclick="joinConference()" id="joinBtn">Присоединиться</button>
-                <button onclick="leaveConference()" id="leaveBtn" disabled>Покинуть</button>
-                <button onclick="endConference()" id="endBtn" {{ 'disabled' if user.role != 'teacher' }}>Завершить</button>
+                <input type="text" id="roomName" placeholder="Room name" value="ZindakiRoom_{{ user.username if user.role == 'teacher' else 'admin' }}">
+                <button onclick="startConference()" id="startBtn" {{ 'disabled' if user.role != 'teacher' }}>Start Conference</button>
+                <button onclick="joinConference()" id="joinBtn">Join</button>
+                <button onclick="leaveConference()" id="leaveBtn" disabled>Leave</button>
+                <button onclick="endConference()" id="endBtn" {{ 'disabled' if user.role != 'teacher' }}>End</button>
             </div>
 
             <div class="video-container">
-                <video id="localVideo" autoplay muted></video>
-                <video id="remoteVideo" autoplay></video>
+                <div>
+                    <video id="localVideo" autoplay muted></video>
+                    <div class="remote-username">You ({{ user.username }})</div>
+                </div>
+                <div id="remoteVideosContainer"></div>
             </div>
 
             <div class="controls">
-                <input type="text" id="messageInput" placeholder="Сообщение">
-                <button onclick="sendMessage()">Отправить</button>
+                <input type="text" id="messageInput" placeholder="Type your message">
+                <button onclick="sendMessage()">Send</button>
             </div>
             <div id="messages"></div>
         </div>
@@ -105,15 +128,19 @@
     <script>
         const socket = io();
         let localStream;
-        let peerConnection;
+        let peerConnections = {};
         let roomName;
         const configuration = {
-            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' }
+            ]
         };
 
-        // Элементы интерфейса
+        // DOM elements
         const localVideo = document.getElementById('localVideo');
-        const remoteVideo = document.getElementById('remoteVideo');
+        const remoteVideosContainer = document.getElementById('remoteVideosContainer');
         const messagesDiv = document.getElementById('messages');
         const messageInput = document.getElementById('messageInput');
         const roomNameInput = document.getElementById('roomName');
@@ -122,26 +149,124 @@
         const leaveBtn = document.getElementById('leaveBtn');
         const endBtn = document.getElementById('endBtn');
 
-        // Инициализация медиаустройств
+        // Initialize local media stream
         async function initLocalStream() {
             try {
-                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                localStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: true, 
+                    audio: true 
+                });
                 localVideo.srcObject = localStream;
+                return true;
             } catch (err) {
-                console.error('Ошибка доступа к медиаустройствам:', err);
-                alert('Не удалось получить доступ к камере/микрофону');
+                console.error('Error accessing media devices:', err);
+                alert('Could not access camera/microphone');
+                return false;
             }
         }
 
-        // Начать конференцию (для учителя)
+        // Create peer connection for a specific user
+        function createPeerConnection(userId) {
+            console.log(`Creating peer connection for ${userId}`);
+            
+            const pc = new RTCPeerConnection(configuration);
+            peerConnections[userId] = pc;
+
+            // Add local stream tracks
+            localStream.getTracks().forEach(track => {
+                pc.addTrack(track, localStream);
+            });
+
+            // Handle remote stream
+            pc.ontrack = (event) => {
+                console.log(`Received remote stream from ${userId}`, event.streams);
+                
+                // Check if we already have a video element for this user
+                let videoElement = document.getElementById(`remoteVideo-${userId}`);
+                if (!videoElement) {
+                    const videoContainer = document.createElement('div');
+                    videoContainer.className = 'remote-video-container';
+                    videoContainer.id = `remoteContainer-${userId}`;
+                    
+                    videoElement = document.createElement('video');
+                    videoElement.id = `remoteVideo-${userId}`;
+                    videoElement.autoplay = true;
+                    videoElement.playsInline = true;
+                    
+                    const usernameLabel = document.createElement('div');
+                    usernameLabel.className = 'remote-username';
+                    usernameLabel.textContent = userId;
+                    
+                    videoContainer.appendChild(videoElement);
+                    videoContainer.appendChild(usernameLabel);
+                    remoteVideosContainer.appendChild(videoContainer);
+                }
+                
+                // Set the remote stream
+                videoElement.srcObject = event.streams[0];
+            };
+
+            // ICE candidate handler
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    console.log(`Sending ICE candidate to ${userId}`);
+                    socket.emit('ice-candidate', {
+                        candidate: event.candidate,
+                        targetUserId: userId,
+                        room: roomName
+                    });
+                }
+            };
+
+            pc.oniceconnectionstatechange = () => {
+                console.log(`ICE state for ${userId}:`, pc.iceConnectionState);
+                if (pc.iceConnectionState === 'disconnected' || 
+                    pc.iceConnectionState === 'failed') {
+                    removeRemoteVideo(userId);
+                }
+            };
+
+            pc.onnegotiationneeded = async () => {
+                console.log(`Negotiation needed for ${userId}`);
+                try {
+                    const offer = await pc.createOffer();
+                    await pc.setLocalDescription(offer);
+                    
+                    socket.emit('offer', {
+                        sdp: pc.localDescription,
+                        targetUserId: userId,
+                        room: roomName
+                    });
+                } catch (err) {
+                    console.error('Error creating offer:', err);
+                }
+            };
+
+            return pc;
+        }
+
+        // Remove remote video element
+        function removeRemoteVideo(userId) {
+            const videoContainer = document.getElementById(`remoteContainer-${userId}`);
+            if (videoContainer) {
+                videoContainer.remove();
+            }
+            if (peerConnections[userId]) {
+                peerConnections[userId].close();
+                delete peerConnections[userId];
+            }
+        }
+
+        // Start conference (teacher)
         async function startConference() {
             roomName = roomNameInput.value.trim();
             if (!roomName) {
-                alert('Введите название комнаты');
+                alert('Please enter room name');
                 return;
             }
 
-            await initLocalStream();
+            const hasStream = await initLocalStream();
+            if (!hasStream) return;
             
             try {
                 const response = await fetch(`/api/conference/${roomName}/start`, {
@@ -153,26 +278,32 @@
                 
                 const data = await response.json();
                 if (data.success) {
-                    addMessage(`Конференция "${roomName}" начата`);
-                    joinConference();
+                    addSystemMessage(`Conference "${roomName}" started`);
+                    setupSocketConnection();
+                    
+                    startBtn.disabled = true;
+                    joinBtn.disabled = true;
+                    leaveBtn.disabled = false;
+                    endBtn.disabled = false;
                 } else {
-                    alert(data.error || 'Ошибка начала конференции');
+                    alert(data.error || 'Failed to start conference');
                 }
             } catch (err) {
-                console.error('Ошибка начала конференции:', err);
-                alert('Ошибка начала конференции');
+                console.error('Error starting conference:', err);
+                alert('Error starting conference');
             }
         }
 
-        // Присоединиться к конференции
+        // Join conference
         async function joinConference() {
             roomName = roomNameInput.value.trim();
             if (!roomName) {
-                alert('Введите название комнаты');
+                alert('Please enter room name');
                 return;
             }
 
-            await initLocalStream();
+            const hasStream = await initLocalStream();
+            if (!hasStream) return;
             
             try {
                 const response = await fetch(`/api/conference/${roomName}/join`, {
@@ -184,22 +315,23 @@
                 
                 const data = await response.json();
                 if (data.success) {
-                    addMessage(`Вы присоединились к конференции "${roomName}"`);
+                    addSystemMessage(`Joined conference "${roomName}"`);
                     setupSocketConnection();
+                    
                     startBtn.disabled = true;
                     joinBtn.disabled = true;
                     leaveBtn.disabled = false;
                     endBtn.disabled = false;
                 } else {
-                    alert(data.error || 'Ошибка присоединения к конференции');
+                    alert(data.error || 'Failed to join conference');
                 }
             } catch (err) {
-                console.error('Ошибка присоединения к конференции:', err);
-                alert('Ошибка присоединения к конференции');
+                console.error('Error joining conference:', err);
+                alert('Error joining conference');
             }
         }
 
-        // Покинуть конференцию
+        // Leave conference
         async function leaveConference() {
             try {
                 const response = await fetch(`/api/conference/${roomName}/leave`, {
@@ -211,23 +343,35 @@
                 
                 const data = await response.json();
                 if (data.success) {
-                    addMessage(`Вы покинули конференцию "${roomName}"`);
-                    if (peerConnection) {
-                        peerConnection.close();
-                        peerConnection = null;
+                    addSystemMessage(`Left conference "${roomName}"`);
+                    
+                    // Close all peer connections
+                    Object.keys(peerConnections).forEach(userId => {
+                        peerConnections[userId].close();
+                        removeRemoteVideo(userId);
+                    });
+                    peerConnections = {};
+                    
+                    // Stop local stream
+                    if (localStream) {
+                        localStream.getTracks().forEach(track => track.stop());
+                        localVideo.srcObject = null;
                     }
-                    remoteVideo.srcObject = null;
+                    
+                    // Leave socket room
+                    socket.emit('leave', { room: roomName });
+                    
                     startBtn.disabled = false;
                     joinBtn.disabled = false;
                     leaveBtn.disabled = true;
                     endBtn.disabled = true;
                 }
             } catch (err) {
-                console.error('Ошибка при выходе из конференции:', err);
+                console.error('Error leaving conference:', err);
             }
         }
 
-        // Завершить конференцию (для учителя)
+        // End conference (teacher)
         async function endConference() {
             try {
                 const response = await fetch(`/api/conference/${roomName}/end`, {
@@ -239,144 +383,133 @@
                 
                 const data = await response.json();
                 if (data.success) {
-                    addMessage(`Конференция "${roomName}" завершена`);
-                    if (peerConnection) {
-                        peerConnection.close();
-                        peerConnection = null;
+                    addSystemMessage(`Conference "${roomName}" ended`);
+                    
+                    // Close all peer connections
+                    Object.keys(peerConnections).forEach(userId => {
+                        peerConnections[userId].close();
+                        removeRemoteVideo(userId);
+                    });
+                    peerConnections = {};
+                    
+                    // Stop local stream
+                    if (localStream) {
+                        localStream.getTracks().forEach(track => track.stop());
+                        localVideo.srcObject = null;
                     }
-                    remoteVideo.srcObject = null;
+                    
+                    // Leave socket room
+                    socket.emit('leave', { room: roomName });
+                    
                     startBtn.disabled = false;
                     joinBtn.disabled = false;
                     leaveBtn.disabled = true;
                     endBtn.disabled = true;
                 }
             } catch (err) {
-                console.error('Ошибка завершения конференции:', err);
+                console.error('Error ending conference:', err);
             }
         }
 
-        // Настройка WebRTC соединения
+        // Setup socket event handlers
         function setupSocketConnection() {
             socket.emit('join', { room: roomName });
 
-            // Обработчики событий Socket.IO
+            // When a new user joins
+            socket.on('user-joined', async (data) => {
+                addSystemMessage(`${data.user} joined the conference`);
+                
+                if (data.user !== '{{ user.username }}') {
+                    // Create a new peer connection for this user
+                    const pc = createPeerConnection(data.user);
+                    
+                    // If we're the teacher, create an offer
+                    if ('{{ user.role }}' === 'teacher') {
+                        try {
+                            const offer = await pc.createOffer();
+                            await pc.setLocalDescription(offer);
+                            
+                            socket.emit('offer', {
+                                sdp: pc.localDescription,
+                                targetUserId: data.user,
+                                room: roomName
+                            });
+                        } catch (err) {
+                            console.error('Error creating offer:', err);
+                        }
+                    }
+                }
+            });
+
+            // When a user leaves
+            socket.on('user-left', (data) => {
+                addSystemMessage(`${data.user} left the conference`);
+                removeRemoteVideo(data.user);
+            });
+
+            // Handle incoming offers
             socket.on('offer', async (data) => {
-                if (data.from === '{{ user.username }}') return;
+                if (data.targetUserId !== '{{ user.username }}') return;
                 
                 try {
-                    if (!peerConnection) {
-                        createPeerConnection();
-                    }
+                    const pc = createPeerConnection(data.from);
                     
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                    await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
                     
-                    const answer = await peerConnection.createAnswer();
-                    await peerConnection.setLocalDescription(answer);
+                    const answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
                     
                     socket.emit('answer', {
-                        sdp: peerConnection.localDescription,
+                        sdp: pc.localDescription,
+                        targetUserId: data.from,
                         room: roomName
                     });
                 } catch (err) {
-                    console.error('Ошибка обработки offer:', err);
+                    console.error('Error handling offer:', err);
                 }
             });
 
+            // Handle incoming answers
             socket.on('answer', async (data) => {
-                if (data.from === '{{ user.username }}') return;
+                if (data.targetUserId !== '{{ user.username }}') return;
                 
                 try {
-                    if (peerConnection) {
-                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                    const pc = peerConnections[data.from];
+                    if (pc) {
+                        await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
                     }
                 } catch (err) {
-                    console.error('Ошибка обработки answer:', err);
+                    console.error('Error handling answer:', err);
                 }
             });
 
+            // Handle ICE candidates
             socket.on('ice-candidate', async (data) => {
-                if (data.from === '{{ user.username }}') return;
+                if (data.targetUserId !== '{{ user.username }}') return;
                 
                 try {
-                    if (peerConnection && data.candidate) {
-                        await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                    const pc = peerConnections[data.from];
+                    if (pc && data.candidate) {
+                        await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
                     }
                 } catch (err) {
-                    console.error('Ошибка обработки ICE candidate:', err);
+                    console.error('Error adding ICE candidate:', err);
                 }
             });
 
-            socket.on('user-joined', (data) => {
-                addMessage(`Пользователь ${data.user} присоединился`);
-            });
-
-            socket.on('user-left', (data) => {
-                addMessage(`Пользователь ${data.user} покинул конференцию`);
-            });
-
+            // Handle conference ended by teacher
             socket.on('conference-ended', () => {
-                addMessage('Конференция завершена учителем');
-                if (peerConnection) {
-                    peerConnection.close();
-                    peerConnection = null;
-                }
-                remoteVideo.srcObject = null;
-                startBtn.disabled = false;
-                joinBtn.disabled = false;
-                leaveBtn.disabled = true;
-                endBtn.disabled = true;
+                addSystemMessage('Conference ended by teacher');
+                leaveConference();
             });
 
+            // Handle chat messages
             socket.on('message', (data) => {
-                addMessage(`${data.user}: ${data.text}`);
+                addUserMessage(data.user, data.text);
             });
-
-            // Создаем peer connection и отправляем offer
-            if ('{{ user.role }}' === 'teacher') {
-                createPeerConnection();
-                sendOffer();
-            }
         }
 
-        function createPeerConnection() {
-            peerConnection = new RTCPeerConnection(configuration);
-
-            // Добавляем локальный поток
-            localStream.getTracks().forEach(track => {
-                peerConnection.addTrack(track, localStream);
-            });
-
-            // Обработчик получения удаленного потока
-            peerConnection.ontrack = (event) => {
-                remoteVideo.srcObject = event.streams[0];
-            };
-
-            // Обработчик ICE кандидатов
-            peerConnection.onicecandidate = (event) => {
-                if (event.candidate) {
-                    socket.emit('ice-candidate', {
-                        candidate: event.candidate,
-                        room: roomName
-                    });
-                }
-            };
-        }
-
-        async function sendOffer() {
-            try {
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-                
-                socket.emit('offer', {
-                    sdp: peerConnection.localDescription,
-                    room: roomName
-                });
-            } catch (err) {
-                console.error('Ошибка создания offer:', err);
-            }
-        }
-
-        // Отправить сообщение в чат
+        // Send chat message
         function sendMessage() {
             const message = messageInput.value.trim();
             if (message && roomName) {
@@ -385,20 +518,39 @@
                     room: roomName,
                     user: '{{ user.username }}'
                 });
-                addMessage(`Вы: ${message}`);
+                addUserMessage('You', message);
                 messageInput.value = '';
             }
         }
 
-        // Добавить сообщение в чат
-        function addMessage(message) {
+        // Add system message to chat
+        function addSystemMessage(message) {
             const messageElement = document.createElement('div');
+            messageElement.className = 'message system-message';
             messageElement.textContent = message;
             messagesDiv.appendChild(messageElement);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
 
-        // Выйти из системы
+        // Add user message to chat
+        function addUserMessage(username, message) {
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message';
+            
+            const usernameSpan = document.createElement('span');
+            usernameSpan.className = 'message-username';
+            usernameSpan.textContent = username + ': ';
+            
+            const textSpan = document.createElement('span');
+            textSpan.textContent = message;
+            
+            messageElement.appendChild(usernameSpan);
+            messageElement.appendChild(textSpan);
+            messagesDiv.appendChild(messageElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Logout
         function logout() {
             fetch('/api/logout')
                 .then(response => response.json())
@@ -409,12 +561,19 @@
                 });
         }
 
-        // Проверка статуса конференции при загрузке
+        // Initialize
         window.addEventListener('load', () => {
             if ('{{ user.role }}' === 'student') {
                 startBtn.disabled = true;
                 endBtn.disabled = true;
             }
+            
+            // Handle Enter key in message input
+            messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
         });
     </script>
 </body>
