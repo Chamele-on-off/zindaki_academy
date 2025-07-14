@@ -1,235 +1,31 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Тест конференции</title>
-    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        #video-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        .video-box {
-            width: 400px;
-            height: 300px;
-            background: #000;
-            position: relative;
-        }
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .video-label {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            color: white;
-            background: rgba(0,0,0,0.5);
-            padding: 5px 10px;
-            border-radius: 4px;
-        }
-        .controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        button {
-            padding: 8px 16px;
-            background: #4361ee;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button:hover {
-            background: #3a0ca3;
-        }
-        #room-id {
-            padding: 8px;
-            width: 200px;
-        }
-        #status {
-            margin-top: 20px;
-            padding: 10px;
-            background: #f0f0f0;
-            border-radius: 4px;
-        }
-        #peer-id {
-            margin-top: 10px;
-            font-weight: bold;
-        }
-    </style>
-</head>
-<body>
-    <h1>Тест видеоконференции</h1>
+@socketio.on('join')
+def handle_join(data):
+    if 'user' not in session:
+        emit('error', {'message': 'Unauthorized'})
+        return
     
-    <div id="video-container">
-        <div class="video-box">
-            <video id="remote-video" autoplay playsinline></video>
-            <div class="video-label">Удаленный участник</div>
-        </div>
-        <div class="video-box">
-            <video id="local-video" autoplay muted playsinline></video>
-            <div class="video-label">Вы</div>
-        </div>
-    </div>
-
-    <div class="controls">
-        <input type="text" id="room-id" placeholder="ID комнаты" value="test-room">
-        <button id="start-btn">Создать комнату</button>
-        <button id="join-btn">Присоединиться</button>
-        <button id="leave-btn" disabled>Покинуть</button>
-    </div>
-
-    <div id="peer-id">Ваш ID: загрузка...</div>
-    <div id="status">Статус: Не подключен</div>
-
-    <script>
-        let peer;
-        let currentPeerId;
-        let currentCall;
-        let localStream;
-        const roomIdInput = document.getElementById('room-id');
-        const startBtn = document.getElementById('start-btn');
-        const joinBtn = document.getElementById('join-btn');
-        const leaveBtn = document.getElementById('leave-btn');
-        const statusDiv = document.getElementById('status');
-        const peerIdDiv = document.getElementById('peer-id');
-        const localVideo = document.getElementById('local-video');
-        const remoteVideo = document.getElementById('remote-video');
-
-        // Инициализация PeerJS
-        async function initPeer() {
-            try {
-                // Создаем Peer с рандомным ID
-                peer = new Peer({
-                    host: '0.peerjs.com',
-                    port: 443,
-                    secure: true,
-                    debug: 3
-                });
-                
-                peer.on('open', (id) => {
-                    currentPeerId = id;
-                    peerIdDiv.textContent = `Ваш ID: ${id}`;
-                    statusDiv.textContent = `Статус: Готов к подключению`;
-                });
-
-                peer.on('error', (err) => {
-                    console.error('PeerJS error:', err);
-                    statusDiv.textContent = `Ошибка: ${err.message}`;
-                });
-
-                // Обработка входящих вызовов
-                peer.on('call', async (call) => {
-                    statusDiv.textContent = `Входящее соединение от ${call.peer}`;
-                    
-                    try {
-                        // Отвечаем на вызов с нашим потоком
-                        call.answer(localStream);
-                        
-                        call.on('stream', (remoteStream) => {
-                            remoteVideo.srcObject = remoteStream;
-                            statusDiv.textContent = `Статус: Подключен к ${call.peer}`;
-                        });
-                        
-                        call.on('close', () => {
-                            remoteVideo.srcObject = null;
-                            statusDiv.textContent = 'Соединение закрыто';
-                        });
-                        
-                        currentCall = call;
-                    } catch (err) {
-                        console.error('Answer call error:', err);
-                        statusDiv.textContent = `Ошибка при ответе на вызов: ${err.message}`;
-                    }
-                });
-
-                // Получаем доступ к камере/микрофону
-                localStream = await navigator.mediaDevices.getUserMedia({
-                    video: true,
-                    audio: true
-                });
-                localVideo.srcObject = localStream;
-                
-            } catch (err) {
-                console.error('Initialization error:', err);
-                statusDiv.textContent = `Ошибка инициализации: ${err.message}`;
-            }
+    room = data.get('room')
+    if not room:
+        emit('error', {'message': 'Room not specified'})
+        return
+    
+    user = session['user']['username']
+    join_room(room)
+    user_rooms[request.sid] = room
+    
+    if room not in active_conferences:
+        active_conferences[room] = {
+            'teacher': user if session['user']['role'] == 'teacher' else None,
+            'started_at': datetime.now().isoformat(),
+            'participants': []
         }
-
-        // Создать комнату (как учитель)
-        startBtn.addEventListener('click', () => {
-            if (!peer || !roomIdInput.value) return;
-            
-            // В этом простом примере "создание комнаты" просто означает,
-            // что мы готовы принимать входящие соединения
-            statusDiv.textContent = `Ожидаем подключения в комнате ${roomIdInput.value}`;
-            startBtn.disabled = true;
-            joinBtn.disabled = true;
-            leaveBtn.disabled = false;
-        });
-
-        // Присоединиться к комнате (как студент)
-        joinBtn.addEventListener('click', async () => {
-            if (!peer || !roomIdInput.value) return;
-            
-            try {
-                statusDiv.textContent = `Подключаемся к ${roomIdInput.value}`;
-                
-                // Инициируем видеозвонок
-                const call = peer.call(roomIdInput.value, localStream);
-                
-                call.on('stream', (remoteStream) => {
-                    remoteVideo.srcObject = remoteStream;
-                    statusDiv.textContent = `Статус: Подключен к ${roomIdInput.value}`;
-                    startBtn.disabled = true;
-                    joinBtn.disabled = true;
-                    leaveBtn.disabled = false;
-                    currentCall = call;
-                });
-                
-                call.on('error', (err) => {
-                    console.error('Call error:', err);
-                    statusDiv.textContent = `Ошибка подключения: ${err.message}`;
-                });
-                
-                call.on('close', () => {
-                    remoteVideo.srcObject = null;
-                    statusDiv.textContent = 'Соединение закрыто';
-                });
-                
-            } catch (err) {
-                console.error('Connection error:', err);
-                statusDiv.textContent = `Ошибка: ${err.message}`;
-            }
-        });
-
-        // Покинуть комнату
-        leaveBtn.addEventListener('click', () => {
-            if (currentCall) {
-                currentCall.close();
-            }
-            remoteVideo.srcObject = null;
-            statusDiv.textContent = 'Статус: Отключен';
-            startBtn.disabled = false;
-            joinBtn.disabled = false;
-            leaveBtn.disabled = true;
-            currentCall = null;
-        });
-
-        // Инициализация при загрузке страницы
-        window.addEventListener('load', initPeer);
-    </script>
-</body>
-</html>
+    
+    if user not in active_conferences[room]['participants']:
+        active_conferences[room]['participants'].append(user)
+    
+    # Отправляем обновленный список участников всем в комнате
+    emit('user-joined', {
+        'user': user,
+        'participants': active_conferences[room]['participants']
+    }, room=room)
+    logger.info(f'User {user} joined room {room}')
