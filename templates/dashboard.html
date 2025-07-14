@@ -1105,6 +1105,86 @@
             inviteCheckInterval = setInterval(loadStudentInvites, 10000);
         }
 
+        // Загрузка приглашений для студента
+        async function loadStudentInvites() {
+            try {
+                const response = await fetch('/api/conference/invites');
+                if (!response.ok) {
+                    throw new Error('Ошибка загрузки приглашений');
+                }
+                const data = await response.json();
+                
+                const invitesList = document.getElementById('studentInvitesList');
+                invitesList.innerHTML = '';
+                
+                if (data.invites && data.invites.length > 0) {
+                    // Фильтруем только приглашения для текущего пользователя со статусом 'pending'
+                    const userInvites = data.invites.filter(invite => 
+                        invite.student === '{{ user.username }}' && invite.status === 'pending'
+                    );
+                    
+                    if (userInvites.length === 0) {
+                        invitesList.innerHTML = '<p>Нет новых приглашений</p>';
+                        return;
+                    }
+                    
+                    userInvites.forEach(invite => {
+                        const inviteCard = document.createElement('div');
+                        inviteCard.className = 'invite-card';
+                        inviteCard.innerHTML = `
+                            <div class="invite-info">
+                                <p><strong>Преподаватель:</strong> ${invite.teacher}</p>
+                                <p><small>Получено: ${new Date(invite.created_at).toLocaleString()}</small></p>
+                            </div>
+                            <div class="invite-actions">
+                                <button class="btn btn-success" onclick="respondToInvite(${invite.id}, 'accept')">
+                                    <i class="fas fa-check"></i> Принять
+                                </button>
+                                <button class="btn btn-danger" onclick="respondToInvite(${invite.id}, 'decline')">
+                                    <i class="fas fa-times"></i> Отклонить
+                                </button>
+                            </div>
+                        `;
+                        invitesList.appendChild(inviteCard);
+                    });
+                } else {
+                    invitesList.innerHTML = '<p>Нет новых приглашений</p>';
+                }
+            } catch (error) {
+                console.error('Error loading invites:', error);
+                document.getElementById('studentInvitesList').innerHTML = 
+                    '<p>Ошибка загрузки приглашений. Пожалуйста, обновите страницу.</p>';
+            }
+        }
+
+        // Ответ на приглашение (принять/отклонить)
+        window.respondToInvite = async function(inviteId, action) {
+            try {
+                const response = await fetch(`/api/conference/invite/${inviteId}/respond`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ action })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    if (action === 'accept') {
+                        // Принятие приглашения - присоединяемся к конференции
+                        initConference(data.room_name);
+                    }
+                    // Обновляем список приглашений
+                    loadStudentInvites();
+                } else {
+                    alert(data.error || 'Ошибка при обработке приглашения');
+                }
+            } catch (error) {
+                console.error('Error responding to invite:', error);
+                alert('Произошла ошибка при обработке приглашения');
+            }
+        };
+
         // Инициализация видеоконференции с PeerJS
         async function initConference(roomName, isInitiator = false) {
             console.log('Initializing conference with PeerJS...');
@@ -1631,74 +1711,9 @@
             loadTeacherInvites();
         } else {
             // Для студентов: загрузка приглашений
-            async function loadStudentInvites() {
-                try {
-                    const response = await fetch('/api/conference/invites');
-                    const data = await response.json();
-                    
-                    const invitesList = document.getElementById('studentInvitesList');
-                    invitesList.innerHTML = '';
-                    
-                    if (data.invites.length === 0) {
-                        invitesList.innerHTML = '<p>Нет новых приглашений</p>';
-                        return;
-                    }
-                    
-                    data.invites.forEach(invite => {
-                        const inviteCard = document.createElement('div');
-                        inviteCard.className = 'invite-card';
-                        inviteCard.innerHTML = `
-                            <div class="invite-info">
-                                <p><strong>Преподаватель:</strong> ${invite.teacher}</p>
-                                <p><strong>Статус:</strong> <span class="status-${invite.status}">${
-                                    invite.status === 'pending' ? 'Ожидает вашего ответа' : 
-                                    invite.status === 'accepted' ? 'Принято' : 'Отклонено'
-                                }</span></p>
-                                <p><small>Получено: ${new Date(invite.created_at).toLocaleString()}</small></p>
-                            </div>
-                            <div class="invite-actions">
-                                ${invite.status === 'pending' ? `
-                                <button class="btn btn-success" onclick="respondToInvite(${invite.id}, 'accept')">
-                                    <i class="fas fa-check"></i> Принять
-                                </button>
-                                <button class="btn btn-danger" onclick="respondToInvite(${invite.id}, 'decline')">
-                                    <i class="fas fa-times"></i> Отклонить
-                                </button>
-                                ` : ''}
-                            </div>
-                        `;
-                        invitesList.appendChild(inviteCard);
-                    });
-                } catch (error) {
-                    console.error('Error loading invites:', error);
-                }
-            }
-            
-            // Инициализация
             loadStudentInvites();
         }
         
-        // Функция для ответа на приглашение (для студента)
-        window.respondToInvite = async function(inviteId, action) {
-            const response = await fetch(`/api/conference/invite/${inviteId}/respond`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ action })
-            });
-            
-            const data = await response.json();
-            if (data.success) {
-                if (action === 'accept') {
-                    initConference(data.room_name);
-                }
-                loadStudentInvites();
-            } else {
-                alert(data.error || 'Ошибка при обработке приглашения');
-            }
-        };
-
         // Обработка присоединения к уроку
         document.addEventListener('click', function(e) {
             if (e.target && e.target.classList.contains('join-lesson-btn')) {
@@ -2002,6 +2017,6 @@
         document.addEventListener('DOMContentLoaded', function() {
             initPeerJS();
         });
-    </script> 
+    </script>
 </body>
 </html>
