@@ -6,7 +6,6 @@
     <title>Личный кабинет | Zindaki Academy</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
         :root {
             --primary: #4361ee;
@@ -437,6 +436,20 @@
             color: var(--text-light);
         }
         
+        /* Повторяющиеся занятия */
+        .recurring-options {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: var(--light);
+            border-radius: var(--rounded-md);
+        }
+        
+        .recurring-options label {
+            display: inline-block;
+            margin-right: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
         /* Приглашения */
         .invite-card {
             background: white;
@@ -474,40 +487,6 @@
         
         .fullscreen-btn:hover {
             background: rgba(0,0,0,0.7);
-        }
-        
-        /* Полезности */
-        .utilities-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-top: 1.5rem;
-        }
-        
-        .utility-card {
-            background: white;
-            border-radius: var(--rounded-md);
-            padding: 1.5rem;
-            box-shadow: var(--shadow-md);
-            transition: transform 0.3s ease;
-        }
-        
-        .utility-card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .utility-card h3 {
-            margin-bottom: 1rem;
-            color: var(--primary);
-        }
-        
-        .utility-card p {
-            margin-bottom: 1rem;
-            color: var(--text-light);
-        }
-        
-        .utility-card .btn {
-            margin-top: 0.5rem;
         }
         
         /* Адаптивность */
@@ -555,10 +534,6 @@
                 bottom: 10px;
                 right: 10px;
             }
-            
-            .utilities-grid {
-                grid-template-columns: 1fr;
-            }
         }
     </style>
 </head>
@@ -604,6 +579,39 @@
             </div>
         </div>
 
+        <!-- Расписание занятий -->
+        <div class="section">
+            <h2 class="section-title">
+                Расписание занятий
+                <div class="actions">
+                    <button class="btn" id="addLessonBtn">
+                        <i class="fas fa-plus"></i> Добавить занятие
+                    </button>
+                    <button class="btn" id="assignHomeworkBtn">
+                        <i class="fas fa-book"></i> Назначить ДЗ
+                    </button>
+                </div>
+            </h2>
+            
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Название</th>
+                            <th>Описание</th>
+                            <th>Дата/время</th>
+                            <th>Длительность</th>
+                            <th>Ученики</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lessonsTable">
+                        <!-- Данные будут загружены через JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- Домашние задания (для учителя) -->
         <div class="section">
             <h2 class="section-title">Назначенные домашние задания</h2>
@@ -619,19 +627,7 @@
                         </tr>
                     </thead>
                     <tbody id="homeworksTable">
-                        {% for hw in homeworks %}
-                        <tr>
-                            <td>{{ hw.title }}</td>
-                            <td>{{ hw.description }}</td>
-                            <td>{{ hw.deadline }}</td>
-                            <td>{{ hw.students|join(', ') }}</td>
-                            <td>
-                                <span class="homework-status homework-status-{{ 'submitted' if hw.status == 'submitted' else 'not-submitted' }}">
-                                    {{ 'Сдано' if hw.status == 'submitted' else 'Не сдано' }}
-                                </span>
-                            </td>
-                        </tr>
-                        {% endfor %}
+                        <!-- Данные будут загружены через JavaScript -->
                     </tbody>
                 </table>
             </div>
@@ -672,6 +668,8 @@
                         <tr>
                             <th>Название</th>
                             <th>Описание</th>
+                            <th>Дата/время</th>
+                            <th>Длительность</th>
                             <th>Действия</th>
                         </tr>
                     </thead>
@@ -680,10 +678,12 @@
                         <tr>
                             <td>{{ lesson.title }}</td>
                             <td>{{ lesson.description }}</td>
+                            <td>{{ lesson.schedule }}</td>
+                            <td>{{ lesson.duration }} мин</td>
                             <td>
-                                <button class="btn join-lesson-btn" data-lesson-id="{{ lesson.id }}">
+                                <a href="/api/lesson/{{ lesson.id }}/join" class="btn">
                                     <i class="fas fa-video"></i> Присоединиться
-                                </button>
+                                </a>
                             </td>
                         </tr>
                         {% endfor %}
@@ -693,23 +693,6 @@
             {% else %}
             <p>Вы пока не записаны ни на один курс</p>
             {% endif %}
-            
-            <!-- Альтернативные ссылки на конференции -->
-            <div style="margin-top: 2rem;">
-                <h3>Альтернативные платформы для конференций:</h3>
-                <ul style="margin-top: 1rem; list-style-type: none; padding-left: 0;">
-                    <li style="margin-bottom: 0.5rem;">
-                        <a href="https://meet.google.com/eec-earm-gyd" target="_blank" class="btn btn-secondary" style="display: inline-flex; align-items: center;">
-                            <i class="fab fa-google" style="margin-right: 0.5rem;"></i> Google Meet
-                        </a>
-                    </li>
-                    <li>
-                        <a href="https://teams.live.com/meet/9480976290023?p=wqOkR5Ye8VJMKmpq" target="_blank" class="btn btn-secondary" style="display: inline-flex; align-items: center;">
-                            <i class="fab fa-microsoft" style="margin-right: 0.5rem;"></i> Microsoft Teams
-                        </a>
-                    </li>
-                </ul>
-            </div>
         </div>
 
         <!-- Приглашения на конференции (для студента) -->
@@ -723,7 +706,7 @@
         <!-- Домашние задания (для студента) -->
         <div class="section">
             <h2 class="section-title">Домашние задания</h2>
-            {% if homeworks %}
+            {% if homework %}
             <div class="table-container">
                 <table>
                     <thead>
@@ -736,7 +719,7 @@
                         </tr>
                     </thead>
                     <tbody id="studentHomeworkTable">
-                        {% for hw in homeworks %}
+                        {% for hw in homework %}
                         <tr>
                             <td>{{ hw.title }}</td>
                             <td>{{ hw.description }}</td>
@@ -768,53 +751,13 @@
         </div>
         {% endif %}
 
-        <!-- Раздел "Полезности" -->
-        <div class="section">
-            <h2 class="section-title">Полезные ресурсы</h2>
-            <div class="utilities-grid">
-                <div class="utility-card">
-                    <h3>VPN подключение</h3>
-                    <p>Получите QR-код для подключения к нашему VPN серверу через WireGuard</p>
-                    <button class="btn" id="getVpnBtn">
-                        <i class="fas fa-qrcode"></i> Получить QR-код
-                    </button>
-                </div>
-                
-                <div class="utility-card">
-                    <h3>Словари и переводчики</h3>
-                    <p>Полезные ссылки на онлайн-словари и переводчики для изучения языков</p>
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                        <a href="https://translate.yandex.ru/" target="_blank" class="btn btn-secondary">
-                            <i class="fas fa-language"></i> Яндекс.Переводчик
-                        </a>
-                        <a href="https://www.lingvolive.com/" target="_blank" class="btn btn-secondary">
-                            <i class="fas fa-book"></i> Lingvo
-                        </a>
-                    </div>
-                </div>
-                
-                <div class="utility-card">
-                    <h3>Образовательные ресурсы</h3>
-                    <p>Дополнительные материалы для углубленного изучения предметов</p>
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                        <a href="https://postnauka.ru/" target="_blank" class="btn btn-secondary">
-                            <i class="fas fa-graduation-cap"></i> ПостНаука
-                        </a>
-                        <a href="https://arzamas.academy/" target="_blank" class="btn btn-secondary">
-                            <i class="fas fa-history"></i> Арзамас
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Видеоконференция -->
         <div class="section" id="conferenceSection" style="display: none;">
             <h2 class="section-title">Видеоконференция</h2>
             
             <div class="conference-container" id="conferenceContainer">
                 <!-- Основное видео (удаленный участник) -->
-                <div class="video-container" id="remoteVideoContainer">
+                <div class="video-container" id="remoteVideoContainer" style="display: none;">
                     <video id="remoteVideo" autoplay playsinline></video>
                     <div class="video-label" id="remoteVideoLabel">Участник</div>
                     <div class="video-controls">
@@ -831,7 +774,7 @@
             </div>
             
             <!-- Маленькое окно с локальным видео (в правом нижнем углу) -->
-            <div class="local-video-container" id="localVideoContainer">
+            <div class="local-video-container" id="localVideoContainer" style="display: none;">
                 <video id="localVideo" autoplay muted playsinline></video>
                 <div class="video-label">Вы ({{ user.username }})</div>
                 <div class="video-controls">
@@ -840,12 +783,6 @@
                     </button>
                     <button class="video-control-btn" id="toggleAudioBtn">
                         <i class="fas fa-microphone"></i>
-                    </button>
-                    <button class="video-control-btn" id="shareScreenBtn" style="display: none;">
-                        <i class="fas fa-desktop"></i>
-                    </button>
-                    <button class="video-control-btn btn-danger" id="disconnectBtn">
-                        <i class="fas fa-phone-slash"></i>
                     </button>
                 </div>
             </div>
@@ -873,15 +810,15 @@
             
             <div class="conference-controls">
                 {% if is_teacher %}
-                <button class="btn" id="teacherShareScreenBtn">
+                <button class="btn" id="shareScreenBtn">
                     <i class="fas fa-desktop"></i> Демонстрация экрана
                 </button>
-                <button class="btn btn-danger" id="endConferenceBtn">
-                    <i class="fas fa-stop"></i> Завершить конференцию
-                </button>
                 {% endif %}
-                <button class="btn btn-danger" id="leaveConferenceBtn">
+                <button class="btn btn-danger" id="leaveConference">
                     <i class="fas fa-phone-slash"></i> Покинуть конференцию
+                </button>
+                <button class="btn" id="endConferenceBtn" style="display: none;">
+                    <i class="fas fa-stop"></i> Завершить конференцию
                 </button>
             </div>
         </div>
@@ -926,6 +863,101 @@
                 <div class="form-group" style="margin-top: 2rem;">
                     <button type="submit" class="btn">
                         <i class="fas fa-save"></i> Сохранить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="addLessonModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Добавить новое занятие</h2>
+            <form id="addLessonForm">
+                <div class="form-group">
+                    <label for="lessonTitle">Название занятия</label>
+                    <input type="text" id="lessonTitle" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="lessonDescription">Описание</label>
+                    <textarea id="lessonDescription" class="form-control" rows="3"></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="lessonDate">Дата начала</label>
+                        <input type="date" id="lessonDate" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lessonTime">Время</label>
+                        <input type="time" id="lessonTime" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lessonDuration">Длительность (мин)</label>
+                        <input type="number" id="lessonDuration" class="form-control" value="60" min="30" step="15" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="lessonStudents">Выберите учеников</label>
+                    <select id="lessonStudents" class="form-control" multiple style="height: 150px;">
+                        <!-- Список учеников будет загружен через JavaScript -->
+                    </select>
+                </div>
+                
+                <div class="form-group" style="margin-top: 2rem;">
+                    <button type="submit" class="btn">
+                        <i class="fas fa-save"></i> Сохранить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="assignHomeworkModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Назначить домашнее задание</h2>
+            <form id="assignHomeworkForm">
+                <div class="form-group">
+                    <label for="homeworkLesson">Урок</label>
+                    <select id="homeworkLesson" class="form-control" required>
+                        <!-- Список уроков будет загружен через JavaScript -->
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkTitle">Название задания</label>
+                    <input type="text" id="homeworkTitle" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkDescription">Описание</label>
+                    <textarea id="homeworkDescription" class="form-control" rows="3" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkDeadline">Срок сдачи</label>
+                    <input type="date" id="homeworkDeadline" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkStudents">Ученики</label>
+                    <select id="homeworkStudents" class="form-control" multiple style="height: 150px;" required>
+                        <!-- Список учеников будет загружен через JavaScript -->
+                    </select>
+                </div>
+                
+                <div class="form-group file-upload">
+                    <label for="homeworkFiles">Прикрепленные файлы</label>
+                    <input type="file" id="homeworkFiles" class="form-control" multiple>
+                    <div class="file-upload-preview" id="homeworkFilesPreview"></div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 2rem;">
+                    <button type="submit" class="btn">
+                        <i class="fas fa-save"></i> Назначить задание
                     </button>
                 </div>
             </form>
@@ -1000,237 +1032,116 @@
         </div>
     </div>
 
-    <div class="modal" id="vpnModal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2>VPN подключение</h2>
-            <div id="vpnContent" style="text-align: center;">
-                <p>Используйте этот QR-код для подключения к нашему VPN серверу через WireGuard</p>
-                <div id="vpnQrCode" style="margin: 1rem auto; padding: 1rem; background: white; display: inline-block;">
-                    <!-- QR-код будет сгенерирован здесь -->
-                </div>
-                <p>Или скачайте конфигурационный файл:</p>
-                <button class="btn" id="downloadVpnConfig">
-                    <i class="fas fa-download"></i> Скачать конфиг
-                </button>
-            </div>
-        </div>
-    </div>
-
     <script>
-        // PeerJS конфигурация
-        let peer = null;
-        let currentPeerId = null;
-        let connections = {};
+        // Обработка выхода
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            fetch('/api/logout')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = '/';
+                    }
+                });
+        });
+
+        // Видеоконференция на основе WebRTC
         let localStream = null;
-        let screenStream = null;
+        let peerConnection = null;
         let currentRoom = null;
         let isVideoEnabled = true;
         let isAudioEnabled = true;
+        let screenStream = null;
         let isScreenSharing = false;
-        let inviteCheckInterval = null;
 
-        // Инициализация PeerJS
-        function initPeerJS() {
-            // Генерируем уникальный ID для пользователя
-            const userId = '{{ user.username }}_' + Math.random().toString(36).substr(2, 9);
-            currentPeerId = userId;
-            
-            // Создаем Peer объект с настройкой для локального сервера PeerJS
-            peer = new Peer(userId, {
-                host: 'localhost',
-                port: 9001,
-                secure: false,
-                path: '/peerjs',
-                debug: 3
-            });
-            
-            peer.on('open', (id) => {
-                console.log('PeerJS подключен с ID:', id);
-                currentPeerId = id;
-                
-                // Для студента: запускаем проверку новых приглашений
-                if (!{{ 'true' if is_teacher else 'false' }}) {
-                    startCheckingInvites();
-                }
-            });
-            
-            peer.on('error', (err) => {
-                console.error('PeerJS ошибка:', err);
-            });
-            
-            // Обработка входящих соединений
-            peer.on('call', (call) => {
-                // Принимаем вызов и отвечаем своим потоком
-                call.answer(localStream);
-                
-                call.on('stream', (remoteStream) => {
-                    // Отображаем удаленный поток
-                    handleRemoteStream(remoteStream, call.peer);
-                });
-                
-                call.on('close', () => {
-                    removeRemoteStream(call.peer);
-                });
-                
-                call.on('error', (err) => {
-                    console.error('Ошибка вызова:', err);
-                    removeRemoteStream(call.peer);
-                });
-            });
-            
-            // Обработка входящих данных
-            peer.on('connection', (conn) => {
-                conn.on('data', (data) => {
-                    handlePeerData(conn.peer, data);
-                });
-                
-                conn.on('close', () => {
-                    removePeerConnection(conn.peer);
-                });
-            });
-        }
-
-        // Для студента: периодическая проверка новых приглашений
-        function startCheckingInvites() {
-            // Останавливаем предыдущий интервал, если он был
-            if (inviteCheckInterval) {
-                clearInterval(inviteCheckInterval);
-            }
-            
-            // Загружаем приглашения сразу
-            loadStudentInvites();
-            
-            // Устанавливаем интервал проверки каждые 10 секунд
-            inviteCheckInterval = setInterval(loadStudentInvites, 10000);
-        }
-
-        // Загрузка приглашений для студента
-        async function loadStudentInvites() {
-            try {
-                const response = await fetch('/api/conference/invites');
-                if (!response.ok) {
-                    throw new Error('Ошибка загрузки приглашений');
-                }
-                const data = await response.json();
-                
-                const invitesList = document.getElementById('studentInvitesList');
-                invitesList.innerHTML = '';
-                
-                if (data.invites && data.invites.length > 0) {
-                    // Фильтруем только приглашения для текущего пользователя со статусом 'pending'
-                    const userInvites = data.invites.filter(invite => 
-                        invite.student === '{{ user.username }}' && invite.status === 'pending'
-                    );
-                    
-                    if (userInvites.length === 0) {
-                        invitesList.innerHTML = '<p>Нет новых приглашений</p>';
-                        return;
-                    }
-                    
-                    userInvites.forEach(invite => {
-                        const inviteCard = document.createElement('div');
-                        inviteCard.className = 'invite-card';
-                        inviteCard.innerHTML = `
-                            <div class="invite-info">
-                                <p><strong>Преподаватель:</strong> ${invite.teacher}</p>
-                                <p><small>Получено: ${new Date(invite.created_at).toLocaleString()}</small></p>
-                            </div>
-                            <div class="invite-actions">
-                                <button class="btn btn-success" onclick="respondToInvite(${invite.id}, 'accept')">
-                                    <i class="fas fa-check"></i> Принять
-                                </button>
-                                <button class="btn btn-danger" onclick="respondToInvite(${invite.id}, 'decline')">
-                                    <i class="fas fa-times"></i> Отклонить
-                                </button>
-                            </div>
-                        `;
-                        invitesList.appendChild(inviteCard);
-                    });
-                } else {
-                    invitesList.innerHTML = '<p>Нет новых приглашений</p>';
-                }
-            } catch (error) {
-                console.error('Error loading invites:', error);
-                document.getElementById('studentInvitesList').innerHTML = 
-                    '<p>Ошибка загрузки приглашений. Пожалуйста, обновите страницу.</p>';
-            }
-        }
-
-        // Ответ на приглашение (принять/отклонить)
-        window.respondToInvite = async function(inviteId, action) {
-            try {
-                const response = await fetch(`/api/conference/invite/${inviteId}/respond`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ action })
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    if (action === 'accept') {
-                        // Принятие приглашения - присоединяемся к конференции
-                        initConference(data.room_name);
-                    }
-                    // Обновляем список приглашений
-                    loadStudentInvites();
-                } else {
-                    alert(data.error || 'Ошибка при обработке приглашения');
-                }
-            } catch (error) {
-                console.error('Error responding to invite:', error);
-                alert('Произошла ошибка при обработке приглашения');
-            }
+        // Конфигурация STUN/TURN серверов
+        const configuration = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' }
+                // Добавьте здесь свои TURN серверы при необходимости
+            ]
         };
 
-        // Инициализация видеоконференции с PeerJS
-        async function initConference(roomName, isInitiator = false) {
-            console.log('Initializing conference with PeerJS...');
+        // Инициализация видеоконференции
+        async function initConference(roomName) {
+            console.log('Initializing WebRTC conference...');
             currentRoom = roomName;
             
             try {
                 // Получаем доступ к камере и микрофону
-                const constraints = {
+                localStream = await navigator.mediaDevices.getUserMedia({
                     video: {
-                        width: { ideal: 640 },
-                        height: { ideal: 480 },
-                        frameRate: { ideal: 15, max: 20 }
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 30 }
                     },
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true
-                    }
-                };
-                
-                localStream = await navigator.mediaDevices.getUserMedia(constraints);
+                    audio: true
+                });
                 
                 // Отображаем локальное видео
                 const localVideo = document.getElementById('localVideo');
                 localVideo.srcObject = localStream;
                 document.getElementById('localVideoContainer').style.display = 'block';
                 
-                // Подключаемся к другим участникам
-                if (isInitiator) {
-                    // Учитель ожидает подключения студентов
-                    document.getElementById('waitingMessage').style.display = 'flex';
-                } else {
-                    // Студент подключается к учителю
-                    const teacherId = await getTeacherPeerId(roomName);
-                    if (teacherId) {
-                        connectToPeer(teacherId);
-                    } else {
-                        alert('Преподаватель не найден в комнате');
+                // Создаем PeerConnection
+                peerConnection = new RTCPeerConnection(configuration);
+                
+                // Добавляем треки из локального потока
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+                
+                // Обработка удаленного потока
+                peerConnection.ontrack = event => {
+                    console.log('Received remote track:', event.track.kind);
+                    const remoteVideo = document.getElementById('remoteVideo');
+                    if (!remoteVideo.srcObject) {
+                        remoteVideo.srcObject = event.streams[0];
+                        document.getElementById('remoteVideoContainer').style.display = 'block';
+                        document.getElementById('waitingMessage').style.display = 'none';
                     }
+                };
+                
+                // Обработка ICE кандидатов
+                peerConnection.onicecandidate = event => {
+                    if (event.candidate) {
+                        console.log('Sending ICE candidate:', event.candidate);
+                        sendIceCandidate(event.candidate);
+                    } else {
+                        console.log('All ICE candidates have been sent');
+                    }
+                };
+                
+                peerConnection.oniceconnectionstatechange = () => {
+                    console.log('ICE connection state:', peerConnection.iceConnectionState);
+                };
+                
+                peerConnection.onsignalingstatechange = () => {
+                    console.log('Signaling state:', peerConnection.signalingState);
+                };
+                
+                // Присоединяемся к комнате
+                await joinRoom(roomName);
+                
+                // Если учитель - создаем предложение (offer)
+                if ({% if is_teacher %}true{% else %}false{% endif %}) {
+                    console.log('Creating offer as teacher...');
+                    await createOffer(roomName);
+                } else {
+                    // Если студент - проверяем наличие offer
+                    console.log('Checking for offer as student...');
+                    await checkForOffer(roomName);
                 }
+                
+                // Начинаем проверку ICE кандидатов
+                checkForIceCandidates(roomName);
                 
                 document.getElementById('conferenceSection').style.display = 'block';
                 document.getElementById('conferenceSection').scrollIntoView({ behavior: 'smooth' });
                 
                 // Для учителя показываем кнопку завершения конференции
-                if ({{ 'true' if is_teacher else 'false' }}) {
+                if ({% if is_teacher %}true{% else %}false{% endif %}) {
                     document.getElementById('endConferenceBtn').style.display = 'inline-block';
                 }
             } catch (error) {
@@ -1239,215 +1150,184 @@
             }
         }
 
-        // Получение Peer ID преподавателя
-        async function getTeacherPeerId(roomName) {
-            try {
-                const response = await fetch(`/api/conference/${roomName}/host`);
-                const data = await response.json();
-                return data.peerId;
-            } catch (error) {
-                console.error('Error getting teacher peer ID:', error);
-                return null;
-            }
-        }
-
-        // Подключение к другому участнику
-        function connectToPeer(peerId) {
-            if (connections[peerId]) return;
-            
-            // Устанавливаем соединение для передачи данных
-            const conn = peer.connect(peerId);
-            connections[peerId] = conn;
-            
-            conn.on('open', () => {
-                console.log('Соединение установлено с', peerId);
-                // Отправляем информацию о себе
-                conn.send({
-                    type: 'user-info',
-                    username: '{{ user.username }}',
-                    isTeacher: {{ 'true' if is_teacher else 'false' }}
-                });
-            });
-            
-            conn.on('data', (data) => {
-                handlePeerData(peerId, data);
-            });
-            
-            conn.on('close', () => {
-                removePeerConnection(peerId);
-            });
-            
-            conn.on('error', (err) => {
-                console.error('Ошибка соединения:', err);
-                removePeerConnection(peerId);
-            });
-            
-            // Устанавливаем видеозвонок
-            const call = peer.call(peerId, localStream);
-            call.on('stream', (remoteStream) => {
-                handleRemoteStream(remoteStream, peerId);
-            });
-            
-            call.on('close', () => {
-                removeRemoteStream(peerId);
-            });
-            
-            call.on('error', (err) => {
-                console.error('Ошибка видеозвонка:', err);
-                removeRemoteStream(peerId);
-            });
-        }
-
-        // Обработка удаленного потока
-        function handleRemoteStream(stream, peerId) {
-            const remoteVideo = document.getElementById('remoteVideo');
-            remoteVideo.srcObject = stream;
-            document.getElementById('remoteVideoContainer').style.display = 'block';
-            document.getElementById('waitingMessage').style.display = 'none';
-            
-            // Добавляем участника в список
-            updateParticipantList(peerId, true);
-        }
-
-        // Удаление удаленного потока
-        function removeRemoteStream(peerId) {
-            const remoteVideo = document.getElementById('remoteVideo');
-            if (remoteVideo.srcObject) {
-                remoteVideo.srcObject.getTracks().forEach(track => track.stop());
-                remoteVideo.srcObject = null;
-            }
-            
-            document.getElementById('remoteVideoContainer').style.display = 'none';
-            document.getElementById('waitingMessage').style.display = 'flex';
-            
-            // Удаляем участника из списка
-            updateParticipantList(peerId, false);
-        }
-
-        // Обработка данных от других участников
-        function handlePeerData(peerId, data) {
-            switch (data.type) {
-                case 'user-info':
-                    updateParticipantList(peerId, true, data.username, data.isTeacher);
-                    break;
-                case 'screen-sharing':
-                    if (data.active) {
-                        document.getElementById('screenContainer').style.display = 'block';
-                        const screenVideo = document.getElementById('screenShare');
-                        screenVideo.srcObject = data.stream;
-                    } else {
-                        document.getElementById('screenContainer').style.display = 'none';
-                    }
-                    break;
-                case 'conference-end':
-                    alert('Конференция завершена преподавателем');
-                    leaveConference();
-                    break;
-            }
-        }
-
-        // Удаление соединения с участником
-        function removePeerConnection(peerId) {
-            if (connections[peerId]) {
-                connections[peerId].close();
-                delete connections[peerId];
-            }
-            removeRemoteStream(peerId);
-        }
-
-        // Обновление списка участников
-        function updateParticipantList(peerId, isConnected, username = null, isTeacher = false) {
-            const participantsList = document.getElementById('participantsList');
-            const participantItem = document.getElementById(`participant-${peerId}`);
-            
-            if (isConnected) {
-                if (!participantItem) {
-                    const item = document.createElement('div');
-                    item.className = 'participant-item';
-                    item.id = `participant-${peerId}`;
-                    item.innerHTML = `
-                        <div class="participant-avatar">${(username || peerId).charAt(0).toUpperCase()}</div>
-                        <div>${username || peerId} ${isTeacher ? '(Преподаватель)' : ''}</div>
-                    `;
-                    participantsList.appendChild(item);
+        // Присоединение к комнате
+        async function joinRoom(roomName) {
+            const response = await fetch(`/api/conference/${roomName}/join`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
                 }
-            } else if (participantItem) {
-                participantItem.remove();
+            });
+            return await response.json();
+        }
+
+        // Создание и отправка предложения (offer)
+        async function createOffer(roomName) {
+            try {
+                const offer = await peerConnection.createOffer({
+                    offerToReceiveAudio: true,
+                    offerToReceiveVideo: true
+                });
+                console.log('Created offer:', offer);
+                
+                await peerConnection.setLocalDescription(offer);
+                console.log('Set local description:', peerConnection.localDescription);
+                
+                const response = await fetch(`/api/conference/${roomName}/offer`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        sdp: offer.sdp,
+                        type: offer.type
+                    })
+                });
+                
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error('Failed to send offer');
+                }
+                
+                console.log('Offer sent successfully');
+                // Начинаем проверку ответов (answer)
+                checkForAnswer(roomName);
+            } catch (error) {
+                console.error('Error in createOffer:', error);
             }
         }
 
-        // Демонстрация экрана (для учителя)
-        async function startScreenSharing() {
-            if (isScreenSharing) {
-                stopScreenSharing();
-                return;
+        // Проверка наличия предложения (offer)
+        async function checkForOffer(roomName) {
+            try {
+                const response = await fetch(`/api/conference/${roomName}/get_offer`);
+                const data = await response.json();
+                
+                if (data.success && data.offer) {
+                    console.log('Received offer:', data.offer);
+                    await handleOffer(roomName, data.offer);
+                } else {
+                    // Если нет offer, ждем и проверяем снова
+                    setTimeout(() => checkForOffer(roomName), 2000);
+                }
+            } catch (error) {
+                console.error('Error in checkForOffer:', error);
+                setTimeout(() => checkForOffer(roomName), 2000);
             }
+        }
+
+        // Обработка полученного предложения (offer)
+        async function handleOffer(roomName, offer) {
+            try {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+                console.log('Set remote description:', offer);
+                
+                // Создаем ответ (answer)
+                const answer = await peerConnection.createAnswer({
+                    offerToReceiveAudio: true,
+                    offerToReceiveVideo: true
+                });
+                console.log('Created answer:', answer);
+                
+                await peerConnection.setLocalDescription(answer);
+                console.log('Set local description:', peerConnection.localDescription);
+                
+                // Отправляем answer на сервер
+                const response = await fetch(`/api/conference/${roomName}/answer`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        sdp: answer.sdp,
+                        type: answer.type
+                    })
+                });
+                
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error('Failed to send answer');
+                }
+                
+                console.log('Answer sent successfully');
+            } catch (error) {
+                console.error('Error in handleOffer:', error);
+            }
+        }
+
+        // Проверка наличия ответа (answer)
+        async function checkForAnswer(roomName) {
+            try {
+                const response = await fetch(`/api/conference/${roomName}/get_answer`);
+                const data = await response.json();
+                
+                if (data.success && data.answer) {
+                    console.log('Received answer:', data.answer);
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                } else {
+                    // Если нет answer, ждем и проверяем снова
+                    setTimeout(() => checkForAnswer(roomName), 2000);
+                }
+            } catch (error) {
+                console.error('Error in checkForAnswer:', error);
+                setTimeout(() => checkForAnswer(roomName), 2000);
+            }
+        }
+
+        // Проверка ICE кандидатов
+        async function checkForIceCandidates(roomName) {
+            try {
+                if (!peerConnection || peerConnection.iceConnectionState === 'closed') {
+                    return;
+                }
+                
+                const response = await fetch(`/api/conference/${roomName}/get_ice_candidates`);
+                const data = await response.json();
+                
+                if (data.success && data.candidates && data.candidates.length > 0) {
+                    console.log('Received ICE candidates:', data.candidates);
+                    for (const candidate of data.candidates) {
+                        try {
+                            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                        } catch (e) {
+                            console.error('Error adding ICE candidate:', e);
+                        }
+                    }
+                }
+                
+                // Продолжаем проверять новые кандидаты
+                setTimeout(() => checkForIceCandidates(roomName), 2000);
+            } catch (error) {
+                console.error('Error in checkForIceCandidates:', error);
+                setTimeout(() => checkForIceCandidates(roomName), 2000);
+            }
+        }
+
+        // Отправка ICE кандидата на сервер
+        async function sendIceCandidate(candidate) {
+            if (!currentRoom || !peerConnection) return;
             
             try {
-                screenStream = await navigator.mediaDevices.getDisplayMedia({
-                    video: {
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                        frameRate: { ideal: 10, max: 15 }
+                await fetch(`/api/conference/${currentRoom}/ice`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
                     },
-                    audio: false
+                    body: JSON.stringify({
+                        candidate: candidate.candidate,
+                        sdpMid: candidate.sdpMid,
+                        sdpMLineIndex: candidate.sdpMLineIndex
+                    })
                 });
-                
-                isScreenSharing = true;
-                document.getElementById('screenContainer').style.display = 'block';
-                document.getElementById('teacherShareScreenBtn').innerHTML = '<i class="fas fa-stop"></i> Остановить демонстрацию';
-                
-                const screenVideo = document.getElementById('screenShare');
-                screenVideo.srcObject = screenStream;
-                
-                // Отправляем информацию о демонстрации экрана всем участникам
-                Object.keys(connections).forEach(peerId => {
-                    const call = peer.call(peerId, screenStream);
-                    call.on('stream', (remoteStream) => {
-                        // Участник получит наш экран
-                    });
-                    
-                    connections[peerId].send({
-                        type: 'screen-sharing',
-                        active: true
-                    });
-                });
-                
-                screenStream.getVideoTracks()[0].onended = () => {
-                    stopScreenSharing();
-                };
-                
             } catch (error) {
-                console.error('Error starting screen sharing:', error);
-                isScreenSharing = false;
-                document.getElementById('screenContainer').style.display = 'none';
-                document.getElementById('teacherShareScreenBtn').innerHTML = '<i class="fas fa-desktop"></i> Демонстрация экрана';
+                console.error('Error sending ICE candidate:', error);
             }
-        }
-
-        // Остановка демонстрации экрана
-        function stopScreenSharing() {
-            if (screenStream) {
-                screenStream.getTracks().forEach(track => track.stop());
-                screenStream = null;
-            }
-            
-            isScreenSharing = false;
-            document.getElementById('screenContainer').style.display = 'none';
-            document.getElementById('teacherShareScreenBtn').innerHTML = '<i class="fas fa-desktop"></i> Демонстрация экрана';
-            
-            // Уведомляем участников об остановке демонстрации
-            Object.keys(connections).forEach(peerId => {
-                connections[peerId].send({
-                    type: 'screen-sharing',
-                    active: false
-                });
-            });
         }
 
         // Выход из конференции
         async function leaveConference() {
-            // Останавливаем все медиапотоки
+            console.log('Leaving conference...');
+            
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
                 localStream = null;
@@ -1458,27 +1338,17 @@
                 screenStream = null;
             }
             
-            // Закрываем все соединения
-            Object.keys(connections).forEach(peerId => {
-                connections[peerId].close();
-            });
-            connections = {};
-            
-            // Очищаем видеоэлементы
-            document.getElementById('remoteVideo').srcObject = null;
-            document.getElementById('localVideo').srcObject = null;
-            document.getElementById('screenShare').srcObject = null;
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
             
             document.getElementById('waitingMessage').style.display = 'flex';
             document.getElementById('remoteVideoContainer').style.display = 'none';
             document.getElementById('localVideoContainer').style.display = 'none';
             document.getElementById('screenContainer').style.display = 'none';
             
-            // Очищаем список участников
-            document.getElementById('participantsList').innerHTML = '<h4>Участники:</h4>';
-            
             if (currentRoom) {
-                // Уведомляем сервер о выходе из комнаты
                 await fetch(`/api/conference/${currentRoom}/leave`, {
                     method: 'POST',
                     headers: {
@@ -1495,13 +1365,6 @@
         // Завершение конференции (для учителя)
         async function endConference() {
             if (confirm('Вы уверены, что хотите завершить конференцию для всех участников?')) {
-                // Уведомляем всех участников о завершении
-                Object.keys(connections).forEach(peerId => {
-                    connections[peerId].send({
-                        type: 'conference-end'
-                    });
-                });
-                
                 await leaveConference();
                 
                 if (currentRoom) {
@@ -1514,6 +1377,29 @@
                 }
                 
                 window.location.reload();
+            }
+        }
+
+        // Полноэкранный режим
+        function toggleFullscreen(elementId) {
+            const element = document.getElementById(elementId);
+            
+            if (!document.fullscreenElement) {
+                if (element.requestFullscreen) {
+                    element.requestFullscreen();
+                } else if (element.webkitRequestFullscreen) {
+                    element.webkitRequestFullscreen();
+                } else if (element.msRequestFullscreen) {
+                    element.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
             }
         }
 
@@ -1553,25 +1439,65 @@
             }
         }
 
-        // Полноэкранный режим
-        function toggleFullscreen(elementId) {
-            const element = document.getElementById(elementId);
+        // Демонстрация экрана (для учителя)
+        async function startScreenSharing() {
+            if (isScreenSharing) {
+                stopScreenSharing();
+                return;
+            }
             
-            if (!document.fullscreenElement) {
-                if (element.requestFullscreen) {
-                    element.requestFullscreen();
-                } else if (element.webkitRequestFullscreen) {
-                    element.webkitRequestFullscreen();
-                } else if (element.msRequestFullscreen) {
-                    element.msRequestFullscreen();
+            try {
+                screenStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        cursor: 'always',
+                        displaySurface: 'monitor'
+                    },
+                    audio: false
+                });
+                
+                isScreenSharing = true;
+                document.getElementById('screenContainer').style.display = 'block';
+                document.getElementById('shareScreenBtn').innerHTML = '<i class="fas fa-stop"></i> Остановить демонстрацию';
+                
+                const screenVideo = document.getElementById('screenShare');
+                screenVideo.srcObject = screenStream;
+                
+                // Заменяем видео трек в PeerConnection
+                const [screenTrack] = screenStream.getVideoTracks();
+                const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
+                if (sender) {
+                    sender.replaceTrack(screenTrack);
                 }
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
-                } else if (document.msExitFullscreen) {
-                    document.msExitFullscreen();
+                
+                screenStream.getVideoTracks()[0].onended = () => {
+                    stopScreenSharing();
+                };
+                
+            } catch (error) {
+                console.error('Error starting screen sharing:', error);
+                isScreenSharing = false;
+                document.getElementById('screenContainer').style.display = 'none';
+                document.getElementById('shareScreenBtn').innerHTML = '<i class="fas fa-desktop"></i> Демонстрация экрана';
+            }
+        }
+
+        // Остановка демонстрации экрана
+        function stopScreenSharing() {
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+                screenStream = null;
+            }
+            
+            isScreenSharing = false;
+            document.getElementById('screenContainer').style.display = 'none';
+            document.getElementById('shareScreenBtn').innerHTML = '<i class="fas fa-desktop"></i> Демонстрация экрана';
+            
+            // Возвращаем оригинальный видео трек
+            if (localStream && peerConnection) {
+                const [videoTrack] = localStream.getVideoTracks();
+                const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
+                if (sender && videoTrack) {
+                    sender.replaceTrack(videoTrack);
                 }
             }
         }
@@ -1579,13 +1505,8 @@
         // Обработчики кнопок
         document.getElementById('toggleVideoBtn').addEventListener('click', toggleVideo);
         document.getElementById('toggleAudioBtn').addEventListener('click', toggleAudio);
-        document.getElementById('disconnectBtn').addEventListener('click', function() {
-            if (confirm('Вы уверены, что хотите отключиться от конференции?')) {
-                leaveConference();
-            }
-        });
 
-        document.getElementById('leaveConferenceBtn').addEventListener('click', function() {
+        document.getElementById('leaveConference').addEventListener('click', function() {
             if (confirm('Вы уверены, что хотите покинуть конференцию?')) {
                 leaveConference().then(() => {
                     window.location.reload();
@@ -1596,8 +1517,8 @@
         document.getElementById('endConferenceBtn').addEventListener('click', endConference);
 
         // Для учителя: кнопка демонстрации экрана
-        if ({{ 'true' if is_teacher else 'false' }}) {
-            document.getElementById('teacherShareScreenBtn').addEventListener('click', startScreenSharing);
+        if ({% if is_teacher %}true{% else %}false{% endif %}) {
+            document.getElementById('shareScreenBtn').addEventListener('click', startScreenSharing);
             
             // Обновление статуса конференции
             async function updateConferenceStatus() {
@@ -1656,15 +1577,12 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        peerId: currentPeerId
-                    })
+                    }
                 });
                 
                 const data = await response.json();
                 if (data.success) {
-                    initConference(roomName, true);
+                    initConference(roomName);
                     updateConferenceStatus();
                 } else {
                     alert(data.error || 'Ошибка при запуске конференции');
@@ -1711,29 +1629,72 @@
             loadTeacherInvites();
         } else {
             // Для студентов: загрузка приглашений
+            async function loadStudentInvites() {
+                const response = await fetch('/api/conference/invites');
+                const data = await response.json();
+                
+                const invitesList = document.getElementById('studentInvitesList');
+                invitesList.innerHTML = '';
+                
+                if (data.invites.length === 0) {
+                    invitesList.innerHTML = '<p>Нет новых приглашений</p>';
+                    return;
+                }
+                
+                data.invites.forEach(invite => {
+                    const inviteCard = document.createElement('div');
+                    inviteCard.className = 'invite-card';
+                    inviteCard.innerHTML = `
+                        <div class="invite-info">
+                            <p><strong>Преподаватель:</strong> ${invite.teacher}</p>
+                            <p><strong>Статус:</strong> <span class="status-${invite.status}">${
+                                invite.status === 'pending' ? 'Ожидает вашего ответа' : 
+                                invite.status === 'accepted' ? 'Принято' : 'Отклонено'
+                            }</span></p>
+                            <p><small>Получено: ${new Date(invite.created_at).toLocaleString()}</small></p>
+                        </div>
+                        <div class="invite-actions">
+                            ${invite.status === 'pending' ? `
+                            <button class="btn btn-success" onclick="respondToInvite(${invite.id}, 'accept')">
+                                <i class="fas fa-check"></i> Принять
+                            </button>
+                            <button class="btn btn-danger" onclick="respondToInvite(${invite.id}, 'decline')">
+                                <i class="fas fa-times"></i> Отклонить
+                            </button>
+                            ` : ''}
+                        </div>
+                    `;
+                    invitesList.appendChild(inviteCard);
+                });
+            }
+            
+            // Инициализация
             loadStudentInvites();
         }
         
-        // Обработка присоединения к уроку
-        document.addEventListener('click', function(e) {
-            if (e.target && e.target.classList.contains('join-lesson-btn')) {
-                e.preventDefault();
-                const lessonId = e.target.getAttribute('data-lesson-id');
-                
-                fetch(`/api/lesson/${lessonId}/join`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            initConference(data.room_name);
-                        } else {
-                            alert(data.error || 'Ошибка подключения к конференции');
-                        }
-                    });
+        // Функция для ответа на приглашение (для студента)
+        window.respondToInvite = async function(inviteId, action) {
+            const response = await fetch(`/api/conference/invite/${inviteId}/respond`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ action })
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                if (action === 'accept') {
+                    initConference(data.room_name);
+                }
+                loadStudentInvites();
+            } else {
+                alert(data.error || 'Ошибка при обработке приглашения');
             }
-        });
+        };
 
         // Для учителя: загрузка данных
-        if ({{ 'true' if is_teacher else 'false' }}) {
+        if ({% if is_teacher %}true{% else %}false{% endif %}) {
             // Функция для добавления пользователя
             function addUser(userData) {
                 fetch('/api/register', {
@@ -1790,6 +1751,40 @@
                     .catch(error => {
                         console.error('Error:', error);
                         alert('Ошибка загрузки пользователей');
+                    });
+            }
+            
+            // Загрузка списка занятий
+            function loadLessons() {
+                fetch('/api/lessons')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Ошибка загрузки занятий');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const tableBody = document.getElementById('lessonsTable');
+                        tableBody.innerHTML = '';
+                        
+                        data.lessons.forEach(lesson => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${lesson.title}</td>
+                                <td>${lesson.description || '-'}</td>
+                                <td>${lesson.schedule}</td>
+                                <td>${lesson.duration} мин</td>
+                                <td>${lesson.students?.join(', ') || 'нет'}</td>
+                                <td>
+                                    <button class="btn btn-danger" onclick="deleteLesson('${lesson.id}')">
+                                        <i class="fas fa-trash"></i> Удалить
+                                    </button>
+                                </td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Ошибка загрузки занятий');
                     });
             }
             
@@ -1850,6 +1845,30 @@
                     });
             }
             
+            // Загрузка уроков для назначения ДЗ
+            function loadLessonsForHomework() {
+                fetch('/api/lessons')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Ошибка загрузки уроков');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const select = document.getElementById('homeworkLesson');
+                        select.innerHTML = '';
+                        
+                        data.lessons.forEach(lesson => {
+                            const option = document.createElement('option');
+                            option.value = lesson.id;
+                            option.textContent = `${lesson.title} (${lesson.schedule})`;
+                            select.appendChild(option);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Ошибка загрузки списка уроков');
+                    });
+            }
+            
             // Управление пользователями
             window.toggleUserStatus = function(username, activate) {
                 if (confirm(`Вы уверены, что хотите ${activate ? 'активировать' : 'деактивировать'} пользователя ${username}?`)) {
@@ -1887,9 +1906,88 @@
                 }
             };
             
+            // Управление занятиями
+            function addLesson(lessonData) {
+                fetch('/api/lessons', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(lessonData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loadLessons();
+                        document.getElementById('addLessonModal').style.display = 'none';
+                        document.getElementById('addLessonForm').reset();
+                    } else {
+                        alert(data.error || 'Ошибка создания занятия');
+                    }
+                });
+            }
+            
+            window.deleteLesson = function(lessonId) {
+                if (confirm('Вы уверены, что хотите удалить это занятие?')) {
+                    fetch(`/api/lessons/${lessonId}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            loadLessons();
+                        } else {
+                            alert(data.error || 'Ошибка удаления занятия');
+                        }
+                    });
+                }
+            };
+            
+            // Назначение домашнего задания
+            function assignHomework(homeworkData) {
+                const formData = new FormData();
+                
+                formData.append('lesson_id', homeworkData.lesson_id);
+                formData.append('title', homeworkData.title);
+                formData.append('description', homeworkData.description);
+                formData.append('deadline', homeworkData.deadline);
+                formData.append('students', JSON.stringify(homeworkData.students));
+                
+                for (let i = 0; i < homeworkData.files.length; i++) {
+                    formData.append('files', homeworkData.files[i]);
+                }
+                
+                fetch('/api/homework', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loadHomeworks();
+                        document.getElementById('assignHomeworkModal').style.display = 'none';
+                        document.getElementById('assignHomeworkForm').reset();
+                        document.getElementById('homeworkFilesPreview').innerHTML = '';
+                    } else {
+                        alert(data.error || 'Ошибка назначения домашнего задания');
+                    }
+                });
+            }
+            
             // Модальные окна
             document.getElementById('addUserBtn').addEventListener('click', () => {
                 document.getElementById('addUserModal').style.display = 'flex';
+            });
+            
+            document.getElementById('addLessonBtn').addEventListener('click', () => {
+                loadStudentsForSelect('lessonStudents');
+                document.getElementById('addLessonModal').style.display = 'flex';
+            });
+            
+            document.getElementById('assignHomeworkBtn').addEventListener('click', () => {
+                loadLessonsForHomework();
+                loadStudentsForSelect('homeworkStudents');
+                document.getElementById('assignHomeworkModal').style.display = 'flex';
             });
             
             document.querySelectorAll('.close-modal').forEach(btn => {
@@ -1918,8 +2016,69 @@
                 addUser({ username, email, password, role });
             });
             
+            // Форма добавления занятия
+            document.getElementById('addLessonForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const title = document.getElementById('lessonTitle').value;
+                const description = document.getElementById('lessonDescription').value;
+                const date = document.getElementById('lessonDate').value;
+                const time = document.getElementById('lessonTime').value;
+                const duration = document.getElementById('lessonDuration').value;
+                
+                const studentsSelect = document.getElementById('lessonStudents');
+                const students = Array.from(studentsSelect.selectedOptions).map(option => option.value);
+                
+                addLesson({
+                    title,
+                    description,
+                    schedule: new Date(`${date}T${time}:00`).toISOString(),
+                    duration,
+                    students
+                });
+            });
+            
+            // Форма назначения домашнего задания
+            document.getElementById('assignHomeworkForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const lessonId = document.getElementById('homeworkLesson').value;
+                const title = document.getElementById('homeworkTitle').value;
+                const description = document.getElementById('homeworkDescription').value;
+                const deadline = document.getElementById('homeworkDeadline').value;
+                
+                const studentsSelect = document.getElementById('homeworkStudents');
+                const students = Array.from(studentsSelect.selectedOptions).map(option => option.value);
+                
+                const filesInput = document.getElementById('homeworkFiles');
+                const files = filesInput.files;
+                
+                assignHomework({
+                    lesson_id: lessonId,
+                    title,
+                    description,
+                    deadline,
+                    students,
+                    files
+                });
+            });
+            
+            // Превью загружаемых файлов (ДЗ)
+            document.getElementById('homeworkFiles').addEventListener('change', function() {
+                const preview = document.getElementById('homeworkFilesPreview');
+                preview.innerHTML = '';
+                
+                if (this.files.length > 0) {
+                    preview.innerHTML = `Выбрано файлов: ${this.files.length}<br>`;
+                    for (let i = 0; i < this.files.length; i++) {
+                        preview.innerHTML += `${i+1}. ${this.files[i].name}<br>`;
+                    }
+                }
+            });
+            
             // Загрузка начальных данных
             loadUsers();
+            loadLessons();
             loadHomeworks();
         } else {
             // Для учеников
@@ -1981,18 +2140,22 @@
             });
         }
 
-        // Получение VPN QR-кода
-        document.getElementById('getVpnBtn').addEventListener('click', function() {
-            // В реальной реализации здесь будет запрос к серверу для получения QR-кода
-            // Сейчас просто демонстрация
-            document.getElementById('vpnModal').style.display = 'flex';
-            document.getElementById('vpnQrCode').innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://wireguard.example.com/config/vpn-config" alt="VPN QR Code">';
-        });
-
-        // Скачивание VPN конфига
-        document.getElementById('downloadVpnConfig').addEventListener('click', function() {
-            // В реальной реализации здесь будет запрос к серверу для скачивания файла
-            alert('Конфигурационный файл WireGuard будет скачан');
+        // Обработка присоединения к уроку
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.closest('a[href^="/api/lesson/"]')) {
+                e.preventDefault();
+                const lessonId = e.target.closest('a').href.split('/').slice(-2, -1)[0];
+                
+                fetch(`/api/lesson/${lessonId}/join`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            initConference(data.room_name);
+                        } else {
+                            alert(data.error || 'Ошибка подключения к конференции');
+                        }
+                    });
+            }
         });
 
         // Закрытие модальных окон при клике вне их
@@ -2000,22 +2163,6 @@
             if (e.target.classList.contains('modal')) {
                 e.target.style.display = 'none';
             }
-        });
-
-        // Обработка выхода
-        document.getElementById('logoutBtn').addEventListener('click', function() {
-            fetch('/api/logout')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        window.location.href = '/';
-                    }
-                });
-        });
-
-        // Инициализация PeerJS при загрузке страницы
-        document.addEventListener('DOMContentLoaded', function() {
-            initPeerJS();
         });
     </script>
 </body>
