@@ -1,944 +1,2022 @@
-import os
-from flask import Flask, render_template, request, session, redirect, jsonify, send_from_directory
-from flask_socketio import SocketIO
-from werkzeug.security import generate_password_hash, check_password_hash
-import json
-from datetime import datetime, timedelta
-from werkzeug.utils import secure_filename
-import logging
-import jwt
-from collections import defaultdict, deque
-import uuid
-
-# Инициализация приложения
-app = Flask(__name__, static_folder='static', template_folder='templates')
-app.secret_key = os.environ.get('SECRET_KEY', 'your-very-secret-key-12345')
-
-# Настройка SocketIO
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
-
-# Конфигурация PeerJS
-PEERJS_HOST = os.environ.get('PEERJS_HOST', 'peerjs.zindaki.academy')
-PEERJS_PORT = os.environ.get('PEERJS_PORT', '443')
-PEERJS_SECURE = os.environ.get('PEERJS_SECURE', 'true').lower() == 'true'
-PEERJS_PATH = os.environ.get('PEERJS_PATH', '/peerjs')
-
-# Конфигурация приложения
-UPLOAD_FOLDER = 'uploads'
-DB_FOLDER = 'data'
-INVITES_FOLDER = 'invites'
-os.makedirs(DB_FOLDER, exist_ok=True)
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(INVITES_FOLDER, exist_ok=True)
-
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
-
-# Настройка логирования
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-class DB:
-    @staticmethod
-    def _get_db(file):
-        try:
-            with open(f'{DB_FOLDER}/{file}.json', 'r') as f:
-                return json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            return []
-
-    @staticmethod
-    def _save_db(file, data):
-        with open(f'{DB_FOLDER}/{file}.json', 'w') as f:
-            json.dump(data, f, indent=2)
-
-    # Пользователи
-    @staticmethod
-    def get_users(role=None):
-        users = DB._get_db('users')
-        if role:
-            return [u for u in users if u['role'] == role]
-        return users
-
-    @staticmethod
-    def get_user(username):
-        users = DB.get_users()
-        return next((u for u in users if u['username'] == username), None)
-
-    @staticmethod
-    def save_user(username, email, password, role='student', is_active=True):
-        users = DB.get_users()
-        if any(u['username'] == username for u in users):
-            return False
-        
-        users.append({
-            'username': username,
-            'email': email,
-            'password': generate_password_hash(password),
-            'role': role,
-            'is_active': is_active,
-            'created_at': datetime.now().isoformat(),
-            'avatar': f'https://i.pravatar.cc/150?u={username}'
-        })
-        DB._save_db('users', users)
-        return True
-
-    @staticmethod
-    def update_user_status(username, is_active):
-        users = DB.get_users()
-        for user in users:
-            if user['username'] == username:
-                user['is_active'] = is_active
-                DB._save_db('users', users)
-                return True
-        return False
-
-    @staticmethod
-    def delete_user(username):
-        users = DB.get_users()
-        users = [u for u in users if u['username'] != username]
-        DB._save_db('users', users)
-        return True
-
-    # Уроки
-    @staticmethod
-    def get_lessons(teacher=None):
-        lessons = DB._get_db('lessons')
-        if teacher:
-            return [l for l in lessons if l['teacher'] == teacher]
-        return lessons
-
-    @staticmethod
-    def get_lesson(lesson_id):
-        lessons = DB.get_lessons()
-        return next((l for l in lessons if l['id'] == lesson_id), None)
-
-    @staticmethod
-    def save_lesson(title, description, teacher, schedule, duration=60, subject=None, students=None):
-        if students is None:
-            students = []
-        lessons = DB.get_lessons()
-        lesson_id = max([l['id'] for l in lessons], default=0) + 1
-        
-        lesson_data = {
-            'id': lesson_id,
-            'title': title,
-            'description': description,
-            'teacher': teacher,
-            'schedule': schedule,
-            'duration': duration,
-            'subject': subject,
-            'students': students,
-            'created_at': datetime.now().isoformat()
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет | Zindaki Academy</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-light: #4895ef;
+            --primary-dark: #3a0ca3;
+            --light: #f8f9fa;
+            --lighter: #ffffff;
+            --text: #2b2d42;
+            --text-light: #8d99ae;
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+            --rounded-md: 12px;
+            --rounded-lg: 16px;
         }
         
-        lessons.append(lesson_data)
-        DB._save_db('lessons', lessons)
-        return lesson_data
-
-    @staticmethod
-    def delete_lesson(lesson_id):
-        lessons = DB.get_lessons()
-        lessons = [l for l in lessons if l['id'] != lesson_id]
-        DB._save_db('lessons', lessons)
-        return True
-
-    # Домашние задания
-    @staticmethod
-    def get_homeworks():
-        return DB._get_db('homeworks')
-
-    @staticmethod
-    def get_homework(homework_id):
-        homeworks = DB.get_homeworks()
-        return next((h for h in homeworks if h['id'] == homework_id), None)
-
-    @staticmethod
-    def save_homework(lesson_id, title, description, deadline, teacher, students=None, files=None):
-        if students is None:
-            students = []
-        if files is None:
-            files = []
-        homeworks = DB.get_homeworks()
-        homework_id = max([h['id'] for h in homeworks], default=0) + 1
-        
-        homework = {
-            'id': homework_id,
-            'lesson_id': lesson_id,
-            'title': title,
-            'description': description,
-            'deadline': deadline,
-            'teacher': teacher,
-            'students': students,
-            'files': files,
-            'created_at': datetime.now().isoformat(),
-            'submissions': {}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
         }
         
-        homeworks.append(homework)
-        DB._save_db('homeworks', homeworks)
-        return homework
-
-    @staticmethod
-    def submit_homework(homework_id, student_username, comment, files=None):
-        if files is None:
-            files = []
-        homeworks = DB.get_homeworks()
-        for hw in homeworks:
-            if hw['id'] == homework_id and student_username in hw['students']:
-                hw['submissions'][student_username] = {
-                    'comment': comment,
-                    'files': files,
-                    'submitted_at': datetime.now().isoformat(),
-                    'status': 'submitted'
-                }
-                DB._save_db('homeworks', homeworks)
-                return True
-        return False
-
-    @staticmethod
-    def get_student_homeworks(student_username):
-        homeworks = DB.get_homeworks()
-        return [hw for hw in homeworks if student_username in hw['students']]
-
-    @staticmethod
-    def get_teacher_homeworks(teacher_username):
-        homeworks = DB.get_homeworks()
-        return [hw for hw in homeworks if hw['teacher'] == teacher_username]
-
-    # Отзывы
-    @staticmethod
-    def get_testimonials():
-        return DB._get_db('testimonials')
-
-    # Приглашения
-    @staticmethod
-    def get_invites():
-        try:
-            with open(f'{INVITES_FOLDER}/invites.json', 'r') as f:
-                return json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            return []
-
-    @staticmethod
-    def save_invite(teacher_username, student_username, room_name, status='pending'):
-        invites = DB.get_invites()
-        invite_id = max([i.get('id', 0) for i in invites], default=0) + 1
-        
-        invite = {
-            'id': invite_id,
-            'teacher': teacher_username,
-            'student': student_username,
-            'room_name': room_name,
-            'status': status,
-            'created_at': datetime.now().isoformat(),
-            'updated_at': datetime.now().isoformat()
+        body {
+            background-color: var(--light);
+            color: var(--text);
+            line-height: 1.6;
         }
         
-        invites.append(invite)
-        with open(f'{INVITES_FOLDER}/invites.json', 'w') as f:
-            json.dump(invites, f, indent=2)
-        return invite
-
-    @staticmethod
-    def update_invite_status(invite_id, status):
-        invites = DB.get_invites()
-        for invite in invites:
-            if invite['id'] == invite_id:
-                invite['status'] = status
-                invite['updated_at'] = datetime.now().isoformat()
-                with open(f'{INVITES_FOLDER}/invites.json', 'w') as f:
-                    json.dump(invites, f, indent=2)
-                return True
-        return False
-
-    @staticmethod
-    def get_user_invites(username):
-        invites = DB.get_invites()
-        return [i for i in invites if i['student'] == username and i['status'] == 'pending']
-
-    @staticmethod
-    def get_teacher_invites(username):
-        invites = DB.get_invites()
-        return [i for i in invites if i['teacher'] == username]
-
-    # Конференции
-    @staticmethod
-    def get_conferences():
-        return DB._get_db('conferences')
-
-    @staticmethod
-    def get_conference(room_name):
-        conferences = DB.get_conferences()
-        return next((c for c in conferences if c['room_name'] == room_name), None)
-
-    @staticmethod
-    def save_conference(room_name, host_username, is_active=True):
-        conferences = DB.get_conferences()
-        conference = next((c for c in conferences if c['room_name'] == room_name), None)
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 80px auto 0;
+            padding: 2rem;
+        }
         
-        if conference:
-            conference['is_active'] = is_active
-            conference['updated_at'] = datetime.now().isoformat()
-        else:
-            conference = {
-                'room_name': room_name,
-                'host': host_username,
-                'participants': [],
-                'is_active': is_active,
-                'created_at': datetime.now().isoformat(),
-                'updated_at': datetime.now().isoformat()
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        
+        .user-greeting h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .user-greeting p {
+            color: var(--text-light);
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--rounded-md);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .btn-secondary {
+            background-color: var(--light);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+        
+        .btn-secondary:hover {
+            background-color: var(--primary-light);
+            color: white;
+        }
+        
+        .btn-danger {
+            background-color: #f72585;
+        }
+        
+        .btn-danger:hover {
+            background-color: #d1146e;
+        }
+        
+        .btn-success {
+            background-color: #4cc9f0;
+        }
+        
+        .btn-success:hover {
+            background-color: #3aa8cc;
+        }
+        
+        .section {
+            margin-top: 3rem;
+            background: var(--lighter);
+            padding: 1.5rem;
+            border-radius: var(--rounded-lg);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--text);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .section-title .actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        /* Таблицы */
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        th {
+            background-color: var(--light);
+            font-weight: 600;
+        }
+        
+        tr:hover {
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+        
+        .status-active {
+            color: #4cc9f0;
+            font-weight: 600;
+        }
+        
+        .status-inactive {
+            color: var(--text-light);
+        }
+        
+        .status-pending {
+            color: #f8961e;
+            font-weight: 600;
+        }
+        
+        .status-accepted {
+            color: #43aa8b;
+            font-weight: 600;
+        }
+        
+        .status-declined {
+            color: #f94144;
+            font-weight: 600;
+        }
+        
+        /* Формы */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #e0e0e0;
+            border-radius: var(--rounded-md);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        /* Модальные окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: var(--rounded-lg);
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        /* Видеоконференция */
+        .conference-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            min-height: 500px;
+            position: relative;
+        }
+        
+        #remoteVideoContainer {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            border-radius: var(--rounded-md);
+            display: none;
+        }
+        
+        #remoteVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        #waitingMessage {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: var(--text-light);
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: var(--rounded-md);
+            overflow: hidden;
+            aspect-ratio: 16/9;
+        }
+        
+        .video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .video-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .video-container:hover .video-controls {
+            opacity: 1;
+        }
+        
+        .video-control-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .video-control-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .video-label {
+            position: absolute;
+            bottom: 40px;
+            left: 0;
+            right: 0;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+            background: rgba(0,0,0,0.5);
+        }
+        
+        /* Локальное видео (маленькое в углу) */
+        .local-video-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 200px;
+            height: 150px;
+            z-index: 100;
+            background: #000;
+            border-radius: var(--rounded-md);
+            overflow: hidden;
+        }
+        
+        .local-video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .screen-container {
+            grid-column: 1 / -1;
+            background: #000;
+            border-radius: var(--rounded-md);
+            overflow: hidden;
+            aspect-ratio: 16/9;
+            position: relative;
+            display: none;
+        }
+        
+        .screen-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        .conference-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .participants-list {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--light);
+            border-radius: var(--rounded-md);
+        }
+        
+        .participant-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .participant-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        /* Домашние задания */
+        .homework-status {
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--rounded-md);
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .homework-status-not-submitted {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        
+        .homework-status-submitted {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        /* Загрузка файлов */
+        .file-upload {
+            margin-top: 1rem;
+        }
+        
+        .file-upload-preview {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+        
+        /* Приглашения */
+        .invite-card {
+            background: white;
+            border-radius: var(--rounded-md);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .invite-info {
+            flex: 1;
+        }
+        
+        .invite-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        /* Полноэкранный режим */
+        .fullscreen-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            cursor: pointer;
+            z-index: 10;
+        }
+        
+        .fullscreen-btn:hover {
+            background: rgba(0,0,0,0.7);
+        }
+        
+        /* Полезности */
+        .utilities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .utility-card {
+            background: white;
+            border-radius: var(--rounded-md);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-md);
+            transition: transform 0.3s ease;
+        }
+        
+        .utility-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .utility-card h3 {
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+        
+        .utility-card p {
+            margin-bottom: 1rem;
+            color: var(--text-light);
+        }
+        
+        .utility-card .btn {
+            margin-top: 0.5rem;
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .dashboard-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
             }
-            conferences.append(conference)
-        
-        DB._save_db('conferences', conferences)
-        return conference
-
-    @staticmethod
-    def add_participant(room_name, username):
-        conferences = DB.get_conferences()
-        conference = next((c for c in conferences if c['room_name'] == room_name), None)
-        
-        if conference and username not in conference['participants']:
-            conference['participants'].append(username)
-            conference['updated_at'] = datetime.now().isoformat()
-            DB._save_db('conferences', conferences)
-            return True
-        return False
-
-    @staticmethod
-    def remove_participant(room_name, username):
-        conferences = DB.get_conferences()
-        conference = next((c for c in conferences if c['room_name'] == room_name), None)
-        
-        if conference and username in conference['participants']:
-            conference['participants'].remove(username)
-            conference['updated_at'] = datetime.now().isoformat()
-            DB._save_db('conferences', conferences)
-            return True
-        return False
-
-    @staticmethod
-    def end_conference(room_name):
-        conferences = DB.get_conferences()
-        conference = next((c for c in conferences if c['room_name'] == room_name), None)
-        
-        if conference:
-            conference['is_active'] = False
-            conference['updated_at'] = datetime.now().isoformat()
-            DB._save_db('conferences', conferences)
-            return True
-        return False
-
-# Инициализация базы данных
-if not os.path.exists(f'{DB_FOLDER}/users.json'):
-    initial_users = [
-        {
-            'username': 'admin',
-            'email': 'admin@zindaki.academy',
-            'password': generate_password_hash('admin123'),
-            'role': 'teacher',
-            'is_active': True,
-            'created_at': datetime.now().isoformat(),
-            'avatar': 'https://i.pravatar.cc/150?u=admin'
-        },
-        {
-            'username': 'student1',
-            'email': 'student1@example.com',
-            'password': generate_password_hash('student123'),
-            'role': 'student',
-            'is_active': True,
-            'created_at': datetime.now().isoformat(),
-            'avatar': 'https://i.pravatar.cc/150?u=student1'
-        }
-    ]
-    
-    initial_lessons = [
-        {
-            'id': 1,
-            'title': 'Вводный урок по английскому',
-            'description': 'Основы грамматики и произношения',
-            'teacher': 'admin',
-            'schedule': 'Понедельник 13:00-14:00',
-            'duration': 60,
-            'subject': 'Английский язык',
-            'students': ['student1'],
-            'created_at': datetime.now().isoformat()
-        },
-        {
-            'id': 2,
-            'title': 'Обществознание для начинающих',
-            'description': 'Основные понятия и термины',
-            'teacher': 'admin',
-            'schedule': 'Четверг 14:00-15:30',
-            'duration': 90,
-            'subject': 'Обществознание',
-            'students': ['student1'],
-            'created_at': datetime.now().isoformat()
-        }
-    ]
-    
-    initial_homeworks = []
-    initial_conferences = []
-    initial_testimonials = [
-        {
-            "id": 1,
-            "text": "Мой сын занимается с Галиной Петровной уже год. Несмотря на диагноз (аутизм), он начал говорить целыми предложениями!",
-            "author": "Мария С.",
-            "role": "Мама ученика",
-            "avatar": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
-        },
-        {
-            "id": 2,
-            "text": "Спасибо Zindaki Academy за подготовку к ЕГЭ! Сдала английский на 94 балла и поступила в МГЛУ.",
-            "author": "Анна К.",
-            "role": "Выпускница",
-            "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
-        }
-    ]
-    
-    DB._save_db('users', initial_users)
-    DB._save_db('lessons', initial_lessons)
-    DB._save_db('homeworks', initial_homeworks)
-    DB._save_db('conferences', initial_conferences)
-    DB._save_db('testimonials', initial_testimonials)
-
-if not os.path.exists(f'{INVITES_FOLDER}/invites.json'):
-    with open(f'{INVITES_FOLDER}/invites.json', 'w') as f:
-        json.dump([], f)
-
-# Главная страница и все SPA-роуты
-@app.route('/')
-@app.route('/about')
-@app.route('/teachers')
-@app.route('/programs')
-@app.route('/testimonials')
-@app.route('/contact')
-def home():
-    scroll_to = request.path[1:] if request.path != '/' else None
-    return render_template('index.html', 
-                         user=session.get('user'),
-                         teachers=DB.get_users(role='teacher')[:3],
-                         testimonials=DB.get_testimonials(),
-                         scroll_to=scroll_to)
-
-# API Endpoints
-@app.route('/api/register', methods=['POST'])
-def api_register():
-    data = request.json
-    if not all(k in data for k in ['username', 'email', 'password']):
-        return jsonify({'error': 'Missing fields'}), 400
-    
-    if DB.save_user(
-        data['username'],
-        data['email'],
-        data['password'],
-        data.get('role', 'student'),
-        data.get('is_active', True)
-    ):
-        return jsonify({'success': True})
-    return jsonify({'error': 'Username already exists'}), 400
-
-@app.route('/api/login', methods=['POST'])
-def api_login():
-    data = request.json
-    user = DB.get_user(data['username'])
-    
-    if user and check_password_hash(user['password'], data['password']):
-        if not user.get('is_active', True):
-            return jsonify({'error': 'Account is deactivated'}), 403
             
-        session['user'] = {
-            'username': user['username'],
-            'email': user['email'],
-            'role': user['role'],
-            'avatar': user['avatar']
-        }
-        return jsonify({'success': True, 'user': session['user']})
-    return jsonify({'error': 'Invalid credentials'}), 401
-
-@app.route('/api/logout')
-def api_logout():
-    session.pop('user', None)
-    return jsonify({'success': True})
-
-# Управление пользователями
-@app.route('/api/users', methods=['GET'])
-def api_get_users():
-    if 'user' not in session or session['user']['role'] != 'teacher':
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    role = request.args.get('role')
-    users = DB.get_users(role=role)
-    
-    safe_users = []
-    for user in users:
-        safe_user = user.copy()
-        safe_user.pop('password', None)
-        safe_users.append(safe_user)
-    
-    return jsonify({'users': safe_users})
-
-@app.route('/api/users/<username>/status', methods=['PUT'])
-def api_update_user_status(username):
-    if 'user' not in session or session['user']['role'] != 'teacher':
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    data = request.json
-    if DB.update_user_status(username, data.get('is_active', True)):
-        return jsonify({'success': True})
-    return jsonify({'error': 'User not found'}), 404
-
-@app.route('/api/users/<username>', methods=['DELETE'])
-def api_delete_user(username):
-    if 'user' not in session or session['user']['role'] != 'teacher':
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    if DB.delete_user(username):
-        return jsonify({'success': True})
-    return jsonify({'error': 'User not found'}), 404
-
-# Управление уроками
-@app.route('/api/lessons', methods=['GET', 'POST'])
-def api_lessons():
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    if request.method == 'POST':
-        if session['user']['role'] != 'teacher':
-            return jsonify({'error': 'Only teachers can create lessons'}), 403
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
             
-        data = request.json
-        required_fields = ['title', 'schedule', 'duration']
-        if not all(field in data for field in required_fields):
-            return jsonify({'error': 'Missing required fields'}), 400
-        
-        lesson = DB.save_lesson(
-            data['title'],
-            data.get('description', ''),
-            session['user']['username'],
-            data['schedule'],
-            data['duration'],
-            data.get('subject'),
-            data.get('students', [])
-        )
-        
-        return jsonify({'success': True, 'lesson': lesson})
-    
-    if session['user']['role'] == 'teacher':
-        lessons = DB.get_lessons(teacher=session['user']['username'])
-    else:
-        lessons = [l for l in DB.get_lessons() if session['user']['username'] in l.get('students', [])]
-    
-    return jsonify({'lessons': lessons})
+            .section-title {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .section-title .actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+            
+            .conference-controls {
+                flex-direction: column;
+            }
+            
+            .invite-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .invite-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+            
+            .local-video-container {
+                width: 120px;
+                height: 90px;
+                bottom: 10px;
+                right: 10px;
+            }
+            
+            .utilities-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <div class="user-greeting">
+                <h1>Добро пожаловать, {{ user.username }}!</h1>
+                <p>{{ 'Преподаватель' if user.role == 'teacher' else 'Студент' }} Zindaki Academy</p>
+            </div>
+            <button class="btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i> Выйти
+            </button>
+        </div>
 
-@app.route('/api/lessons/<int:lesson_id>', methods=['DELETE'])
-def api_delete_lesson(lesson_id):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    lesson = DB.get_lesson(lesson_id)
-    if not lesson:
-        return jsonify({'error': 'Lesson not found'}), 404
-    
-    if session['user']['role'] != 'teacher' or lesson['teacher'] != session['user']['username']:
-        return jsonify({'error': 'Access denied'}), 403
-    
-    if DB.delete_lesson(lesson_id):
-        return jsonify({'success': True})
-    return jsonify({'error': 'Failed to delete lesson'}), 500
+        {% if is_teacher %}
+        <!-- Управление пользователями -->
+        <div class="section">
+            <h2 class="section-title">
+                Управление пользователями
+                <div class="actions">
+                    <button class="btn" id="addUserBtn">
+                        <i class="fas fa-plus"></i> Добавить пользователя
+                    </button>
+                </div>
+            </h2>
+            
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Имя пользователя</th>
+                            <th>Email</th>
+                            <th>Роль</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTable">
+                        <!-- Данные будут загружены через JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-@app.route('/api/lesson/<int:lesson_id>/join')
-def api_join_lesson(lesson_id):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    lesson = DB.get_lesson(lesson_id)
-    if not lesson:
-        return jsonify({'error': 'Lesson not found'}), 404
-    
-    if session['user']['role'] != 'teacher' and session['user']['username'] not in lesson.get('students', []):
-        return jsonify({'error': 'Access denied'}), 403
-    
-    if session['user']['role'] == 'teacher':
-        room_name = f"ZindakiRoom_{session['user']['username']}"
-        # Учитель создает конференцию
-        conference = DB.save_conference(room_name, session['user']['username'], is_active=True)
-    else:
-        room_name = f"ZindakiRoom_{lesson['teacher']}"
-    
-    # Возвращаем конфигурацию PeerJS
-    return jsonify({
-        'success': True,
-        'room_name': room_name,
-        'peerjs_config': {
-            'host': PEERJS_HOST,
-            'port': PEERJS_PORT,
-            'secure': PEERJS_SECURE,
-            'path': PEERJS_PATH
-        },
-        'lesson': lesson
-    })
+        <!-- Домашние задания (для учителя) -->
+        <div class="section">
+            <h2 class="section-title">Назначенные домашние задания</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Урок</th>
+                            <th>Задание</th>
+                            <th>Срок сдачи</th>
+                            <th>Ученики</th>
+                            <th>Статус</th>
+                        </tr>
+                    </thead>
+                    <tbody id="homeworksTable">
+                        {% for hw in homeworks %}
+                        <tr>
+                            <td>{{ hw.title }}</td>
+                            <td>{{ hw.description }}</td>
+                            <td>{{ hw.deadline }}</td>
+                            <td>{{ hw.students|join(', ') }}</td>
+                            <td>
+                                <span class="homework-status homework-status-{{ 'submitted' if hw.status == 'submitted' else 'not-submitted' }}">
+                                    {{ 'Сдано' if hw.status == 'submitted' else 'Не сдано' }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-# API для конференций
-@app.route('/api/conference/invite', methods=['POST'])
-def send_conference_invite():
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    if session['user']['role'] != 'teacher':
-        return jsonify({'error': 'Only teacher can send invites'}), 403
-    
-    data = request.json
-    student_username = data.get('student_username')
-    room_name = data.get('room_name')
-    
-    if not student_username or not room_name:
-        return jsonify({'error': 'Missing required fields'}), 400
-    
-    student = DB.get_user(student_username)
-    if not student or student['role'] != 'student':
-        return jsonify({'error': 'Student not found'}), 404
-    
-    invite = DB.save_invite(
-        teacher_username=session['user']['username'],
-        student_username=student_username,
-        room_name=room_name
-    )
-    
-    return jsonify({'success': True, 'invite': invite})
+        <!-- Управление конференциями (для учителя) -->
+        <div class="section" id="conferenceManagementSection">
+            <h2 class="section-title">
+                Управление конференциями
+                <div class="actions">
+                    <button class="btn" id="startConferenceBtn">
+                        <i class="fas fa-video"></i> Начать конференцию
+                    </button>
+                    <button class="btn btn-secondary" id="inviteStudentBtn">
+                        <i class="fas fa-user-plus"></i> Пригласить ученика
+                    </button>
+                </div>
+            </h2>
+            
+            <div id="conferenceStatus" style="margin-bottom: 1rem; padding: 1rem; background: #f0f0f0; border-radius: var(--rounded-md);">
+                <p>Конференция не активна</p>
+            </div>
+            
+            <div id="invitesList">
+                <h4>Отправленные приглашения:</h4>
+                <!-- Список приглашений будет загружен через JavaScript -->
+            </div>
+        </div>
+        {% else %}
+        <!-- Для студентов -->
+        <div class="section">
+            <h2 class="section-title">Мои курсы</h2>
+            
+            {% if lessons %}
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Название</th>
+                            <th>Описание</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lesson in lessons %}
+                        <tr>
+                            <td>{{ lesson.title }}</td>
+                            <td>{{ lesson.description }}</td>
+                            <td>
+                                <button class="btn join-lesson-btn" data-lesson-id="{{ lesson.id }}">
+                                    <i class="fas fa-video"></i> Присоединиться
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p>Вы пока не записаны ни на один курс</p>
+            {% endif %}
+            
+            <!-- Альтернативные ссылки на конференции -->
+            <div style="margin-top: 2rem;">
+                <h3>Альтернативные платформы для конференций:</h3>
+                <ul style="margin-top: 1rem; list-style-type: none; padding-left: 0;">
+                    <li style="margin-bottom: 0.5rem;">
+                        <a href="https://meet.google.com/eec-earm-gyd" target="_blank" class="btn btn-secondary" style="display: inline-flex; align-items: center;">
+                            <i class="fab fa-google" style="margin-right: 0.5rem;"></i> Google Meet
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://teams.live.com/meet/9480976290023?p=wqOkR5Ye8VJMKmpq" target="_blank" class="btn btn-secondary" style="display: inline-flex; align-items: center;">
+                            <i class="fab fa-microsoft" style="margin-right: 0.5rem;"></i> Microsoft Teams
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
 
-@app.route('/api/conference/invites', methods=['GET'])
-def get_user_invites():
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    if session['user']['role'] == 'student':
-        invites = DB.get_user_invites(session['user']['username'])
-    else:
-        invites = DB.get_teacher_invites(session['user']['username'])
-    
-    return jsonify({'success': True, 'invites': invites})
+        <!-- Приглашения на конференции (для студента) -->
+        <div class="section" id="invitesSection">
+            <h2 class="section-title">Приглашения на конференции</h2>
+            <div id="studentInvitesList">
+                <!-- Приглашения будут загружены через JavaScript -->
+            </div>
+        </div>
 
-@app.route('/api/conference/invite/<int:invite_id>/respond', methods=['POST'])
-def respond_to_invite(invite_id):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    if session['user']['role'] != 'student':
-        return jsonify({'error': 'Only student can respond to invites'}), 403
-    
-    data = request.json
-    action = data.get('action')
-    
-    if action not in ['accept', 'decline']:
-        return jsonify({'error': 'Invalid action'}), 400
-    
-    status = 'accepted' if action == 'accept' else 'declined'
-    if DB.update_invite_status(invite_id, status):
-        if action == 'accept':
-            invites = DB.get_invites()
-            invite = next((i for i in invites if i['id'] == invite_id), None)
-            if invite:
-                # Добавляем участника в конференцию
-                DB.add_participant(invite['room_name'], session['user']['username'])
+        <!-- Домашние задания (для студента) -->
+        <div class="section">
+            <h2 class="section-title">Домашние задания</h2>
+            {% if homeworks %}
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Название</th>
+                            <th>Описание</th>
+                            <th>Срок сдачи</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentHomeworkTable">
+                        {% for hw in homeworks %}
+                        <tr>
+                            <td>{{ hw.title }}</td>
+                            <td>{{ hw.description }}</td>
+                            <td>{{ hw.deadline }}</td>
+                            <td>
+                                <span class="homework-status homework-status-{{ 'submitted' if hw.status == 'submitted' else 'not-submitted' }}">
+                                    {{ 'Сдано' if hw.status == 'submitted' else 'Не сдано' }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if hw.status != 'submitted' %}
+                                <button class="btn" onclick="openSubmitHomeworkModal('{{ hw.id }}', '{{ hw.title }}', '{{ hw.description }}', '{{ hw.deadline }}')">
+                                    <i class="fas fa-upload"></i> Сдать
+                                </button>
+                                {% else %}
+                                <button class="btn btn-secondary">
+                                    <i class="fas fa-check"></i> Проверено
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p>Нет активных заданий</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Раздел "Полезности" -->
+        <div class="section">
+            <h2 class="section-title">Полезные ресурсы</h2>
+            <div class="utilities-grid">
+                <div class="utility-card">
+                    <h3>VPN подключение</h3>
+                    <p>Получите QR-код для подключения к нашему VPN серверу через WireGuard</p>
+                    <button class="btn" id="getVpnBtn">
+                        <i class="fas fa-qrcode"></i> Получить QR-код
+                    </button>
+                </div>
                 
-                return jsonify({
-                    'success': True,
-                    'room_name': invite["room_name"],
-                    'peerjs_config': {
-                        'host': PEERJS_HOST,
-                        'port': PEERJS_PORT,
-                        'secure': PEERJS_SECURE,
-                        'path': PEERJS_PATH
+                <div class="utility-card">
+                    <h3>Словари и переводчики</h3>
+                    <p>Полезные ссылки на онлайн-словари и переводчики для изучения языков</p>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <a href="https://translate.yandex.ru/" target="_blank" class="btn btn-secondary">
+                            <i class="fas fa-language"></i> Яндекс.Переводчик
+                        </a>
+                        <a href="https://www.lingvolive.com/" target="_blank" class="btn btn-secondary">
+                            <i class="fas fa-book"></i> Lingvo
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="utility-card">
+                    <h3>Образовательные ресурсы</h3>
+                    <p>Дополнительные материалы для углубленного изучения предметов</p>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <a href="https://postnauka.ru/" target="_blank" class="btn btn-secondary">
+                            <i class="fas fa-graduation-cap"></i> ПостНаука
+                        </a>
+                        <a href="https://arzamas.academy/" target="_blank" class="btn btn-secondary">
+                            <i class="fas fa-history"></i> Арзамас
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Видеоконференция -->
+        <div class="section" id="conferenceSection" style="display: none;">
+            <h2 class="section-title">Видеоконференция</h2>
+            
+            <div class="conference-container" id="conferenceContainer">
+                <!-- Основное видео (удаленный участник) -->
+                <div class="video-container" id="remoteVideoContainer">
+                    <video id="remoteVideo" autoplay playsinline></video>
+                    <div class="video-label" id="remoteVideoLabel">Участник</div>
+                    <div class="video-controls">
+                        <button class="video-control-btn" onclick="toggleFullscreen('remoteVideo')">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Сообщение об ожидании -->
+                <div id="waitingMessage">
+                    <p>Ожидаем подключения другого участника...</p>
+                </div>
+            </div>
+            
+            <!-- Маленькое окно с локальным видео (в правом нижнем углу) -->
+            <div class="local-video-container" id="localVideoContainer">
+                <video id="localVideo" autoplay muted playsinline></video>
+                <div class="video-label">Вы ({{ user.username }})</div>
+                <div class="video-controls">
+                    <button class="video-control-btn" id="toggleVideoBtn">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button class="video-control-btn" id="toggleAudioBtn">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button class="video-control-btn" id="shareScreenBtn" style="display: none;">
+                        <i class="fas fa-desktop"></i>
+                    </button>
+                    <button class="video-control-btn btn-danger" id="disconnectBtn">
+                        <i class="fas fa-phone-slash"></i>
+                    </button>
+                </div>
+            </div>
+            
+            {% if is_teacher %}
+            <!-- Демонстрация экрана -->
+            <div class="screen-container" id="screenContainer">
+                <video id="screenShare" autoplay playsinline></video>
+                <div class="video-label">Демонстрация экрана</div>
+                <div class="video-controls">
+                    <button class="video-control-btn" onclick="stopScreenSharing()">
+                        <i class="fas fa-stop"></i>
+                    </button>
+                    <button class="video-control-btn" onclick="toggleFullscreen('screenShare')">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="participants-list" id="participantsList">
+                <h4>Участники:</h4>
+                <!-- Список участников будет добавлен динамически -->
+            </div>
+            
+            <div class="conference-controls">
+                {% if is_teacher %}
+                <button class="btn" id="teacherShareScreenBtn">
+                    <i class="fas fa-desktop"></i> Демонстрация экрана
+                </button>
+                <button class="btn btn-danger" id="endConferenceBtn">
+                    <i class="fas fa-stop"></i> Завершить конференцию
+                </button>
+                {% endif %}
+                <button class="btn btn-danger" id="leaveConferenceBtn">
+                    <i class="fas fa-phone-slash"></i> Покинуть конференцию
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальные окна -->
+    <div class="modal" id="addUserModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Добавить нового пользователя</h2>
+            <form id="addUserForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newUsername">Имя пользователя</label>
+                        <input type="text" id="newUsername" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newEmail">Email</label>
+                        <input type="email" id="newEmail" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newPassword">Пароль</label>
+                        <input type="password" id="newPassword" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Подтвердите пароль</label>
+                        <input type="password" id="confirmPassword" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="userRole">Роль</label>
+                    <select id="userRole" class="form-control" required>
+                        <option value="student">Ученик</option>
+                        <option value="teacher">Преподаватель</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" style="margin-top: 2rem;">
+                    <button type="submit" class="btn">
+                        <i class="fas fa-save"></i> Сохранить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="submitHomeworkModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Сдать домашнее задание</h2>
+            <form id="submitHomeworkForm">
+                <input type="hidden" id="homeworkId">
+                
+                <div class="form-group">
+                    <label for="homeworkSubmissionTitle">Название задания</label>
+                    <input type="text" id="homeworkSubmissionTitle" class="form-control" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkSubmissionDescription">Описание</label>
+                    <textarea id="homeworkSubmissionDescription" class="form-control" rows="3" readonly></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkSubmissionDeadline">Срок сдачи</label>
+                    <input type="text" id="homeworkSubmissionDeadline" class="form-control" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="homeworkSubmissionComment">Комментарий</label>
+                    <textarea id="homeworkSubmissionComment" class="form-control" rows="3"></textarea>
+                </div>
+                
+                <div class="form-group file-upload">
+                    <label for="homeworkSubmissionFiles">Прикрепите файлы</label>
+                    <input type="file" id="homeworkSubmissionFiles" class="form-control" multiple>
+                    <div class="file-upload-preview" id="homeworkSubmissionFilesPreview"></div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 2rem;">
+                    <button type="submit" class="btn">
+                        <i class="fas fa-upload"></i> Отправить задание
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="inviteStudentModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Пригласить ученика на конференцию</h2>
+            <form id="inviteStudentForm">
+                <div class="form-group">
+                    <label for="inviteRoomName">Название комнаты</label>
+                    <input type="text" id="inviteRoomName" class="form-control" value="ZindakiRoom_{{ user.username }}" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="inviteStudent">Выберите ученика</label>
+                    <select id="inviteStudent" class="form-control" required>
+                        <!-- Список учеников будет загружен через JavaScript -->
+                    </select>
+                </div>
+                
+                <div class="form-group" style="margin-top: 2rem;">
+                    <button type="submit" class="btn">
+                        <i class="fas fa-paper-plane"></i> Отправить приглашение
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="vpnModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>VPN подключение</h2>
+            <div id="vpnContent" style="text-align: center;">
+                <p>Используйте этот QR-код для подключения к нашему VPN серверу через WireGuard</p>
+                <div id="vpnQrCode" style="margin: 1rem auto; padding: 1rem; background: white; display: inline-block;">
+                    <!-- QR-код будет сгенерирован здесь -->
+                </div>
+                <p>Или скачайте конфигурационный файл:</p>
+                <button class="btn" id="downloadVpnConfig">
+                    <i class="fas fa-download"></i> Скачать конфиг
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // PeerJS конфигурация
+        let peer = null;
+        let currentPeerId = null;
+        let connections = {};
+        let localStream = null;
+        let screenStream = null;
+        let currentRoom = null;
+        let isVideoEnabled = true;
+        let isAudioEnabled = true;
+        let isScreenSharing = false;
+        let inviteCheckInterval = null;
+
+        // Инициализация PeerJS
+        function initPeerJS() {
+            // Генерируем уникальный ID для пользователя
+            const userId = '{{ user.username }}_' + Math.random().toString(36).substr(2, 9);
+            currentPeerId = userId;
+            
+            // Создаем Peer объект с настройкой для локального сервера PeerJS
+            peer = new Peer(userId, {
+                host: 'localhost',
+                port: 9001,
+                secure: false,
+                path: '/peerjs',
+                debug: 3
+            });
+            
+            peer.on('open', (id) => {
+                console.log('PeerJS подключен с ID:', id);
+                currentPeerId = id;
+                
+                // Для студента: запускаем проверку новых приглашений
+                if (!{{ 'true' if is_teacher else 'false' }}) {
+                    startCheckingInvites();
+                }
+            });
+            
+            peer.on('error', (err) => {
+                console.error('PeerJS ошибка:', err);
+            });
+            
+            // Обработка входящих соединений
+            peer.on('call', (call) => {
+                // Принимаем вызов и отвечаем своим потоком
+                call.answer(localStream);
+                
+                call.on('stream', (remoteStream) => {
+                    // Отображаем удаленный поток
+                    handleRemoteStream(remoteStream, call.peer);
+                });
+                
+                call.on('close', () => {
+                    removeRemoteStream(call.peer);
+                });
+                
+                call.on('error', (err) => {
+                    console.error('Ошибка вызова:', err);
+                    removeRemoteStream(call.peer);
+                });
+            });
+            
+            // Обработка входящих данных
+            peer.on('connection', (conn) => {
+                conn.on('data', (data) => {
+                    handlePeerData(conn.peer, data);
+                });
+                
+                conn.on('close', () => {
+                    removePeerConnection(conn.peer);
+                });
+            });
+        }
+
+        // Для студента: периодическая проверка новых приглашений
+        function startCheckingInvites() {
+            // Останавливаем предыдущий интервал, если он был
+            if (inviteCheckInterval) {
+                clearInterval(inviteCheckInterval);
+            }
+            
+            // Загружаем приглашения сразу
+            loadStudentInvites();
+            
+            // Устанавливаем интервал проверки каждые 10 секунд
+            inviteCheckInterval = setInterval(loadStudentInvites, 10000);
+        }
+
+        // Загрузка приглашений для студента
+        async function loadStudentInvites() {
+            try {
+                const response = await fetch('/api/conference/invites');
+                if (!response.ok) {
+                    throw new Error('Ошибка загрузки приглашений');
+                }
+                const data = await response.json();
+                
+                const invitesList = document.getElementById('studentInvitesList');
+                invitesList.innerHTML = '';
+                
+                if (data.invites && data.invites.length > 0) {
+                    // Фильтруем только приглашения для текущего пользователя со статусом 'pending'
+                    const userInvites = data.invites.filter(invite => 
+                        invite.student === '{{ user.username }}' && invite.status === 'pending'
+                    );
+                    
+                    if (userInvites.length === 0) {
+                        invitesList.innerHTML = '<p>Нет новых приглашений</p>';
+                        return;
                     }
-                })
-        return jsonify({'success': True})
-    
-    return jsonify({'error': 'Invite not found'}), 404
-
-@app.route('/api/conference/<room_name>/start', methods=['POST'])
-def start_conference(room_name):
-    if 'user' not in session or session['user']['role'] != 'teacher':
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    data = request.json
-    peer_id = data.get('peerId')
-    
-    if not peer_id:
-        return jsonify({'error': 'Peer ID is required'}), 400
-    
-    # Создаем/обновляем конференцию
-    conference = DB.save_conference(room_name, session['user']['username'], is_active=True)
-    
-    return jsonify({
-        'success': True,
-        'conference': conference,
-        'peerjs_config': {
-            'host': PEERJS_HOST,
-            'port': PEERJS_PORT,
-            'secure': PEERJS_SECURE,
-            'path': PEERJS_PATH
+                    
+                    userInvites.forEach(invite => {
+                        const inviteCard = document.createElement('div');
+                        inviteCard.className = 'invite-card';
+                        inviteCard.innerHTML = `
+                            <div class="invite-info">
+                                <p><strong>Преподаватель:</strong> ${invite.teacher}</p>
+                                <p><small>Получено: ${new Date(invite.created_at).toLocaleString()}</small></p>
+                            </div>
+                            <div class="invite-actions">
+                                <button class="btn btn-success" onclick="respondToInvite(${invite.id}, 'accept')">
+                                    <i class="fas fa-check"></i> Принять
+                                </button>
+                                <button class="btn btn-danger" onclick="respondToInvite(${invite.id}, 'decline')">
+                                    <i class="fas fa-times"></i> Отклонить
+                                </button>
+                            </div>
+                        `;
+                        invitesList.appendChild(inviteCard);
+                    });
+                } else {
+                    invitesList.innerHTML = '<p>Нет новых приглашений</p>';
+                }
+            } catch (error) {
+                console.error('Error loading invites:', error);
+                document.getElementById('studentInvitesList').innerHTML = 
+                    '<p>Ошибка загрузки приглашений. Пожалуйста, обновите страницу.</p>';
+            }
         }
-    })
 
-@app.route('/api/conference/<room_name>/join', methods=['POST'])
-def join_conference(room_name):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    # Проверяем доступ к конференции
-    conference = DB.get_conference(room_name)
-    if not conference or not conference['is_active']:
-        return jsonify({'error': 'Conference not found or inactive'}), 404
-    
-    if session['user']['role'] == 'student':
-        # Проверяем, есть ли у студента доступ через уроки или приглашения
-        teacher_username = room_name.replace('ZindakiRoom_', '')
-        lessons = DB.get_lessons()
-        has_access = any(
-            session['user']['username'] in lesson.get('students', []) and 
-            lesson['teacher'] == teacher_username 
-            for lesson in lessons
-        )
-        
-        if not has_access:
-            invites = DB.get_user_invites(session['user']['username'])
-            has_invite = any(invite['room_name'] == room_name for invite in invites)
+        // Ответ на приглашение (принять/отклонить)
+        window.respondToInvite = async function(inviteId, action) {
+            try {
+                const response = await fetch(`/api/conference/invite/${inviteId}/respond`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ action })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    if (action === 'accept') {
+                        // Принятие приглашения - присоединяемся к конференции
+                        initConference(data.room_name);
+                    }
+                    // Обновляем список приглашений
+                    loadStudentInvites();
+                } else {
+                    alert(data.error || 'Ошибка при обработке приглашения');
+                }
+            } catch (error) {
+                console.error('Error responding to invite:', error);
+                alert('Произошла ошибка при обработке приглашения');
+            }
+        };
+
+        // Инициализация видеоконференции с PeerJS
+        async function initConference(roomName, isInitiator = false) {
+            console.log('Initializing conference with PeerJS...');
+            currentRoom = roomName;
             
-            if not has_invite:
-                return jsonify({'error': 'Access denied'}), 403
-    
-    # Добавляем участника в конференцию
-    DB.add_participant(room_name, session['user']['username'])
-    
-    return jsonify({
-        'success': True,
-        'conference': conference,
-        'participants': conference['participants'],
-        'peerjs_config': {
-            'host': PEERJS_HOST,
-            'port': PEERJS_PORT,
-            'secure': PEERJS_SECURE,
-            'path': PEERJS_PATH
+            try {
+                // Получаем доступ к камере и микрофону
+                const constraints = {
+                    video: {
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                        frameRate: { ideal: 15, max: 20 }
+                    },
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                };
+                
+                localStream = await navigator.mediaDevices.getUserMedia(constraints);
+                
+                // Отображаем локальное видео
+                const localVideo = document.getElementById('localVideo');
+                localVideo.srcObject = localStream;
+                document.getElementById('localVideoContainer').style.display = 'block';
+                
+                // Подключаемся к другим участникам
+                if (isInitiator) {
+                    // Учитель ожидает подключения студентов
+                    document.getElementById('waitingMessage').style.display = 'flex';
+                } else {
+                    // Студент подключается к учителю
+                    const teacherId = await getTeacherPeerId(roomName);
+                    if (teacherId) {
+                        connectToPeer(teacherId);
+                    } else {
+                        alert('Преподаватель не найден в комнате');
+                    }
+                }
+                
+                document.getElementById('conferenceSection').style.display = 'block';
+                document.getElementById('conferenceSection').scrollIntoView({ behavior: 'smooth' });
+                
+                // Для учителя показываем кнопку завершения конференции
+                if ({{ 'true' if is_teacher else 'false' }}) {
+                    document.getElementById('endConferenceBtn').style.display = 'inline-block';
+                }
+            } catch (error) {
+                console.error('Error initializing conference:', error);
+                alert('Ошибка при подключении к конференции: ' + error.message);
+            }
         }
-    })
 
-@app.route('/api/conference/<room_name>/leave', methods=['POST'])
-def leave_conference(room_name):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    DB.remove_participant(room_name, session['user']['username'])
-    return jsonify({'success': True})
+        // Получение Peer ID преподавателя
+        async function getTeacherPeerId(roomName) {
+            try {
+                const response = await fetch(`/api/conference/${roomName}/host`);
+                const data = await response.json();
+                return data.peerId;
+            } catch (error) {
+                console.error('Error getting teacher peer ID:', error);
+                return null;
+            }
+        }
 
-@app.route('/api/conference/<room_name>/end', methods=['POST'])
-def end_conference(room_name):
-    if 'user' not in session or session['user']['role'] != 'teacher':
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    conference = DB.get_conference(room_name)
-    if not conference or conference['host'] != session['user']['username']:
-        return jsonify({'error': 'Conference not found or access denied'}), 404
-    
-    DB.end_conference(room_name)
-    return jsonify({'success': True})
-
-@app.route('/api/conference/<room_name>/status', methods=['GET'])
-def get_conference_status(room_name):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    conference = DB.get_conference(room_name)
-    if not conference:
-        return jsonify({'error': 'Conference not found'}), 404
-    
-    return jsonify({
-        'success': True,
-        'is_active': conference['is_active'],
-        'participants': conference['participants'],
-        'host': conference['host'],
-        'started_at': conference['created_at']
-    })
-
-@app.route('/api/conference/<room_name>/host', methods=['GET'])
-def get_conference_host(room_name):
-    conference = DB.get_conference(room_name)
-    if not conference:
-        return jsonify({'error': 'Conference not found'}), 404
-    
-    return jsonify({
-        'success': True,
-        'host': conference['host'],
-        'peerId': f"{conference['host']}_{room_name}"  # Генерируем Peer ID для хоста
-    })
-
-# Видеоконференции
-@app.route('/conference/<room_name>')
-def conference(room_name):
-    if 'user' not in session:
-        return redirect('/#login')
-    
-    if session['user']['role'] == 'teacher':
-        if not room_name.endswith(session['user']['username']):
-            return "Доступ запрещен", 403
-    else:
-        teacher_username = room_name.replace('ZindakiRoom_', '')
-        lessons = DB.get_lessons()
-        has_access = any(
-            session['user']['username'] in lesson.get('students', []) and 
-            lesson['teacher'] == teacher_username 
-            for lesson in lessons
-        )
-        
-        if not has_access:
-            invites = DB.get_user_invites(session['user']['username'])
-            has_invite = any(invite['room_name'] == room_name for invite in invites)
+        // Подключение к другому участнику
+        function connectToPeer(peerId) {
+            if (connections[peerId]) return;
             
-            if not has_invite:
-                return "Доступ запрещен", 403
-    
-    return render_template('dashboard.html', 
-                         room_name=room_name,
-                         user=session['user'],
-                         is_teacher=session['user']['role'] == 'teacher',
-                         peerjs_config={
-                             'host': PEERJS_HOST,
-                             'port': PEERJS_PORT,
-                             'secure': PEERJS_SECURE,
-                             'path': PEERJS_PATH
-                         })
+            // Устанавливаем соединение для передачи данных
+            const conn = peer.connect(peerId);
+            connections[peerId] = conn;
+            
+            conn.on('open', () => {
+                console.log('Соединение установлено с', peerId);
+                // Отправляем информацию о себе
+                conn.send({
+                    type: 'user-info',
+                    username: '{{ user.username }}',
+                    isTeacher: {{ 'true' if is_teacher else 'false' }}
+                });
+            });
+            
+            conn.on('data', (data) => {
+                handlePeerData(peerId, data);
+            });
+            
+            conn.on('close', () => {
+                removePeerConnection(peerId);
+            });
+            
+            conn.on('error', (err) => {
+                console.error('Ошибка соединения:', err);
+                removePeerConnection(peerId);
+            });
+            
+            // Устанавливаем видеозвонок
+            const call = peer.call(peerId, localStream);
+            call.on('stream', (remoteStream) => {
+                handleRemoteStream(remoteStream, peerId);
+            });
+            
+            call.on('close', () => {
+                removeRemoteStream(peerId);
+            });
+            
+            call.on('error', (err) => {
+                console.error('Ошибка видеозвонка:', err);
+                removeRemoteStream(peerId);
+            });
+        }
 
-# Домашние задания
-@app.route('/api/homework', methods=['GET', 'POST'])
-def api_homework():
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    if request.method == 'POST':
-        if session['user']['role'] != 'teacher':
-            return jsonify({'error': 'Only teachers can assign homework'}), 403
-        
-        files = []
-        if 'files' in request.files:
-            for file in request.files.getlist('files'):
-                if file.filename != '':
-                    filename = secure_filename(file.filename)
-                    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                    file.save(filepath)
-                    files.append({
-                        'name': filename,
-                        'path': filepath,
-                        'size': os.path.getsize(filepath)
+        // Обработка удаленного потока
+        function handleRemoteStream(stream, peerId) {
+            const remoteVideo = document.getElementById('remoteVideo');
+            remoteVideo.srcObject = stream;
+            document.getElementById('remoteVideoContainer').style.display = 'block';
+            document.getElementById('waitingMessage').style.display = 'none';
+            
+            // Добавляем участника в список
+            updateParticipantList(peerId, true);
+        }
+
+        // Удаление удаленного потока
+        function removeRemoteStream(peerId) {
+            const remoteVideo = document.getElementById('remoteVideo');
+            if (remoteVideo.srcObject) {
+                remoteVideo.srcObject.getTracks().forEach(track => track.stop());
+                remoteVideo.srcObject = null;
+            }
+            
+            document.getElementById('remoteVideoContainer').style.display = 'none';
+            document.getElementById('waitingMessage').style.display = 'flex';
+            
+            // Удаляем участника из списка
+            updateParticipantList(peerId, false);
+        }
+
+        // Обработка данных от других участников
+        function handlePeerData(peerId, data) {
+            switch (data.type) {
+                case 'user-info':
+                    updateParticipantList(peerId, true, data.username, data.isTeacher);
+                    break;
+                case 'screen-sharing':
+                    if (data.active) {
+                        document.getElementById('screenContainer').style.display = 'block';
+                        const screenVideo = document.getElementById('screenShare');
+                        screenVideo.srcObject = data.stream;
+                    } else {
+                        document.getElementById('screenContainer').style.display = 'none';
+                    }
+                    break;
+                case 'conference-end':
+                    alert('Конференция завершена преподавателем');
+                    leaveConference();
+                    break;
+            }
+        }
+
+        // Удаление соединения с участником
+        function removePeerConnection(peerId) {
+            if (connections[peerId]) {
+                connections[peerId].close();
+                delete connections[peerId];
+            }
+            removeRemoteStream(peerId);
+        }
+
+        // Обновление списка участников
+        function updateParticipantList(peerId, isConnected, username = null, isTeacher = false) {
+            const participantsList = document.getElementById('participantsList');
+            const participantItem = document.getElementById(`participant-${peerId}`);
+            
+            if (isConnected) {
+                if (!participantItem) {
+                    const item = document.createElement('div');
+                    item.className = 'participant-item';
+                    item.id = `participant-${peerId}`;
+                    item.innerHTML = `
+                        <div class="participant-avatar">${(username || peerId).charAt(0).toUpperCase()}</div>
+                        <div>${username || peerId} ${isTeacher ? '(Преподаватель)' : ''}</div>
+                    `;
+                    participantsList.appendChild(item);
+                }
+            } else if (participantItem) {
+                participantItem.remove();
+            }
+        }
+
+        // Демонстрация экрана (для учителя)
+        async function startScreenSharing() {
+            if (isScreenSharing) {
+                stopScreenSharing();
+                return;
+            }
+            
+            try {
+                screenStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 10, max: 15 }
+                    },
+                    audio: false
+                });
+                
+                isScreenSharing = true;
+                document.getElementById('screenContainer').style.display = 'block';
+                document.getElementById('teacherShareScreenBtn').innerHTML = '<i class="fas fa-stop"></i> Остановить демонстрацию';
+                
+                const screenVideo = document.getElementById('screenShare');
+                screenVideo.srcObject = screenStream;
+                
+                // Отправляем информацию о демонстрации экрана всем участникам
+                Object.keys(connections).forEach(peerId => {
+                    const call = peer.call(peerId, screenStream);
+                    call.on('stream', (remoteStream) => {
+                        // Участник получит наш экран
+                    });
+                    
+                    connections[peerId].send({
+                        type: 'screen-sharing',
+                        active: true
+                    });
+                });
+                
+                screenStream.getVideoTracks()[0].onended = () => {
+                    stopScreenSharing();
+                };
+                
+            } catch (error) {
+                console.error('Error starting screen sharing:', error);
+                isScreenSharing = false;
+                document.getElementById('screenContainer').style.display = 'none';
+                document.getElementById('teacherShareScreenBtn').innerHTML = '<i class="fas fa-desktop"></i> Демонстрация экрана';
+            }
+        }
+
+        // Остановка демонстрации экрана
+        function stopScreenSharing() {
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+                screenStream = null;
+            }
+            
+            isScreenSharing = false;
+            document.getElementById('screenContainer').style.display = 'none';
+            document.getElementById('teacherShareScreenBtn').innerHTML = '<i class="fas fa-desktop"></i> Демонстрация экрана';
+            
+            // Уведомляем участников об остановке демонстрации
+            Object.keys(connections).forEach(peerId => {
+                connections[peerId].send({
+                    type: 'screen-sharing',
+                    active: false
+                });
+            });
+        }
+
+        // Выход из конференции
+        async function leaveConference() {
+            // Останавливаем все медиапотоки
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+                screenStream = null;
+            }
+            
+            // Закрываем все соединения
+            Object.keys(connections).forEach(peerId => {
+                connections[peerId].close();
+            });
+            connections = {};
+            
+            // Очищаем видеоэлементы
+            document.getElementById('remoteVideo').srcObject = null;
+            document.getElementById('localVideo').srcObject = null;
+            document.getElementById('screenShare').srcObject = null;
+            
+            document.getElementById('waitingMessage').style.display = 'flex';
+            document.getElementById('remoteVideoContainer').style.display = 'none';
+            document.getElementById('localVideoContainer').style.display = 'none';
+            document.getElementById('screenContainer').style.display = 'none';
+            
+            // Очищаем список участников
+            document.getElementById('participantsList').innerHTML = '<h4>Участники:</h4>';
+            
+            if (currentRoom) {
+                // Уведомляем сервер о выходе из комнаты
+                await fetch(`/api/conference/${currentRoom}/leave`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                currentRoom = null;
+            }
+            
+            document.getElementById('conferenceSection').style.display = 'none';
+            document.getElementById('endConferenceBtn').style.display = 'none';
+        }
+
+        // Завершение конференции (для учителя)
+        async function endConference() {
+            if (confirm('Вы уверены, что хотите завершить конференцию для всех участников?')) {
+                // Уведомляем всех участников о завершении
+                Object.keys(connections).forEach(peerId => {
+                    connections[peerId].send({
+                        type: 'conference-end'
+                    });
+                });
+                
+                await leaveConference();
+                
+                if (currentRoom) {
+                    await fetch(`/api/conference/${currentRoom}/end`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                }
+                
+                window.location.reload();
+            }
+        }
+
+        // Переключение видео
+        function toggleVideo() {
+            isVideoEnabled = !isVideoEnabled;
+            const btn = document.getElementById('toggleVideoBtn');
+            
+            if (isVideoEnabled) {
+                btn.innerHTML = '<i class="fas fa-video"></i>';
+                btn.title = 'Выключить видео';
+            } else {
+                btn.innerHTML = '<i class="fas fa-video-slash"></i>';
+                btn.title = 'Включить видео';
+            }
+            
+            if (localStream) {
+                localStream.getVideoTracks()[0].enabled = isVideoEnabled;
+            }
+        }
+
+        // Переключение аудио
+        function toggleAudio() {
+            isAudioEnabled = !isAudioEnabled;
+            const btn = document.getElementById('toggleAudioBtn');
+            
+            if (isAudioEnabled) {
+                btn.innerHTML = '<i class="fas fa-microphone"></i>';
+                btn.title = 'Выключить микрофон';
+            } else {
+                btn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+                btn.title = 'Включить микрофон';
+            }
+            
+            if (localStream) {
+                localStream.getAudioTracks()[0].enabled = isAudioEnabled;
+            }
+        }
+
+        // Полноэкранный режим
+        function toggleFullscreen(elementId) {
+            const element = document.getElementById(elementId);
+            
+            if (!document.fullscreenElement) {
+                if (element.requestFullscreen) {
+                    element.requestFullscreen();
+                } else if (element.webkitRequestFullscreen) {
+                    element.webkitRequestFullscreen();
+                } else if (element.msRequestFullscreen) {
+                    element.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        }
+
+        // Обработчики кнопок
+        document.getElementById('toggleVideoBtn').addEventListener('click', toggleVideo);
+        document.getElementById('toggleAudioBtn').addEventListener('click', toggleAudio);
+        document.getElementById('disconnectBtn').addEventListener('click', function() {
+            if (confirm('Вы уверены, что хотите отключиться от конференции?')) {
+                leaveConference();
+            }
+        });
+
+        document.getElementById('leaveConferenceBtn').addEventListener('click', function() {
+            if (confirm('Вы уверены, что хотите покинуть конференцию?')) {
+                leaveConference().then(() => {
+                    window.location.reload();
+                });
+            }
+        });
+
+        document.getElementById('endConferenceBtn').addEventListener('click', endConference);
+
+        // Для учителя: кнопка демонстрации экрана
+        if ({{ 'true' if is_teacher else 'false' }}) {
+            document.getElementById('teacherShareScreenBtn').addEventListener('click', startScreenSharing);
+            
+            // Обновление статуса конференции
+            async function updateConferenceStatus() {
+                const roomName = `ZindakiRoom_{{ user.username }}`;
+                const response = await fetch(`/api/conference/${roomName}/status`);
+                const data = await response.json();
+                
+                const statusElement = document.getElementById('conferenceStatus');
+                if (data.is_active) {
+                    statusElement.innerHTML = `
+                        <p>Конференция активна с ${new Date(data.conference.started_at).toLocaleString()}</p>
+                        <p>Участников: ${data.conference.participants?.length || 0}</p>
+                    `;
+                    statusElement.style.backgroundColor = '#e8f5e9';
+                } else {
+                    statusElement.innerHTML = '<p>Конференция не активна</p>';
+                    statusElement.style.backgroundColor = '#f0f0f0';
+                }
+            }
+            
+            // Загрузка отправленных приглашений
+            async function loadTeacherInvites() {
+                const response = await fetch('/api/conference/invites');
+                const data = await response.json();
+                
+                const invitesList = document.getElementById('invitesList');
+                invitesList.innerHTML = '<h4>Отправленные приглашения:</h4>';
+                
+                if (data.invites.length === 0) {
+                    invitesList.innerHTML += '<p>Нет отправленных приглашений</p>';
+                    return;
+                }
+                
+                data.invites.forEach(invite => {
+                    const inviteCard = document.createElement('div');
+                    inviteCard.className = 'invite-card';
+                    inviteCard.innerHTML = `
+                        <div class="invite-info">
+                            <p><strong>Ученик:</strong> ${invite.student}</p>
+                            <p><strong>Статус:</strong> <span class="status-${invite.status}">${
+                                invite.status === 'pending' ? 'Ожидает ответа' : 
+                                invite.status === 'accepted' ? 'Принято' : 'Отклонено'
+                            }</span></p>
+                            <p><small>Отправлено: ${new Date(invite.created_at).toLocaleString()}</small></p>
+                        </div>
+                    `;
+                    invitesList.appendChild(inviteCard);
+                });
+            }
+            
+            // Начало конференции
+            document.getElementById('startConferenceBtn').addEventListener('click', async function() {
+                const roomName = `ZindakiRoom_{{ user.username }}`;
+                
+                const response = await fetch(`/api/conference/${roomName}/start`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        peerId: currentPeerId
                     })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    initConference(roomName, true);
+                    updateConferenceStatus();
+                } else {
+                    alert(data.error || 'Ошибка при запуске конференции');
+                }
+            });
+            
+            // Отправка приглашения
+            document.getElementById('inviteStudentBtn').addEventListener('click', function() {
+                loadStudentsForSelect('inviteStudent');
+                document.getElementById('inviteStudentModal').style.display = 'flex';
+            });
+            
+            // Форма отправки приглашения
+            document.getElementById('inviteStudentForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const studentUsername = document.getElementById('inviteStudent').value;
+                const roomName = document.getElementById('inviteRoomName').value;
+                
+                const response = await fetch('/api/conference/invite', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        student_username: studentUsername,
+                        room_name: roomName
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert('Приглашение отправлено!');
+                    document.getElementById('inviteStudentModal').style.display = 'none';
+                    document.getElementById('inviteStudentForm').reset();
+                    loadTeacherInvites();
+                } else {
+                    alert(data.error || 'Ошибка отправки приглашения');
+                }
+            });
+            
+            // Инициализация
+            updateConferenceStatus();
+            loadTeacherInvites();
+        } else {
+            // Для студентов: загрузка приглашений
+            loadStudentInvites();
+        }
         
-        lesson_id = request.form.get('lesson_id')
-        title = request.form.get('title')
-        description = request.form.get('description')
-        deadline = request.form.get('deadline')
-        students = json.loads(request.form.get('students', '[]'))
-        
-        if not all([lesson_id, title, description, deadline, students]):
-            return jsonify({'error': 'Missing required fields'}), 400
-        
-        homework = DB.save_homework(
-            lesson_id=int(lesson_id),
-            title=title,
-            description=description,
-            deadline=deadline,
-            teacher=session['user']['username'],
-            students=students,
-            files=files
-        )
-        
-        return jsonify({'success': True, 'homework': homework})
-    
-    if session['user']['role'] == 'teacher':
-        homeworks = DB.get_teacher_homeworks(session['user']['username'])
-    else:
-        homeworks = DB.get_student_homeworks(session['user']['username'])
-    
-    return jsonify({'homeworks': homeworks})
+        // Обработка присоединения к уроку
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.classList.contains('join-lesson-btn')) {
+                e.preventDefault();
+                const lessonId = e.target.getAttribute('data-lesson-id');
+                
+                fetch(`/api/lesson/${lessonId}/join`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            initConference(data.room_name);
+                        } else {
+                            alert(data.error || 'Ошибка подключения к конференции');
+                        }
+                    });
+            }
+        });
 
-@app.route('/api/homework/<int:homework_id>', methods=['GET'])
-def api_get_homework(homework_id):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    homework = DB.get_homework(homework_id)
-    if not homework:
-        return jsonify({'error': 'Homework not found'}), 404
-    
-    if session['user']['role'] == 'student' and session['user']['username'] not in homework['students']:
-        return jsonify({'error': 'Access denied'}), 403
-    if session['user']['role'] == 'teacher' and homework['teacher'] != session['user']['username']:
-        return jsonify({'error': 'Access denied'}), 403
-    
-    return jsonify({'homework': homework})
-
-@app.route('/api/homework/<int:homework_id>/submit', methods=['POST'])
-def api_submit_homework(homework_id):
-    if 'user' not in session or session['user']['role'] != 'student':
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    student_username = session['user']['username']
-    comment = request.form.get('comment', '')
-    
-    files = []
-    if 'files' in request.files:
-        for file in request.files.getlist('files'):
-            if file.filename != '':
-                filename = secure_filename(file.filename)
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(filepath)
-                files.append({
-                    'name': filename,
-                    'path': filepath,
-                    'size': os.path.getsize(filepath)
+        // Для учителя: загрузка данных
+        if ({{ 'true' if is_teacher else 'false' }}) {
+            // Функция для добавления пользователя
+            function addUser(userData) {
+                fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(userData)
                 })
-    
-    if DB.submit_homework(homework_id, student_username, comment, files):
-        return jsonify({'success': True})
-    return jsonify({'error': 'Homework not found or access denied'}), 404
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loadUsers();
+                        document.getElementById('addUserModal').style.display = 'none';
+                        document.getElementById('addUserForm').reset();
+                    } else {
+                        alert(data.error || 'Ошибка при добавлении пользователя');
+                    }
+                });
+            }
+            
+            // Загрузка списка пользователей
+            function loadUsers() {
+                fetch('/api/users')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Ошибка загрузки пользователей');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const tableBody = document.getElementById('usersTable');
+                        tableBody.innerHTML = '';
+                        
+                        data.users.forEach(user => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${user.username}</td>
+                                <td>${user.email}</td>
+                                <td>${user.role === 'teacher' ? 'Преподаватель' : 'Ученик'}</td>
+                                <td class="${user.is_active ? 'status-active' : 'status-inactive'}">
+                                    ${user.is_active ? 'Активен' : 'Неактивен'}
+                                </td>
+                                <td>
+                                    <button class="btn btn-secondary" onclick="toggleUserStatus('${user.username}', ${!user.is_active})">
+                                        ${user.is_active ? 'Деактивировать' : 'Активировать'}
+                                    </button>
+                                    <button class="btn btn-danger" onclick="deleteUser('${user.username}')">
+                                        <i class="fas fa-trash"></i> Удалить
+                                    </button>
+                                </td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Ошибка загрузки пользователей');
+                    });
+            }
+            
+            // Загрузка домашних заданий
+            function loadHomeworks() {
+                fetch('/api/homework')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Ошибка загрузки домашних заданий');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const tableBody = document.getElementById('homeworksTable');
+                        tableBody.innerHTML = '';
+                        
+                        data.homeworks.forEach(hw => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${hw.title}</td>
+                                <td>${hw.description}</td>
+                                <td>${hw.deadline}</td>
+                                <td>${hw.students.join(', ')}</td>
+                                <td>
+                                    <span class="homework-status homework-status-${hw.status || 'not-submitted'}">
+                                        ${hw.status === 'submitted' ? 'Сдано' : 'Не сдано'}
+                                    </span>
+                                </td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Ошибка загрузки домашних заданий');
+                    });
+            }
+            
+            // Загрузка списка учеников для выбора
+            function loadStudentsForSelect(selectId) {
+                fetch('/api/users?role=student')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Ошибка загрузки учеников');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const select = document.getElementById(selectId);
+                        select.innerHTML = '';
+                        
+                        data.users.forEach(student => {
+                            const option = document.createElement('option');
+                            option.value = student.username;
+                            option.textContent = student.username;
+                            select.appendChild(option);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Ошибка загрузки списка учеников');
+                    });
+            }
+            
+            // Управление пользователями
+            window.toggleUserStatus = function(username, activate) {
+                if (confirm(`Вы уверены, что хотите ${activate ? 'активировать' : 'деактивировать'} пользователя ${username}?`)) {
+                    fetch(`/api/users/${username}/status`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ is_active: activate })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            loadUsers();
+                        } else {
+                            alert(data.error || 'Ошибка обновления статуса');
+                        }
+                    });
+                }
+            };
+            
+            window.deleteUser = function(username) {
+                if (confirm(`Вы уверены, что хотите удалить пользователя ${username}?`)) {
+                    fetch(`/api/users/${username}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            loadUsers();
+                        } else {
+                            alert(data.error || 'Ошибка удаления пользователя');
+                        }
+                    });
+                }
+            };
+            
+            // Модальные окна
+            document.getElementById('addUserBtn').addEventListener('click', () => {
+                document.getElementById('addUserModal').style.display = 'flex';
+            });
+            
+            document.querySelectorAll('.close-modal').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.modal').forEach(modal => {
+                        modal.style.display = 'none';
+                    });
+                });
+            });
+            
+            // Форма добавления пользователя
+            document.getElementById('addUserForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const username = document.getElementById('newUsername').value;
+                const email = document.getElementById('newEmail').value;
+                const password = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                const role = document.getElementById('userRole').value;
+                
+                if (password !== confirmPassword) {
+                    alert('Пароли не совпадают!');
+                    return;
+                }
+                
+                addUser({ username, email, password, role });
+            });
+            
+            // Загрузка начальных данных
+            loadUsers();
+            loadHomeworks();
+        } else {
+            // Для учеников
+            window.openSubmitHomeworkModal = function(homeworkId, title, description, deadline) {
+                document.getElementById('homeworkId').value = homeworkId;
+                document.getElementById('homeworkSubmissionTitle').value = title;
+                document.getElementById('homeworkSubmissionDescription').value = description;
+                document.getElementById('homeworkSubmissionDeadline').value = deadline;
+                document.getElementById('submitHomeworkModal').style.display = 'flex';
+            };
+            
+            // Форма сдачи домашнего задания
+            document.getElementById('submitHomeworkForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const homeworkId = document.getElementById('homeworkId').value;
+                const comment = document.getElementById('homeworkSubmissionComment').value;
+                
+                const filesInput = document.getElementById('homeworkSubmissionFiles');
+                const files = filesInput.files;
+                
+                const formData = new FormData();
+                formData.append('homework_id', homeworkId);
+                formData.append('comment', comment);
+                
+                for (let i = 0; i < files.length; i++) {
+                    formData.append('files', files[i]);
+                }
+                
+                fetch('/api/homework/submit', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Домашнее задание успешно отправлено!');
+                        document.getElementById('submitHomeworkModal').style.display = 'none';
+                        document.getElementById('submitHomeworkForm').reset();
+                        document.getElementById('homeworkSubmissionFilesPreview').innerHTML = '';
+                        window.location.reload();
+                    } else {
+                        alert(data.error || 'Ошибка при отправке домашнего задания');
+                    }
+                });
+            });
+            
+            // Превью загружаемых файлов (сдача ДЗ)
+            document.getElementById('homeworkSubmissionFiles').addEventListener('change', function() {
+                const preview = document.getElementById('homeworkSubmissionFilesPreview');
+                preview.innerHTML = '';
+                
+                if (this.files.length > 0) {
+                    preview.innerHTML = `Выбрано файлов: ${this.files.length}<br>`;
+                    for (let i = 0; i < this.files.length; i++) {
+                        preview.innerHTML += `${i+1}. ${this.files[i].name}<br>`;
+                    }
+                }
+            });
+        }
 
-# Загрузка файлов
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+        // Получение VPN QR-кода
+        document.getElementById('getVpnBtn').addEventListener('click', function() {
+            // В реальной реализации здесь будет запрос к серверу для получения QR-кода
+            // Сейчас просто демонстрация
+            document.getElementById('vpnModal').style.display = 'flex';
+            document.getElementById('vpnQrCode').innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://wireguard.example.com/config/vpn-config" alt="VPN QR Code">';
+        });
 
-# Личный кабинет
-@app.route('/dashboard')
-def dashboard():
-    if 'user' not in session:
-        return redirect('/#login')
-    
-    if session['user']['role'] == 'teacher':
-        lessons = DB.get_lessons(teacher=session['user']['username'])
-        homeworks = DB.get_teacher_homeworks(session['user']['username'])
-    else:
-        lessons = [l for l in DB.get_lessons() if session['user']['username'] in l.get('students', [])]
-        homeworks = DB.get_student_homeworks(session['user']['username'])
-    
-    return render_template('dashboard.html', 
-                         user=session['user'],
-                         lessons=lessons,
-                         homeworks=homeworks,
-                         is_teacher=session['user']['role'] == 'teacher',
-                         peerjs_config={
-                             'host': PEERJS_HOST,
-                             'port': PEERJS_PORT,
-                             'secure': PEERJS_SECURE,
-                             'path': PEERJS_PATH
-                         })
+        // Скачивание VPN конфига
+        document.getElementById('downloadVpnConfig').addEventListener('click', function() {
+            // В реальной реализации здесь будет запрос к серверу для скачивания файла
+            alert('Конфигурационный файл WireGuard будет скачан');
+        });
 
-# Обработка контактной формы
-@app.route('/api/contact', methods=['POST'])
-def api_contact():
-    try:
-        data = request.json
-        return jsonify({'success': True, 'message': 'Ваше сообщение отправлено!'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        // Закрытие модальных окон при клике вне их
+        window.addEventListener('click', function(e) {
+            if (e.target.classList.contains('modal')) {
+                e.target.style.display = 'none';
+            }
+        });
 
-if __name__ == '__main__':  
-    socketio.run(app, host='0.0.0.0', port=8000, debug=True)
+        // Обработка выхода
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            fetch('/api/logout')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = '/';
+                    }
+                });
+        });
+
+        // Инициализация PeerJS при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            initPeerJS();
+        });
+    </script>
+</body>
+</html>
