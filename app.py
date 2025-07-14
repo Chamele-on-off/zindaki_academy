@@ -1,29 +1,26 @@
-import os
-from flask import Flask, render_template, request, session, redirect, jsonify, send_from_directory
-from flask_socketio import SocketIO
+from flask import Flask, render_template, request, session, redirect, jsonify, send_from_directory, Response
+from flask_socketio import SocketIO, emit, join_room, leave_room
 from werkzeug.security import generate_password_hash, check_password_hash
 import json
+import os
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
+import time
 import logging
-import jwt
 from collections import defaultdict, deque
 import uuid
 
-# Инициализация приложения
 app = Flask(__name__, static_folder='static', template_folder='templates')
-app.secret_key = os.environ.get('SECRET_KEY', 'your-very-secret-key-12345')
+app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 
 # Настройка SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
-# Конфигурация PeerJS
-PEERJS_HOST = os.environ.get('PEERJS_HOST', 'peerjs.zindaki.academy')
-PEERJS_PORT = os.environ.get('PEERJS_PORT', '443')
-PEERJS_SECURE = os.environ.get('PEERJS_SECURE', 'true').lower() == 'true'
-PEERJS_PATH = os.environ.get('PEERJS_PATH', '/peerjs')
+# Настройка логирования
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Конфигурация приложения
+# Конфигурация
 UPLOAD_FOLDER = 'uploads'
 DB_FOLDER = 'data'
 INVITES_FOLDER = 'invites'
@@ -34,9 +31,9 @@ os.makedirs(INVITES_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
-# Настройка логирования
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Глобальные переменные для видеоконференций
+active_conferences = defaultdict(dict)  # Активные конференции
+user_rooms = {}  # Соответствие пользователей и комнат
 
 class DB:
     @staticmethod
@@ -262,74 +259,6 @@ class DB:
         invites = DB.get_invites()
         return [i for i in invites if i['teacher'] == username]
 
-    # Конференции
-    @staticmethod
-    def get_conferences():
-        return DB._get_db('conferences')
-
-    @staticmethod
-    def get_conference(room_name):
-        conferences = DB.get_conferences()
-        return next((c for c in conferences if c['room_name'] == room_name), None)
-
-    @staticmethod
-    def save_conference(room_name, host_username, is_active=True):
-        conferences = DB.get_conferences()
-        conference = next((c for c in conferences if c['room_name'] == room_name), None)
-        
-        if conference:
-            conference['is_active'] = is_active
-            conference['updated_at'] = datetime.now().isoformat()
-        else:
-            conference = {
-                'room_name': room_name,
-                'host': host_username,
-                'participants': [],
-                'is_active': is_active,
-                'created_at': datetime.now().isoformat(),
-                'updated_at': datetime.now().isoformat()
-            }
-            conferences.append(conference)
-        
-        DB._save_db('conferences', conferences)
-        return conference
-
-    @staticmethod
-    def add_participant(room_name, username):
-        conferences = DB.get_conferences()
-        conference = next((c for c in conferences if c['room_name'] == room_name), None)
-        
-        if conference and username not in conference['participants']:
-            conference['participants'].append(username)
-            conference['updated_at'] = datetime.now().isoformat()
-            DB._save_db('conferences', conferences)
-            return True
-        return False
-
-    @staticmethod
-    def remove_participant(room_name, username):
-        conferences = DB.get_conferences()
-        conference = next((c for c in conferences if c['room_name'] == room_name), None)
-        
-        if conference and username in conference['participants']:
-            conference['participants'].remove(username)
-            conference['updated_at'] = datetime.now().isoformat()
-            DB._save_db('conferences', conferences)
-            return True
-        return False
-
-    @staticmethod
-    def end_conference(room_name):
-        conferences = DB.get_conferences()
-        conference = next((c for c in conferences if c['room_name'] == room_name), None)
-        
-        if conference:
-            conference['is_active'] = False
-            conference['updated_at'] = datetime.now().isoformat()
-            DB._save_db('conferences', conferences)
-            return True
-        return False
-
 # Инициализация базы данных
 if not os.path.exists(f'{DB_FOLDER}/users.json'):
     initial_users = [
@@ -379,7 +308,7 @@ if not os.path.exists(f'{DB_FOLDER}/users.json'):
     ]
     
     initial_homeworks = []
-    initial_conferences = []
+    
     initial_testimonials = [
         {
             "id": 1,
@@ -400,12 +329,301 @@ if not os.path.exists(f'{DB_FOLDER}/users.json'):
     DB._save_db('users', initial_users)
     DB._save_db('lessons', initial_lessons)
     DB._save_db('homeworks', initial_homeworks)
-    DB._save_db('conferences', initial_conferences)
     DB._save_db('testimonials', initial_testimonials)
 
 if not os.path.exists(f'{INVITES_FOLDER}/invites.json'):
     with open(f'{INVITES_FOLDER}/invites.json', 'w') as f:
         json.dump([], f)
+
+# SocketIO обработчики
+@socketio.on('connect')
+def handle_connect():
+    logger.info(f'Client connected: {request.sid}')
+    if 'user' in session:
+        emit('connection-response', {'status': 'connected', 'user': session['user']['username']})
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    logger.info(f'Client disconnected: {request.sid}')
+    if request.sid in user_rooms:
+        room = user_rooms[request.sid]
+        leave_room(room)
+        emit('user-left', {'user': session.get('user', {}).get('username')}, room=room)
+        del user_rooms[request.sid]
+
+@socketio.on('join')
+def handle_join(data):
+    if 'user' not in session:
+        emit('error', {'message': 'Unauthorized'})
+        return
+    
+    room = data.get('room')
+    if not room:
+        emit('error', {'message': 'Room not specified'})
+        return
+    
+    user = session['user']['username']
+    join_room(room)
+    user_rooms[request.sid] = room
+    
+    # Добавляем пользователя в активную конференцию
+    if room not in active_conferences:
+        active_conferences[room] = {
+            'teacher': user if session['user']['role'] == 'teacher' else None,
+            'started_at': datetime.now().isoformat(),
+            'participants': []
+        }
+    
+    if user not in active_conferences[room]['participants']:
+        active_conferences[room]['participants'].append(user)
+    
+    emit('user-joined', {'user': user, 'participants': active_conferences[room]['participants']}, room=room)
+    logger.info(f'User {user} joined room {room}')
+
+@socketio.on('leave')
+def handle_leave(data):
+    if 'user' not in session:
+        return
+    
+    room = data.get('room')
+    if not room or room not in active_conferences:
+        return
+    
+    user = session['user']['username']
+    leave_room(room)
+    
+    if request.sid in user_rooms:
+        del user_rooms[request.sid]
+    
+    if user in active_conferences[room]['participants']:
+        active_conferences[room]['participants'].remove(user)
+    
+    emit('user-left', {'user': user, 'participants': active_conferences[room]['participants']}, room=room)
+    logger.info(f'User {user} left room {room}')
+    
+    # Если комната пуста, удаляем ее
+    if not active_conferences[room]['participants']:
+        del active_conferences[room]
+
+@socketio.on('offer')
+def handle_offer(data):
+    if 'user' not in session:
+        return
+    
+    room = data.get('room')
+    if not room or room not in active_conferences:
+        return
+    
+    emit('offer', {
+        'sdp': data['sdp'],
+        'from': session['user']['username']
+    }, room=room, include_self=False)
+    logger.info(f'Offer forwarded from {session["user"]["username"]} in room {room}')
+
+@socketio.on('answer')
+def handle_answer(data):
+    if 'user' not in session:
+        return
+    
+    room = data.get('room')
+    if not room or room not in active_conferences:
+        return
+    
+    emit('answer', {
+        'sdp': data['sdp'],
+        'from': session['user']['username']
+    }, room=room, include_self=False)
+    logger.info(f'Answer forwarded from {session["user"]["username"]} in room {room}')
+
+@socketio.on('ice-candidate')
+def handle_ice_candidate(data):
+    if 'user' not in session:
+        return
+    
+    room = data.get('room')
+    if not room or room not in active_conferences:
+        return
+    
+    emit('ice-candidate', {
+        'candidate': data['candidate'],
+        'from': session['user']['username']
+    }, room=room, include_self=False)
+    logger.info(f'ICE candidate forwarded from {session["user"]["username"]} in room {room}')
+
+@socketio.on('end-conference')
+def handle_end_conference(data):
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return
+    
+    room = data.get('room')
+    if not room or room not in active_conferences:
+        return
+    
+    emit('conference-ended', {}, room=room)
+    logger.info(f'Conference {room} ended by teacher {session["user"]["username"]}')
+    
+    if room in active_conferences:
+        del active_conferences[room]
+
+# API для видеоконференций
+@app.route('/api/conference/<room_name>/join', methods=['POST'])
+def join_conference(room_name):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    user_id = session['user']['username']
+    
+    # Добавляем пользователя в активную конференцию
+    if room_name not in active_conferences:
+        active_conferences[room_name] = {
+            'teacher': user_id if session['user']['role'] == 'teacher' else None,
+            'started_at': datetime.now().isoformat(),
+            'participants': [user_id]
+        }
+    elif user_id not in active_conferences[room_name]['participants']:
+        active_conferences[room_name]['participants'].append(user_id)
+    
+    logger.info(f"User {user_id} joined room {room_name}")
+    
+    return jsonify({
+        'success': True,
+        'room_name': room_name,
+        'participants': active_conferences[room_name]['participants']
+    })
+
+@app.route('/api/conference/<room_name>/leave', methods=['POST'])
+def leave_conference(room_name):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    user_id = session['user']['username']
+    if room_name in active_conferences and user_id in active_conferences[room_name]['participants']:
+        active_conferences[room_name]['participants'].remove(user_id)
+        logger.info(f"User {user_id} left room {room_name}")
+        
+        # Если комната пуста, удаляем ее
+        if not active_conferences[room_name]['participants']:
+            del active_conferences[room_name]
+    
+    return jsonify({'success': True})
+
+@app.route('/api/conference/<room_name>/end', methods=['POST'])
+def end_conference(room_name):
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if room_name in active_conferences:
+        del active_conferences[room_name]
+    
+    logger.info(f"Conference in room {room_name} ended by teacher")
+    
+    return jsonify({'success': True})
+
+@app.route('/api/conference/<room_name>/start', methods=['POST'])
+def start_conference(room_name):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Only teacher can start conference'}), 403
+    
+    active_conferences[room_name] = {
+        'teacher': session['user']['username'],
+        'started_at': datetime.now().isoformat(),
+        'participants': []
+    }
+    
+    logger.info(f"Conference started in room {room_name} by {session['user']['username']}")
+    
+    return jsonify({'success': True, 'room_name': room_name})
+
+@app.route('/api/conference/<room_name>/status', methods=['GET'])
+def get_conference_status(room_name):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    is_active = room_name in active_conferences
+    conference_data = active_conferences.get(room_name, {})
+    
+    return jsonify({
+        'success': True,
+        'is_active': is_active,
+        'teacher': conference_data.get('teacher'),
+        'started_at': conference_data.get('started_at'),
+        'participants': conference_data.get('participants', [])
+    })
+
+@app.route('/api/conference/invite', methods=['POST'])
+def send_conference_invite():
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Only teacher can send invites'}), 403
+    
+    data = request.json
+    student_username = data.get('student_username')
+    room_name = data.get('room_name')
+    
+    if not student_username or not room_name:
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    student = DB.get_user(student_username)
+    if not student or student['role'] != 'student':
+        return jsonify({'error': 'Student not found'}), 404
+    
+    invite = DB.save_invite(
+        teacher_username=session['user']['username'],
+        student_username=student_username,
+        room_name=room_name
+    )
+    
+    logger.info(f"Invite sent to {student_username} for room {room_name}")
+    
+    return jsonify({'success': True, 'invite': invite})
+
+@app.route('/api/conference/invites', methods=['GET'])
+def get_user_invites():
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if session['user']['role'] == 'student':
+        invites = DB.get_user_invites(session['user']['username'])
+    else:
+        invites = DB.get_teacher_invites(session['user']['username'])
+    
+    return jsonify({'success': True, 'invites': invites})
+
+@app.route('/api/conference/invite/<int:invite_id>/respond', methods=['POST'])
+def respond_to_invite(invite_id):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if session['user']['role'] != 'student':
+        return jsonify({'error': 'Only student can respond to invites'}), 403
+    
+    data = request.json
+    action = data.get('action')
+    
+    if action not in ['accept', 'decline']:
+        return jsonify({'error': 'Invalid action'}), 400
+    
+    status = 'accepted' if action == 'accept' else 'declined'
+    if DB.update_invite_status(invite_id, status):
+        if action == 'accept':
+            invites = DB.get_invites()
+            invite = next((i for i in invites if i['id'] == invite_id), None)
+            if invite:
+                logger.info(f"Invite {invite_id} accepted by {session['user']['username']}")
+                return jsonify({
+                    'success': True,
+                    'conference_url': f'/conference/{invite["room_name"]}',
+                    'room_name': invite["room_name"]
+                })
+        logger.info(f"Invite {invite_id} {status} by {session['user']['username']}")
+        return jsonify({'success': True})
+    
+    return jsonify({'error': 'Invite not found'}), 404
 
 # Главная страница и все SPA-роуты
 @app.route('/')
@@ -562,215 +780,14 @@ def api_join_lesson(lesson_id):
     
     if session['user']['role'] == 'teacher':
         room_name = f"ZindakiRoom_{session['user']['username']}"
-        # Учитель создает конференцию
-        conference = DB.save_conference(room_name, session['user']['username'], is_active=True)
     else:
         room_name = f"ZindakiRoom_{lesson['teacher']}"
     
-    # Возвращаем конфигурацию PeerJS
     return jsonify({
         'success': True,
+        'conference_url': f'/conference/{room_name}',
         'room_name': room_name,
-        'peerjs_config': {
-            'host': PEERJS_HOST,
-            'port': PEERJS_PORT,
-            'secure': PEERJS_SECURE,
-            'path': PEERJS_PATH
-        },
         'lesson': lesson
-    })
-
-# API для конференций
-@app.route('/api/conference/invite', methods=['POST'])
-def send_conference_invite():
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    if session['user']['role'] != 'teacher':
-        return jsonify({'error': 'Only teacher can send invites'}), 403
-    
-    data = request.json
-    student_username = data.get('student_username')
-    room_name = data.get('room_name')
-    
-    if not student_username or not room_name:
-        return jsonify({'error': 'Missing required fields'}), 400
-    
-    student = DB.get_user(student_username)
-    if not student or student['role'] != 'student':
-        return jsonify({'error': 'Student not found'}), 404
-    
-    invite = DB.save_invite(
-        teacher_username=session['user']['username'],
-        student_username=student_username,
-        room_name=room_name
-    )
-    
-    return jsonify({'success': True, 'invite': invite})
-
-@app.route('/api/conference/invites', methods=['GET'])
-def get_user_invites():
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    if session['user']['role'] == 'student':
-        invites = DB.get_user_invites(session['user']['username'])
-    else:
-        invites = DB.get_teacher_invites(session['user']['username'])
-    
-    return jsonify({'success': True, 'invites': invites})
-
-@app.route('/api/conference/invite/<int:invite_id>/respond', methods=['POST'])
-def respond_to_invite(invite_id):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    if session['user']['role'] != 'student':
-        return jsonify({'error': 'Only student can respond to invites'}), 403
-    
-    data = request.json
-    action = data.get('action')
-    
-    if action not in ['accept', 'decline']:
-        return jsonify({'error': 'Invalid action'}), 400
-    
-    status = 'accepted' if action == 'accept' else 'declined'
-    if DB.update_invite_status(invite_id, status):
-        if action == 'accept':
-            invites = DB.get_invites()
-            invite = next((i for i in invites if i['id'] == invite_id), None)
-            if invite:
-                # Добавляем участника в конференцию
-                DB.add_participant(invite['room_name'], session['user']['username'])
-                
-                return jsonify({
-                    'success': True,
-                    'room_name': invite["room_name"],
-                    'peerjs_config': {
-                        'host': PEERJS_HOST,
-                        'port': PEERJS_PORT,
-                        'secure': PEERJS_SECURE,
-                        'path': PEERJS_PATH
-                    }
-                })
-        return jsonify({'success': True})
-    
-    return jsonify({'error': 'Invite not found'}), 404
-
-@app.route('/api/conference/<room_name>/start', methods=['POST'])
-def start_conference(room_name):
-    if 'user' not in session or session['user']['role'] != 'teacher':
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    data = request.json
-    peer_id = data.get('peerId')
-    
-    if not peer_id:
-        return jsonify({'error': 'Peer ID is required'}), 400
-    
-    # Создаем/обновляем конференцию
-    conference = DB.save_conference(room_name, session['user']['username'], is_active=True)
-    
-    return jsonify({
-        'success': True,
-        'conference': conference,
-        'peerjs_config': {
-            'host': PEERJS_HOST,
-            'port': PEERJS_PORT,
-            'secure': PEERJS_SECURE,
-            'path': PEERJS_PATH
-        }
-    })
-
-@app.route('/api/conference/<room_name>/join', methods=['POST'])
-def join_conference(room_name):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    # Проверяем доступ к конференции
-    conference = DB.get_conference(room_name)
-    if not conference or not conference['is_active']:
-        return jsonify({'error': 'Conference not found or inactive'}), 404
-    
-    if session['user']['role'] == 'student':
-        # Проверяем, есть ли у студента доступ через уроки или приглашения
-        teacher_username = room_name.replace('ZindakiRoom_', '')
-        lessons = DB.get_lessons()
-        has_access = any(
-            session['user']['username'] in lesson.get('students', []) and 
-            lesson['teacher'] == teacher_username 
-            for lesson in lessons
-        )
-        
-        if not has_access:
-            invites = DB.get_user_invites(session['user']['username'])
-            has_invite = any(invite['room_name'] == room_name for invite in invites)
-            
-            if not has_invite:
-                return jsonify({'error': 'Access denied'}), 403
-    
-    # Добавляем участника в конференцию
-    DB.add_participant(room_name, session['user']['username'])
-    
-    return jsonify({
-        'success': True,
-        'conference': conference,
-        'participants': conference['participants'],
-        'peerjs_config': {
-            'host': PEERJS_HOST,
-            'port': PEERJS_PORT,
-            'secure': PEERJS_SECURE,
-            'path': PEERJS_PATH
-        }
-    })
-
-@app.route('/api/conference/<room_name>/leave', methods=['POST'])
-def leave_conference(room_name):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    DB.remove_participant(room_name, session['user']['username'])
-    return jsonify({'success': True})
-
-@app.route('/api/conference/<room_name>/end', methods=['POST'])
-def end_conference(room_name):
-    if 'user' not in session or session['user']['role'] != 'teacher':
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    conference = DB.get_conference(room_name)
-    if not conference or conference['host'] != session['user']['username']:
-        return jsonify({'error': 'Conference not found or access denied'}), 404
-    
-    DB.end_conference(room_name)
-    return jsonify({'success': True})
-
-@app.route('/api/conference/<room_name>/status', methods=['GET'])
-def get_conference_status(room_name):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    conference = DB.get_conference(room_name)
-    if not conference:
-        return jsonify({'error': 'Conference not found'}), 404
-    
-    return jsonify({
-        'success': True,
-        'is_active': conference['is_active'],
-        'participants': conference['participants'],
-        'host': conference['host'],
-        'started_at': conference['created_at']
-    })
-
-@app.route('/api/conference/<room_name>/host', methods=['GET'])
-def get_conference_host(room_name):
-    conference = DB.get_conference(room_name)
-    if not conference:
-        return jsonify({'error': 'Conference not found'}), 404
-    
-    return jsonify({
-        'success': True,
-        'host': conference['host'],
-        'peerId': f"{conference['host']}_{room_name}"  # Генерируем Peer ID для хоста
     })
 
 # Видеоконференции
@@ -798,16 +815,10 @@ def conference(room_name):
             if not has_invite:
                 return "Доступ запрещен", 403
     
-    return render_template('dashboard.html', 
+    return render_template('conference.html', 
                          room_name=room_name,
                          user=session['user'],
-                         is_teacher=session['user']['role'] == 'teacher',
-                         peerjs_config={
-                             'host': PEERJS_HOST,
-                             'port': PEERJS_PORT,
-                             'secure': PEERJS_SECURE,
-                             'path': PEERJS_PATH
-                         })
+                         is_teacher=session['user']['role'] == 'teacher')
 
 # Домашние задания
 @app.route('/api/homework', methods=['GET', 'POST'])
@@ -923,13 +934,7 @@ def dashboard():
                          user=session['user'],
                          lessons=lessons,
                          homeworks=homeworks,
-                         is_teacher=session['user']['role'] == 'teacher',
-                         peerjs_config={
-                             'host': PEERJS_HOST,
-                             'port': PEERJS_PORT,
-                             'secure': PEERJS_SECURE,
-                             'path': PEERJS_PATH
-                         })
+                         is_teacher=session['user']['role'] == 'teacher')
 
 # Обработка контактной формы
 @app.route('/api/contact', methods=['POST'])
@@ -940,5 +945,5 @@ def api_contact():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-if __name__ == '__main__':  
+if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=8000, debug=True)
