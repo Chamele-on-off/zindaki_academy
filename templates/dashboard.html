@@ -488,6 +488,70 @@
         .fullscreen-btn:hover {
             background: rgba(0,0,0,0.7);
         }
+
+        /* Полезные ссылки */
+        .useful-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .useful-card {
+            background: white;
+            border-radius: var(--rounded-md);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-md);
+            transition: transform 0.3s ease;
+        }
+        
+        .useful-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .useful-card h3 {
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+        
+        .useful-card p {
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+        
+        .useful-card .btn {
+            display: inline-block;
+            margin-top: 0.5rem;
+        }
+        
+        /* Альтернативные ссылки */
+        .alternative-links {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--light);
+            border-radius: var(--rounded-md);
+        }
+        
+        .alternative-links h4 {
+            margin-bottom: 0.5rem;
+        }
+        
+        .alternative-links ul {
+            list-style-type: none;
+        }
+        
+        .alternative-links li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .alternative-links a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        
+        .alternative-links a:hover {
+            text-decoration: underline;
+        }
         
         /* Адаптивность */
         @media (max-width: 768px) {
@@ -533,6 +597,10 @@
                 height: 90px;
                 bottom: 10px;
                 right: 10px;
+            }
+            
+            .useful-links {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -693,6 +761,15 @@
             {% else %}
             <p>Вы пока не записаны ни на один курс</p>
             {% endif %}
+
+            <!-- Альтернативные ссылки на конференции -->
+            <div class="alternative-links">
+                <h4>Альтернативные платформы для конференций:</h4>
+                <ul>
+                    <li><a href="https://meet.google.com/eec-earm-gyd" target="_blank">Google Meet</a></li>
+                    <li><a href="https://teams.live.com/meet/9480976290023?p=wqOkR5Ze8VJMKmpq" target="_blank">Microsoft Teams</a></li>
+                </ul>
+            </div>
         </div>
 
         <!-- Приглашения на конференции (для студента) -->
@@ -749,6 +826,36 @@
             <p>Нет активных заданий</p>
             {% endif %}
         </div>
+
+        <!-- Раздел "Полезности" -->
+        <div class="section">
+            <h2 class="section-title">Полезные ресурсы</h2>
+            <div class="useful-links">
+                <div class="useful-card">
+                    <h3>Словари и переводчики</h3>
+                    <p>Полезные ресурсы для изучения языков</p>
+                    <a href="https://translate.google.com" target="_blank" class="btn">
+                        <i class="fas fa-language"></i> Google Переводчик
+                    </a>
+                </div>
+                
+                <div class="useful-card">
+                    <h3>VPN доступ</h3>
+                    <p>Получите QR-код для подключения к VPN (скоро)</p>
+                    <button class="btn" disabled>
+                        <i class="fas fa-qrcode"></i> Получить VPN
+                    </button>
+                </div>
+                
+                <div class="useful-card">
+                    <h3>Образовательные ресурсы</h3>
+                    <p>Дополнительные материалы для обучения</p>
+                    <a href="https://edu.gov.ru" target="_blank" class="btn">
+                        <i class="fas fa-graduation-cap"></i> Минпросвещения РФ
+                    </a>
+                </div>
+            </div>
+        </div>
         {% endif %}
 
         <!-- Видеоконференция -->
@@ -761,6 +868,12 @@
                     <img id="remoteVideo" alt="Video feed">
                     <div class="video-label" id="remoteVideoLabel">Участник</div>
                     <div class="video-controls">
+                        <button class="video-control-btn" id="toggleRemoteVideoBtn">
+                            <i class="fas fa-video"></i>
+                        </button>
+                        <button class="video-control-btn" id="toggleRemoteAudioBtn">
+                            <i class="fas fa-microphone"></i>
+                        </button>
                         <button class="video-control-btn" onclick="toggleFullscreen('remoteVideo')">
                             <i class="fas fa-expand"></i>
                         </button>
@@ -783,6 +896,9 @@
                     </button>
                     <button class="video-control-btn" id="toggleAudioBtn">
                         <i class="fas fa-microphone"></i>
+                    </button>
+                    <button class="video-control-btn" id="fakeDisconnectBtn">
+                        <i class="fas fa-plug"></i>
                     </button>
                 </div>
             </div>
@@ -1480,6 +1596,28 @@
             }
         }
 
+        // Имитация отключения конференции
+        function fakeDisconnect() {
+            if (confirm('Имитировать отключение конференции?')) {
+                document.getElementById('remoteVideoContainer').style.display = 'none';
+                document.getElementById('waitingMessage').style.display = 'flex';
+                document.getElementById('waitingMessage').innerHTML = '<p>Конференция временно недоступна</p>';
+                
+                // Останавливаем отправку данных
+                if (videoInterval) clearInterval(videoInterval);
+                if (audioInterval) clearInterval(audioInterval);
+                
+                // Через 5 секунд восстанавливаем соединение
+                setTimeout(() => {
+                    document.getElementById('waitingMessage').innerHTML = '<p>Ожидаем подключения другого участника...</p>';
+                    if (currentRoom) {
+                        startSendingVideo(currentRoom);
+                        startSendingAudio(currentRoom);
+                    }
+                }, 5000);
+            }
+        }
+
         // Демонстрация экрана (для учителя)
         async function startScreenSharing() {
             if (isScreenSharing) {
@@ -1569,6 +1707,7 @@
         // Обработчики кнопок
         document.getElementById('toggleVideoBtn').addEventListener('click', toggleVideo);
         document.getElementById('toggleAudioBtn').addEventListener('click', toggleAudio);
+        document.getElementById('fakeDisconnectBtn').addEventListener('click', fakeDisconnect);
 
         document.getElementById('leaveConference').addEventListener('click', function() {
             if (confirm('Вы уверены, что хотите покинуть конференцию?')) {
