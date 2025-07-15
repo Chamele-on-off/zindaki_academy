@@ -59,15 +59,6 @@ MAX_FRAME_AGE = 0.5      # Максимальный возраст кадра в
 MAX_AUDIO_PER_USER = 10  # Максимальное количество аудио блоков в буфере
 MAX_AUDIO_AGE = 0.5      # Максимальный возраст аудио данных в секундах
 
-# Список курсов
-COURSES = [
-    "Английский язык",
-    "Французский язык",
-    "Обществознание",
-    "История",
-    "Русский язык"
-]
-
 # Функция для очистки старых данных
 def cleanup_old_data():
     global last_cleanup_time
@@ -206,8 +197,7 @@ class DB:
             'role': role,
             'is_active': is_active,
             'created_at': datetime.now().isoformat(),
-            'avatar': f'https://i.pravatar.cc/150?u={username}',
-            'courses': []  # Добавляем поле для курсов
+            'avatar': f'https://i.pravatar.cc/150?u={username}'
         })
         DB._save_db('users', users)
         return True
@@ -243,7 +233,7 @@ class DB:
         return next((l for l in lessons if l['id'] == lesson_id), None)
 
     @staticmethod
-    def save_lesson(title, description, teacher, schedule, duration=60, program_type='languages', students=None, recurrence=None):
+    def save_lesson(title, description, teacher, day_of_week, time_slot, duration=60, subject=None, students=None):
         if students is None:
             students = []
         lessons = DB.get_lessons()
@@ -254,78 +244,24 @@ class DB:
             'title': title,
             'description': description,
             'teacher': teacher,
-            'schedule': schedule,
+            'day_of_week': day_of_week,
+            'time_slot': time_slot,
             'duration': duration,
-            'program_type': program_type,
+            'subject': subject,
             'students': students,
-            'created_at': datetime.now().isoformat(),
-            'course': title.split()[0]  # Автоматически определяем курс по первому слову в названии
+            'created_at': datetime.now().isoformat()
         }
-        
-        if recurrence:
-            lesson_data['recurrence'] = recurrence
-            lesson_data['recurrence_id'] = f"rec_{lesson_id}_{datetime.now().timestamp()}"
         
         lessons.append(lesson_data)
         DB._save_db('lessons', lessons)
-        
-        if recurrence and recurrence.get('type') != 'none':
-            created_lessons = [lesson_data]
-            start_date = datetime.fromisoformat(schedule)
-            weekdays = recurrence.get('weekdays', [])
-            end_type = recurrence.get('end_type')
-            end_value = recurrence.get('end_value')
-            
-            if recurrence['type'] == 'weekly':
-                interval = 1
-            elif recurrence['type'] == 'biweekly':
-                interval = 2
-            else:
-                interval = 1
-            
-            current_date = start_date
-            created_count = 1
-            
-            while True:
-                if end_type == 'count' and created_count >= end_value:
-                    break
-                if end_type == 'date' and current_date > datetime.fromisoformat(end_value):
-                    break
-                
-                current_date += timedelta(weeks=interval)
-                
-                if weekdays:
-                    while str(current_date.weekday()) not in weekdays:
-                        current_date += timedelta(days=1)
-                
-                if end_type == 'count' and created_count >= end_value:
-                    break
-                
-                new_lesson = lesson_data.copy()
-                new_lesson['id'] = max([l['id'] for l in lessons], default=0) + 1
-                new_lesson['schedule'] = current_date.isoformat()
-                new_lesson['recurrence_id'] = lesson_data['recurrence_id']
-                
-                lessons.append(new_lesson)
-                created_lessons.append(new_lesson)
-                created_count += 1
-            
-            DB._save_db('lessons', lessons)
-            return created_lessons
-        
-        return [lesson_data]
+        return lesson_data
 
     @staticmethod
-    def delete_recurring_lessons(recurrence_id):
+    def delete_lesson(lesson_id):
         lessons = DB.get_lessons()
-        lessons = [l for l in lessons if l.get('recurrence_id') != recurrence_id]
+        lessons = [l for l in lessons if l['id'] != lesson_id]
         DB._save_db('lessons', lessons)
         return True
-
-    @staticmethod
-    def get_lessons_by_recurrence(recurrence_id):
-        lessons = DB.get_lessons()
-        return [l for l in lessons if l.get('recurrence_id') == recurrence_id]
 
     # Домашние задания
     @staticmethod
@@ -356,8 +292,7 @@ class DB:
             'students': students,
             'files': files,
             'created_at': datetime.now().isoformat(),
-            'submissions': {},
-            'course': DB.get_lesson(lesson_id)['course'] if DB.get_lesson(lesson_id) else None
+            'submissions': {}
         }
         
         homeworks.append(homework)
@@ -447,34 +382,6 @@ class DB:
         invites = DB.get_invites()
         return [i for i in invites if i['teacher'] == username]
 
-    # Курсы
-    @staticmethod
-    def assign_course(username, course_name):
-        users = DB.get_users()
-        for user in users:
-            if user['username'] == username:
-                if course_name not in user['courses']:
-                    user['courses'].append(course_name)
-                    DB._save_db('users', users)
-                return True
-        return False
-
-    @staticmethod
-    def remove_course(username, course_name):
-        users = DB.get_users()
-        for user in users:
-            if user['username'] == username:
-                if course_name in user['courses']:
-                    user['courses'].remove(course_name)
-                    DB._save_db('users', users)
-                return True
-        return False
-
-    @staticmethod
-    def get_user_courses(username):
-        user = DB.get_user(username)
-        return user['courses'] if user and 'courses' in user else []
-
 # Инициализация базы данных
 if not os.path.exists(f'{DB_FOLDER}/users.json'):
     initial_users = [
@@ -485,8 +392,7 @@ if not os.path.exists(f'{DB_FOLDER}/users.json'):
             'role': 'teacher',
             'is_active': True,
             'created_at': datetime.now().isoformat(),
-            'avatar': 'https://i.pravatar.cc/150?u=admin',
-            'courses': COURSES  # Админ имеет доступ ко всем курсам
+            'avatar': 'https://i.pravatar.cc/150?u=admin'
         },
         {
             'username': 'student1',
@@ -495,23 +401,34 @@ if not os.path.exists(f'{DB_FOLDER}/users.json'):
             'role': 'student',
             'is_active': True,
             'created_at': datetime.now().isoformat(),
-            'avatar': 'https://i.pravatar.cc/150?u=student1',
-            'courses': ['Английский язык', 'История']  # Пример курсов для студента
+            'avatar': 'https://i.pravatar.cc/150?u=student1'
         }
     ]
     
     initial_lessons = [
         {
             'id': 1,
-            'title': 'Английский язык - Вводный урок',
+            'title': 'Вводный урок по английскому',
             'description': 'Основы грамматики и произношения',
             'teacher': 'admin',
-            'schedule': (datetime.now() + timedelta(days=1)).isoformat(),
+            'day_of_week': 'Понедельник',
+            'time_slot': '13:00-14:00',
             'duration': 60,
-            'program_type': 'languages',
+            'subject': 'Английский язык',
             'students': ['student1'],
-            'created_at': datetime.now().isoformat(),
-            'course': 'Английский язык'
+            'created_at': datetime.now().isoformat()
+        },
+        {
+            'id': 2,
+            'title': 'Обществознание для начинающих',
+            'description': 'Основные понятия и термины',
+            'teacher': 'admin',
+            'day_of_week': 'Четверг',
+            'time_slot': '14:00-15:30',
+            'duration': 90,
+            'subject': 'Обществознание',
+            'students': ['student1'],
+            'created_at': datetime.now().isoformat()
         }
     ]
     
@@ -808,60 +725,6 @@ def respond_to_invite(invite_id):
     
     return jsonify({'error': 'Invite not found'}), 404
 
-# API для управления курсами
-@app.route('/api/courses', methods=['GET'])
-def get_courses():
-    return jsonify({
-        'success': True,
-        'courses': COURSES
-    })
-
-@app.route('/api/users/<username>/courses', methods=['GET'])
-def get_user_courses(username):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    if session['user']['role'] != 'teacher' and session['user']['username'] != username:
-        return jsonify({'error': 'Access denied'}), 403
-    
-    courses = DB.get_user_courses(username)
-    return jsonify({
-        'success': True,
-        'courses': courses
-    })
-
-@app.route('/api/users/<username>/courses', methods=['POST'])
-def assign_course(username):
-    if 'user' not in session or session['user']['role'] != 'teacher':
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    data = request.json
-    course_name = data.get('course_name')
-    
-    if not course_name or course_name not in COURSES:
-        return jsonify({'error': 'Invalid course name'}), 400
-    
-    if DB.assign_course(username, course_name):
-        return jsonify({'success': True})
-    
-    return jsonify({'error': 'User not found'}), 404
-
-@app.route('/api/users/<username>/courses', methods=['DELETE'])
-def remove_course(username):
-    if 'user' not in session or session['user']['role'] != 'teacher':
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    data = request.json
-    course_name = data.get('course_name')
-    
-    if not course_name or course_name not in COURSES:
-        return jsonify({'error': 'Invalid course name'}), 400
-    
-    if DB.remove_course(username, course_name):
-        return jsonify({'success': True})
-    
-    return jsonify({'error': 'User not found'}), 404
-
 # Главная страница и все SPA-роуты
 @app.route('/')
 @app.route('/about')
@@ -964,59 +827,29 @@ def api_lessons():
             return jsonify({'error': 'Only teachers can create lessons'}), 403
             
         data = request.json
-        required_fields = ['title', 'schedule']
+        required_fields = ['title', 'day_of_week', 'time_slot', 'duration']
         if not all(field in data for field in required_fields):
             return jsonify({'error': 'Missing required fields'}), 400
         
-        recurrence = None
-        if data.get('recurrence') and data['recurrence'].get('type') != 'none':
-            recurrence = {
-                'type': data['recurrence']['type'],
-                'weekdays': data['recurrence'].get('weekdays', []),
-                'end_type': data['recurrence'].get('end_type'),
-                'end_value': data['recurrence'].get('end_value')
-            }
-            
-            if recurrence['end_type'] == 'date' and recurrence['end_value']:
-                try:
-                    recurrence['end_value'] = datetime.strptime(recurrence['end_value'], '%Y-%m-%d').isoformat()
-                except:
-                    return jsonify({'error': 'Invalid end date format'}), 400
-        
-        result = DB.save_lesson(
+        lesson = DB.save_lesson(
             data['title'],
             data.get('description', ''),
             session['user']['username'],
-            data['schedule'],
-            data.get('duration', 60),
-            data.get('program_type', 'languages'),
-            data.get('students', []),
-            recurrence
+            data['day_of_week'],
+            data['time_slot'],
+            data['duration'],
+            data.get('subject'),
+            data.get('students', [])
         )
         
-        if isinstance(result, list):
-            return jsonify({'success': True, 'lesson_ids': [l['id'] for l in result]})
-        else:
-            return jsonify({'success': True, 'lesson_id': result['id']})
+        return jsonify({'success': True, 'lesson': lesson})
     
     if session['user']['role'] == 'teacher':
         lessons = DB.get_lessons(teacher=session['user']['username'])
     else:
         lessons = [l for l in DB.get_lessons() if session['user']['username'] in l.get('students', [])]
     
-    formatted_lessons = []
-    for lesson in lessons:
-        formatted_lesson = lesson.copy()
-        try:
-            lesson_date = datetime.fromisoformat(lesson['schedule'])
-            formatted_lesson['schedule'] = lesson_date.isoformat()
-            formatted_lesson['formatted_schedule'] = lesson_date.strftime('%d.%m.%Y %H:%M')
-        except:
-            formatted_lesson['formatted_schedule'] = lesson['schedule']
-        
-        formatted_lessons.append(formatted_lesson)
-    
-    return jsonify({'lessons': formatted_lessons})
+    return jsonify({'lessons': lessons})
 
 @app.route('/api/lessons/<int:lesson_id>', methods=['DELETE'])
 def api_delete_lesson(lesson_id):
@@ -1030,13 +863,8 @@ def api_delete_lesson(lesson_id):
     if session['user']['role'] != 'teacher' or lesson['teacher'] != session['user']['username']:
         return jsonify({'error': 'Access denied'}), 403
     
-    if lesson.get('recurrence_id'):
-        if DB.delete_recurring_lessons(lesson['recurrence_id']):
-            return jsonify({'success': True})
-    else:
-        if DB.delete_lesson(lesson_id):
-            return jsonify({'success': True})
-    
+    if DB.delete_lesson(lesson_id):
+        return jsonify({'success': True})
     return jsonify({'error': 'Failed to delete lesson'}), 500
 
 @app.route('/api/lesson/<int:lesson_id>/join')
@@ -1206,16 +1034,11 @@ def dashboard():
         lessons = [l for l in DB.get_lessons() if session['user']['username'] in l.get('students', [])]
         homeworks = DB.get_student_homeworks(session['user']['username'])
     
+    # Форматируем расписание для отображения
     formatted_lessons = []
     for lesson in lessons:
         formatted_lesson = lesson.copy()
-        try:
-            lesson_date = datetime.fromisoformat(lesson['schedule'])
-            formatted_lesson['schedule'] = lesson_date.isoformat()
-            formatted_lesson['formatted_schedule'] = lesson_date.strftime('%d.%m.%Y %H:%M')
-        except:
-            formatted_lesson['formatted_schedule'] = lesson['schedule']
-        
+        formatted_lesson['formatted_schedule'] = f"{lesson['day_of_week']} {lesson['time_slot']}"
         formatted_lessons.append(formatted_lesson)
     
     return render_template('dashboard.html', 
