@@ -37,11 +37,11 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
 # Настройки видео и аудио
-VIDEO_QUALITY = 0.5  # Качество JPEG (0.1 - низкое, 1.0 - высокое)
-TARGET_WIDTH = 320    # Ширина кадра
-TARGET_HEIGHT = 240   # Высота кадра
-TARGET_FPS = 12       # Целевая частота кадров
-AUDIO_SAMPLE_RATE = 16000  # Частота дискретизации аудио
+VIDEO_QUALITY = 0.3  # Качество JPEG (0.1 - низкое, 1.0 - высокое)
+TARGET_WIDTH = 640    # Ширина кадра
+TARGET_HEIGHT = 480   # Высота кадра
+TARGET_FPS = 15       # Целевая частота кадров
+AUDIO_SAMPLE_RATE = 20000  # Частота дискретизации аудио
 AUDIO_CHANNELS = 1    # Количество каналов аудио
 
 # Глобальные переменные для видеоконференций
@@ -54,10 +54,19 @@ audio_timestamps = defaultdict(dict)  # Временные метки после
 last_cleanup_time = time.time()
 
 # Ограничения для видео и аудио
-MAX_FRAMES_PER_USER = 2  # Максимальное количество кадров в буфере
-MAX_FRAME_AGE = 0.2      # Максимальный возраст кадра в секундах
+MAX_FRAMES_PER_USER = 3  # Максимальное количество кадров в буфере
+MAX_FRAME_AGE = 0.5      # Максимальный возраст кадра в секундах
 MAX_AUDIO_PER_USER = 10  # Максимальное количество аудио блоков в буфере
-MAX_AUDIO_AGE = 0.2      # Максимальный возраст аудио данных в секундах
+MAX_AUDIO_AGE = 0.5      # Максимальный возраст аудио данных в секундах
+
+# Список курсов
+COURSES = [
+    "Английский язык",
+    "Французский язык",
+    "Обществознание",
+    "История",
+    "Русский язык"
+]
 
 # Функция для очистки старых данных
 def cleanup_old_data():
@@ -197,7 +206,8 @@ class DB:
             'role': role,
             'is_active': is_active,
             'created_at': datetime.now().isoformat(),
-            'avatar': f'https://i.pravatar.cc/150?u={username}'
+            'avatar': f'https://i.pravatar.cc/150?u={username}',
+            'courses': []  # Добавляем поле для курсов
         })
         DB._save_db('users', users)
         return True
@@ -248,7 +258,8 @@ class DB:
             'duration': duration,
             'program_type': program_type,
             'students': students,
-            'created_at': datetime.now().isoformat()
+            'created_at': datetime.now().isoformat(),
+            'course': title.split()[0]  # Автоматически определяем курс по первому слову в названии
         }
         
         if recurrence:
@@ -345,7 +356,8 @@ class DB:
             'students': students,
             'files': files,
             'created_at': datetime.now().isoformat(),
-            'submissions': {}
+            'submissions': {},
+            'course': DB.get_lesson(lesson_id)['course'] if DB.get_lesson(lesson_id) else None
         }
         
         homeworks.append(homework)
@@ -435,6 +447,34 @@ class DB:
         invites = DB.get_invites()
         return [i for i in invites if i['teacher'] == username]
 
+    # Курсы
+    @staticmethod
+    def assign_course(username, course_name):
+        users = DB.get_users()
+        for user in users:
+            if user['username'] == username:
+                if course_name not in user['courses']:
+                    user['courses'].append(course_name)
+                    DB._save_db('users', users)
+                return True
+        return False
+
+    @staticmethod
+    def remove_course(username, course_name):
+        users = DB.get_users()
+        for user in users:
+            if user['username'] == username:
+                if course_name in user['courses']:
+                    user['courses'].remove(course_name)
+                    DB._save_db('users', users)
+                return True
+        return False
+
+    @staticmethod
+    def get_user_courses(username):
+        user = DB.get_user(username)
+        return user['courses'] if user and 'courses' in user else []
+
 # Инициализация базы данных
 if not os.path.exists(f'{DB_FOLDER}/users.json'):
     initial_users = [
@@ -445,7 +485,8 @@ if not os.path.exists(f'{DB_FOLDER}/users.json'):
             'role': 'teacher',
             'is_active': True,
             'created_at': datetime.now().isoformat(),
-            'avatar': 'https://i.pravatar.cc/150?u=admin'
+            'avatar': 'https://i.pravatar.cc/150?u=admin',
+            'courses': COURSES  # Админ имеет доступ ко всем курсам
         },
         {
             'username': 'student1',
@@ -454,21 +495,23 @@ if not os.path.exists(f'{DB_FOLDER}/users.json'):
             'role': 'student',
             'is_active': True,
             'created_at': datetime.now().isoformat(),
-            'avatar': 'https://i.pravatar.cc/150?u=student1'
+            'avatar': 'https://i.pravatar.cc/150?u=student1',
+            'courses': ['Английский язык', 'История']  # Пример курсов для студента
         }
     ]
     
     initial_lessons = [
         {
             'id': 1,
-            'title': 'Вводный урок по английскому',
+            'title': 'Английский язык - Вводный урок',
             'description': 'Основы грамматики и произношения',
             'teacher': 'admin',
             'schedule': (datetime.now() + timedelta(days=1)).isoformat(),
             'duration': 60,
             'program_type': 'languages',
             'students': ['student1'],
-            'created_at': datetime.now().isoformat()
+            'created_at': datetime.now().isoformat(),
+            'course': 'Английский язык'
         }
     ]
     
@@ -764,6 +807,60 @@ def respond_to_invite(invite_id):
         return jsonify({'success': True})
     
     return jsonify({'error': 'Invite not found'}), 404
+
+# API для управления курсами
+@app.route('/api/courses', methods=['GET'])
+def get_courses():
+    return jsonify({
+        'success': True,
+        'courses': COURSES
+    })
+
+@app.route('/api/users/<username>/courses', methods=['GET'])
+def get_user_courses(username):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if session['user']['role'] != 'teacher' and session['user']['username'] != username:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    courses = DB.get_user_courses(username)
+    return jsonify({
+        'success': True,
+        'courses': courses
+    })
+
+@app.route('/api/users/<username>/courses', methods=['POST'])
+def assign_course(username):
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json
+    course_name = data.get('course_name')
+    
+    if not course_name or course_name not in COURSES:
+        return jsonify({'error': 'Invalid course name'}), 400
+    
+    if DB.assign_course(username, course_name):
+        return jsonify({'success': True})
+    
+    return jsonify({'error': 'User not found'}), 404
+
+@app.route('/api/users/<username>/courses', methods=['DELETE'])
+def remove_course(username):
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json
+    course_name = data.get('course_name')
+    
+    if not course_name or course_name not in COURSES:
+        return jsonify({'error': 'Invalid course name'}), 400
+    
+    if DB.remove_course(username, course_name):
+        return jsonify({'success': True})
+    
+    return jsonify({'error': 'User not found'}), 404
 
 # Главная страница и все SPA-роуты
 @app.route('/')
