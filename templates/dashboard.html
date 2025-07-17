@@ -3,77 +3,1429 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Тест конференции</title>
+    <title>Личный кабинет | Zindaki Academy</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: Arial, sans-serif;
+        :root {
+            --primary: #3a5a78;
+            --primary-light: #4d7ca7;
+            --primary-dark: #2c4761;
+            --secondary: #6d4c41;
+            --accent: #c5a258;
+            --light: #f5f3f0;
+            --lighter: #ffffff;
+            --dark: #1a1a2e;
+            --darker: #0a0a0a;
+            --text: #2a2a2a;
+            --text-light: #6d6d6d;
+            --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            --gradient-accent: linear-gradient(135deg, var(--accent) 0%, #d4b15f 100%);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+            --shadow-xl: 0 20px 50px rgba(0,0,0,0.15);
+            --rounded-sm: 8px;
+            --rounded-md: 12px;
+            --rounded-lg: 16px;
+            --rounded-xl: 24px;
+            --rounded-full: 9999px;
+        }
+        
+        * {
             margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        
+        body {
+            background-color: var(--light);
+            color: var(--text);
+            overflow-x: hidden;
+            line-height: 1.6;
+            font-weight: 400;
         }
-        h1 {
-            color: #333;
-            text-align: center;
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 600;
+            line-height: 1.2;
+            color: var(--darker);
         }
-        .conference-btn {
-            display: block;
-            width: 200px;
-            margin: 20px auto;
-            padding: 10px;
-            background: #4CAF50;
+        
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        /* Навигация */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+        }
+        
+        .navbar.scrolled {
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow-md);
+            background-color: rgba(26, 26, 46, 0.95);
+        }
+        
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: 'Cormorant Garamond', serif;
+        }
+        
+        .navbar.scrolled .logo {
+            color: var(--accent);
+        }
+        
+        .logo-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: var(--gradient);
             color: white;
+            border-radius: var(--rounded-md);
+            font-size: 1.2rem;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+        
+        .nav-links a {
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            color: var(--text);
+            padding: 0.5rem 0;
+        }
+        
+        .navbar.scrolled .nav-links a {
+            color: var(--light);
+        }
+        
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+        
+        .navbar.scrolled .nav-links a:hover {
+            color: var(--accent);
+        }
+        
+        .nav-links a:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--primary);
+            transition: width 0.3s ease;
+        }
+        
+        .navbar.scrolled .nav-links a:after {
+            background-color: var(--accent);
+        }
+        
+        .nav-links a:hover:after {
+            width: 100%;
+        }
+        
+        .mobile-menu-btn {
+            display: none;
+            background: none;
             border: none;
-            border-radius: 4px;
+            font-size: 1.5rem;
+            color: var(--primary);
             cursor: pointer;
+            z-index: 1001;
+        }
+        
+        .navbar.scrolled .mobile-menu-btn {
+            color: var(--accent);
+        }
+        
+        /* Основное содержимое */
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 100px auto 50px;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 30px;
+        }
+        
+        /* Боковая панель */
+        .sidebar {
+            background: var(--lighter);
+            border-radius: var(--rounded-xl);
+            padding: 2rem;
+            box-shadow: var(--shadow-md);
+            height: fit-content;
+            position: sticky;
+            top: 100px;
+        }
+        
+        .user-profile {
             text-align: center;
-            font-size: 16px;
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
         }
-        .conference-btn:hover {
-            background: #45a049;
+        
+        .user-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            margin: 0 auto 1rem;
+            overflow: hidden;
+            border: 5px solid var(--primary-light);
         }
-        #conference-frame {
+        
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .user-name {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--darker);
+        }
+        
+        .user-role {
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: inline-block;
+            padding: 0.3rem 1rem;
+            background: rgba(58, 90, 120, 0.1);
+            border-radius: var(--rounded-full);
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+        }
+        
+        .sidebar-menu li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .sidebar-menu a {
+            display: flex;
+            align-items: center;
+            padding: 0.8rem 1rem;
+            border-radius: var(--rounded-sm);
+            transition: all 0.3s ease;
+            color: var(--text);
+        }
+        
+        .sidebar-menu a:hover, .sidebar-menu a.active {
+            background: rgba(58, 90, 120, 0.1);
+            color: var(--primary);
+        }
+        
+        .sidebar-menu i {
+            margin-right: 0.8rem;
+            width: 20px;
+            text-align: center;
+            color: var(--primary);
+        }
+        
+        /* Основное содержимое */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+        
+        /* Виджеты */
+        .widget {
+            background: var(--lighter);
+            border-radius: var(--rounded-xl);
+            padding: 2rem;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0,0,0,0.03);
+        }
+        
+        .widget:hover {
+            box-shadow: var(--shadow-md);
+        }
+        
+        .widget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .widget-title {
+            font-size: 1.5rem;
+            color: var(--darker);
+        }
+        
+        .widget-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: var(--rounded-md);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            font-size: 0.9rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+        
+        .btn-secondary:hover {
+            background-color: rgba(58, 90, 120, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .btn-accent {
+            background: var(--gradient-accent);
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .btn-accent:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        /* Видеоконференция */
+        .conference-widget {
+            grid-column: 1 / -1;
+        }
+        
+        .conference-container {
             width: 100%;
             height: 500px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            border-radius: var(--rounded-lg);
+            overflow: hidden;
+            background: var(--dark);
+            position: relative;
+        }
+        
+        #conference-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .conference-controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .conference-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--lighter);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+            border: none;
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+        
+        .conference-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .conference-btn.end-call {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .conference-btn.muted {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        /* Расписание */
+        .schedule-widget table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .schedule-widget th, .schedule-widget td {
+            padding: 0.8rem;
+            text-align: center;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .schedule-widget th {
+            background: var(--primary);
+            color: white;
+            font-weight: 500;
+        }
+        
+        .schedule-widget tr:nth-child(even) {
+            background: rgba(0,0,0,0.02);
+        }
+        
+        .schedule-widget tr:hover {
+            background: rgba(58, 90, 120, 0.05);
+        }
+        
+        .lesson-time {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .lesson-subject {
+            font-weight: 500;
+        }
+        
+        .lesson-teacher {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+        
+        /* Домашние задания */
+        .homework-list {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .homework-item {
+            background: var(--light);
+            border-radius: var(--rounded-md);
+            padding: 1.5rem;
+            display: grid;
+            gap: 0.5rem;
+        }
+        
+        .homework-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .homework-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--darker);
+        }
+        
+        .homework-deadline {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        
+        .homework-deadline i {
+            color: var(--accent);
+        }
+        
+        .homework-description {
+            color: var(--text);
+            margin-bottom: 1rem;
+        }
+        
+        .homework-files {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 0.8rem;
+            background: rgba(58, 90, 120, 0.1);
+            border-radius: var(--rounded-md);
+            font-size: 0.9rem;
+            gap: 0.5rem;
+        }
+        
+        .file-item i {
+            color: var(--primary);
+        }
+        
+        .homework-actions {
+            display: flex;
+            gap: 0.8rem;
+        }
+        
+        /* Формы */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--darker);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 1px solid #e0e0e0;
+            border-radius: var(--rounded-md);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background-color: var(--light);
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(58, 90, 120, 0.1);
+        }
+        
+        textarea.form-control {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        
+        /* Альтернативные конференции */
+        .alternative-conferences {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .conference-link {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: var(--light);
+            border-radius: var(--rounded-md);
+            transition: all 0.3s ease;
+            gap: 1rem;
+        }
+        
+        .conference-link:hover {
+            background: rgba(58, 90, 120, 0.1);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .conference-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: var(--rounded-md);
+            background: var(--gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+        }
+        
+        .conference-info h4 {
+            margin-bottom: 0.3rem;
+            color: var(--darker);
+        }
+        
+        .conference-info p {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+        
+        /* Управление пользователями */
+        .users-list {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .user-card {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: var(--light);
+            border-radius: var(--rounded-md);
+            gap: 1rem;
+        }
+        
+        .user-avatar-sm {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+        
+        .user-avatar-sm img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .user-details {
+            flex-grow: 1;
+        }
+        
+        .user-name-sm {
+            font-weight: 600;
+            margin-bottom: 0.2rem;
+        }
+        
+        .user-role-sm {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            background: rgba(58, 90, 120, 0.1);
+            border-radius: var(--rounded-full);
+        }
+        
+        .user-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        /* Модальные окна */
+        .modal {
             display: none;
-            margin-top: 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: var(--lighter);
+            border-radius: var(--rounded-xl);
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-light);
+        }
+        
+        .modal-title {
+            margin-bottom: 1.5rem;
+            color: var(--darker);
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 1200px) {
+            .dashboard-container {
+                grid-template-columns: 250px 1fr;
+            }
+        }
+        
+        @media (max-width: 992px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                position: static;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 1rem;
+            }
+            
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            .nav-links {
+                position: fixed;
+                top: 80px;
+                left: 0;
+                width: 100%;
+                background: var(--darker);
+                flex-direction: column;
+                align-items: center;
+                padding: 2rem;
+                gap: 1.5rem;
+                transform: translateY(-150%);
+                transition: transform 0.3s ease;
+            }
+            
+            .nav-links.active {
+                transform: translateY(0);
+            }
+            
+            .dashboard-container {
+                margin-top: 80px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .widget {
+                padding: 1.5rem;
+            }
+            
+            .homework-actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Личный кабинет</h1>
-        <p>Добро пожаловать, <span id="username">Тестовый пользователь</span>!</p>
-        
-        <button id="startConference" class="conference-btn">Начать конференцию</button>
-        
-        <iframe id="conference-frame" allow="camera; microphone"></iframe>
-    </div>
+    <!-- Навигация -->
+    <nav class="navbar">
+        <a href="/" class="logo">
+            <div class="logo-icon">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <span>Zindaki Academy</span>
+        </a>
+        <div class="nav-links">
+            <a href="/">Главная</a>
+            <a href="/#about">О нас</a>
+            <a href="/#teachers">Преподаватели</a>
+            <a href="/#programs">Программы</a>
+            <a href="/#testimonials">Отзывы</a>
+            <a href="/#contact">Контакты</a>
+            <a href="#" id="logoutBtn">Выйти</a>
+        </div>
+        <button class="mobile-menu-btn">
+            <i class="fas fa-bars"></i>
+        </button>
+    </nav>
 
+    <!-- Основное содержимое -->
+    <div class="dashboard-container">
+        <!-- Боковая панель -->
+        <aside class="sidebar">
+            <div class="user-profile">
+                <div class="user-avatar">
+                    <img src="{{ user.avatar }}" alt="Аватар пользователя">
+                </div>
+                <h3 class="user-name">{{ user.username }}</h3>
+                <span class="user-role">{{ 'Преподаватель' if user.role == 'teacher' else 'Студент' }}</span>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li><a href="#" class="active" data-section="conference"><i class="fas fa-video"></i> Конференция</a></li>
+                <li><a href="#" data-section="schedule"><i class="fas fa-calendar-alt"></i> Расписание</a></li>
+                <li><a href="#" data-section="homework"><i class="fas fa-book"></i> Домашние задания</a></li>
+                <li><a href="#" data-section="profile"><i class="fas fa-user"></i> Профиль</a></li>
+                {% if user.role == 'teacher' %}
+                <li><a href="#" data-section="users"><i class="fas fa-users"></i> Управление пользователями</a></li>
+                {% endif %}
+                <li><a href="#" data-section="resources"><i class="fas fa-link"></i> Ресурсы</a></li>
+            </ul>
+        </aside>
+        
+        <!-- Основной контент -->
+        <main class="main-content">
+            <!-- Виджет конференции -->
+            <section class="widget conference-widget" id="conference-section">
+                <div class="widget-header">
+                    <h3 class="widget-title">Онлайн конференция</h3>
+                    <div class="widget-actions">
+                        <button class="btn btn-secondary" id="refreshConference">
+                            <i class="fas fa-sync-alt"></i> Обновить
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="conference-container">
+                    <iframe id="conference-frame" allow="camera; microphone; display-capture" 
+                            src="https://conf.zindaki-edu.ru?room={{ user.username }}&user={{ user.username }}"></iframe>
+                </div>
+                
+                <div class="conference-controls">
+                    <button class="conference-btn" id="toggleMic">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button class="conference-btn" id="toggleCamera">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button class="conference-btn end-call" id="endCall">
+                        <i class="fas fa-phone-slash"></i>
+                    </button>
+                </div>
+            </section>
+            
+            <!-- Виджет расписания -->
+            <section class="widget schedule-widget" id="schedule-section" style="display: none;">
+                <div class="widget-header">
+                    <h3 class="widget-title">Мое расписание</h3>
+                    {% if user.role == 'teacher' %}
+                    <div class="widget-actions">
+                        <button class="btn btn-primary" id="addSchedule">
+                            <i class="fas fa-plus"></i> Добавить
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="schedule-content">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Время</th>
+                                <th>Понедельник</th>
+                                <th>Вторник</th>
+                                <th>Среда</th>
+                                <th>Четверг</th>
+                                <th>Пятница</th>
+                                <th>Суббота</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for time_slot in ['09:00-10:30', '10:45-12:15', '12:30-14:00', '14:15-15:45', '16:00-17:30', '17:45-19:15'] %}
+                            <tr>
+                                <td class="lesson-time">{{ time_slot }}</td>
+                                {% for day in ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] %}
+                                <td>
+                                    {% if user.role == 'teacher' %}
+                                    <div class="lesson-edit">
+                                        <select class="form-control">
+                                            <option value="">-- Выберите --</option>
+                                            {% for course in ['Английский язык', 'Французский язык', 'Обществознание', 'История', 'Русский язык'] %}
+                                            <option value="{{ course }}">{{ course }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    {% else %}
+                                    <div class="lesson-info">
+                                        <div class="lesson-subject">Английский язык</div>
+                                        <div class="lesson-teacher">Пискарев М.Д.</div>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <!-- Виджет домашних заданий -->
+            <section class="widget homework-widget" id="homework-section" style="display: none;">
+                <div class="widget-header">
+                    <h3 class="widget-title">Домашние задания</h3>
+                    {% if user.role == 'teacher' %}
+                    <div class="widget-actions">
+                        <button class="btn btn-primary" id="addHomework">
+                            <i class="fas fa-plus"></i> Добавить
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="homework-list">
+                    {% for i in range(3) %}
+                    <div class="homework-item">
+                        <div class="homework-header">
+                            <h4 class="homework-title">Домашнее задание по английскому языку #{{ i+1 }}</h4>
+                            <div class="homework-deadline">
+                                <i class="fas fa-clock"></i> До {{ (now + timedelta(days=i+2)).strftime('%d.%m.%Y') }}
+                            </div>
+                        </div>
+                        <div class="homework-description">
+                            Выполнить упражнения 1-10 на странице 45 учебника. Подготовить рассказ о своем дне.
+                        </div>
+                        <div class="homework-files">
+                            <div class="file-item">
+                                <i class="fas fa-file-pdf"></i> Упражнения.pdf
+                            </div>
+                            <div class="file-item">
+                                <i class="fas fa-file-word"></i> Текст.docx
+                            </div>
+                        </div>
+                        {% if user.role == 'student' %}
+                        <div class="homework-actions">
+                            <button class="btn btn-primary">
+                                <i class="fas fa-upload"></i> Загрузить работу
+                            </button>
+                            <button class="btn btn-secondary">
+                                <i class="fas fa-question-circle"></i> Задать вопрос
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            
+            <!-- Виджет профиля -->
+            <section class="widget profile-widget" id="profile-section" style="display: none;">
+                <div class="widget-header">
+                    <h3 class="widget-title">Мой профиль</h3>
+                </div>
+                
+                <form id="profileForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="profileUsername">Логин</label>
+                            <input type="text" id="profileUsername" class="form-control" value="{{ user.username }}" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="profileEmail">Email</label>
+                            <input type="email" id="profileEmail" class="form-control" value="{{ user.email }}">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="profilePhone">Телефон</label>
+                        <input type="tel" id="profilePhone" class="form-control" value="+7 (999) 123-45-67">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="profilePassword">Новый пароль</label>
+                        <input type="password" id="profilePassword" class="form-control" placeholder="Оставьте пустым, если не хотите менять">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="profilePasswordConfirm">Подтвердите пароль</label>
+                        <input type="password" id="profilePasswordConfirm" class="form-control">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Сохранить изменения
+                    </button>
+                </form>
+            </section>
+            
+            <!-- Виджет управления пользователями (только для учителя) -->
+            {% if user.role == 'teacher' %}
+            <section class="widget users-widget" id="users-section" style="display: none;">
+                <div class="widget-header">
+                    <h3 class="widget-title">Управление пользователями</h3>
+                    <div class="widget-actions">
+                        <button class="btn btn-primary" id="addUser">
+                            <i class="fas fa-plus"></i> Добавить
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="users-list">
+                    {% for student in ['student1', 'student2', 'student3'] %}
+                    <div class="user-card">
+                        <div class="user-avatar-sm">
+                            <img src="https://i.pravatar.cc/150?u={{ student }}" alt="Аватар">
+                        </div>
+                        <div class="user-details">
+                            <div class="user-name-sm">{{ student }}</div>
+                            <span class="user-role-sm">Студент</span>
+                        </div>
+                        <div class="user-actions">
+                            <button class="btn btn-secondary btn-sm edit-user">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-secondary btn-sm delete-user">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+            
+            <!-- Виджет ресурсов -->
+            <section class="widget resources-widget" id="resources-section" style="display: none;">
+                <div class="widget-header">
+                    <h3 class="widget-title">Полезные ресурсы</h3>
+                </div>
+                
+                <h4 style="margin-bottom: 1rem;">Альтернативные конференции</h4>
+                <div class="alternative-conferences">
+                    <a href="https://teams.live.com/meet/9480976290023?p=wqOkR5Ze8VJMKmpq" target="_blank" class="conference-link">
+                        <div class="conference-icon">
+                            <i class="fab fa-microsoft"></i>
+                        </div>
+                        <div class="conference-info">
+                            <h4>Microsoft Teams</h4>
+                            <p>Резервная конференция</p>
+                        </div>
+                    </a>
+                    
+                    <a href="https://meet.google.com/eec-earm-gyd" target="_blank" class="conference-link">
+                        <div class="conference-icon" style="background: #4285F4;">
+                            <i class="fab fa-google"></i>
+                        </div>
+                        <div class="conference-info">
+                            <h4>Google Meet</h4>
+                            <p>Резервная конференция</p>
+                        </div>
+                    </a>
+                </div>
+                
+                <h4 style="margin: 2rem 0 1rem;">Другие ресурсы</h4>
+                <div class="alternative-conferences">
+                    <a href="https://classroom.google.com" target="_blank" class="conference-link">
+                        <div class="conference-icon" style="background: #0F9D58;">
+                            <i class="fas fa-chalkboard-teacher"></i>
+                        </div>
+                        <div class="conference-info">
+                            <h4>Google Classroom</h4>
+                            <p>Платформа для обучения</p>
+                        </div>
+                    </a>
+                    
+                    <a href="https://drive.google.com" target="_blank" class="conference-link">
+                        <div class="conference-icon" style="background: #34A853;">
+                            <i class="fas fa-cloud"></i>
+                        </div>
+                        <div class="conference-info">
+                            <h4>Google Drive</h4>
+                            <p>Облачное хранилище</p>
+                        </div>
+                    </a>
+                </div>
+                
+                <div style="margin-top: 2rem; text-align: center;">
+                    <h4>Доступ к VPN (WireGuard)</h4>
+                    <div id="qrcode" style="margin: 1rem auto; width: 200px; height: 200px; background: #f5f5f5; display: flex; align-items: center; justify-content: center;">
+                        <span style="color: var(--text-light);">QR-код будет сгенерирован здесь</span>
+                    </div>
+                    <button class="btn btn-secondary">
+                        <i class="fas fa-download"></i> Скачать конфиг
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <!-- Модальное окно добавления домашнего задания -->
+    <div class="modal" id="homeworkModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3 class="modal-title">Добавить домашнее задание</h3>
+            
+            <form id="addHomeworkForm">
+                <div class="form-group">
+                    <label for="hwTitle">Название задания</label>
+                    <input type="text" id="hwTitle" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="hwDescription">Описание</label>
+                    <textarea id="hwDescription" class="form-control" required></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="hwCourse">Курс</label>
+                        <select id="hwCourse" class="form-control" required>
+                            <option value="">-- Выберите курс --</option>
+                            {% for course in ['Английский язык', 'Французский язык', 'Обществознание', 'История', 'Русский язык'] %}
+                            <option value="{{ course }}">{{ course }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="hwDeadline">Срок сдачи</label>
+                        <input type="date" id="hwDeadline" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="hwStudents">Ученики</label>
+                    <select id="hwStudents" class="form-control" multiple style="height: auto;">
+                        {% for student in ['student1', 'student2', 'student3'] %}
+                        <option value="{{ student }}" selected>{{ student }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="hwFiles">Файлы</label>
+                    <input type="file" id="hwFiles" class="form-control" multiple>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Сохранить задание
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Модальное окно добавления пользователя -->
+    <div class="modal" id="userModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3 class="modal-title">Добавить пользователя</h3>
+            
+            <form id="addUserForm">
+                <div class="form-group">
+                    <label for="userUsername">Логин</label>
+                    <input type="text" id="userUsername" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="userEmail">Email</label>
+                    <input type="email" id="userEmail" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="userPassword">Пароль</label>
+                    <input type="password" id="userPassword" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="userRole">Роль</label>
+                    <select id="userRole" class="form-control" required>
+                        <option value="student">Студент</option>
+                        <option value="teacher">Преподаватель</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="userCourses">Курсы</label>
+                    <select id="userCourses" class="form-control" multiple style="height: auto;">
+                        {% for course in ['Английский язык', 'Французский язык', 'Обществознание', 'История', 'Русский язык'] %}
+                        <option value="{{ course }}">{{ course }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Сохранить пользователя
+                </button>
+            </form>
+        </div>
+    </div>
+    
     <script>
-        document.getElementById('startConference').addEventListener('click', function() {
-            const frame = document.getElementById('conference-frame');
-            
-            // Здесь нужно указать URL вашей конференции с параметрами
-            const roomName = "test-room-123";
-            const userName = "Тестовый пользователь";
-            const conferenceUrl = `https://conf.zindaki-edu.ru?room=${roomName}&user=${userName}`;
-            
-            frame.src = conferenceUrl;
-            frame.style.display = 'block';
-            this.style.display = 'none';
-            
-            console.log("Конференция запущена:", conferenceUrl);
+        // Мобильное меню
+        const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+        const navLinks = document.querySelector('.nav-links');
+        
+        mobileMenuBtn.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            mobileMenuBtn.innerHTML = navLinks.classList.contains('active') ? 
+                '<i class="fas fa-times"></i>' : '<i class="fas fa-bars"></i>';
         });
+        
+        // Переключение разделов
+        const sidebarLinks = document.querySelectorAll('.sidebar-menu a');
+        const sections = document.querySelectorAll('.widget');
+        
+        sidebarLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Удаляем активный класс у всех ссылок
+                sidebarLinks.forEach(l => l.classList.remove('active'));
+                
+                // Добавляем активный класс текущей ссылке
+                this.classList.add('active');
+                
+                // Скрываем все разделы
+                sections.forEach(section => {
+                    section.style.display = 'none';
+                });
+                
+                // Показываем выбранный раздел
+                const sectionId = this.getAttribute('data-section') + '-section';
+                document.getElementById(sectionId).style.display = 'block';
+            });
+        });
+        
+        // Управление конференцией
+        const toggleMic = document.getElementById('toggleMic');
+        const toggleCamera = document.getElementById('toggleCamera');
+        const endCall = document.getElementById('endCall');
+        const refreshConference = document.getElementById('refreshConference');
+        const conferenceFrame = document.getElementById('conference-frame');
+        
+        let isMicOn = true;
+        let isCameraOn = true;
+        
+        toggleMic.addEventListener('click', () => {
+            isMicOn = !isMicOn;
+            toggleMic.classList.toggle('muted', !isMicOn);
+            // Здесь должен быть код для управления микрофоном в iframe
+            console.log('Микрофон:', isMicOn ? 'включен' : 'выключен');
+        });
+        
+        toggleCamera.addEventListener('click', () => {
+            isCameraOn = !isCameraOn;
+            toggleCamera.classList.toggle('muted', !isCameraOn);
+            // Здесь должен быть код для управления камерой в iframe
+            console.log('Камера:', isCameraOn ? 'включена' : 'выключена');
+        });
+        
+        endCall.addEventListener('click', () => {
+            // Здесь должен быть код для завершения звонка
+            conferenceFrame.src = '';
+            alert('Конференция завершена');
+        });
+        
+        refreshConference.addEventListener('click', () => {
+            conferenceFrame.src = conferenceFrame.src;
+        });
+        
+        // Модальные окна
+        const homeworkModal = document.getElementById('homeworkModal');
+        const userModal = document.getElementById('userModal');
+        const addHomeworkBtn = document.getElementById('addHomework');
+        const addUserBtn = document.getElementById('addUser');
+        const closeModalBtns = document.querySelectorAll('.close-modal');
+        
+        // Показать модальное окно добавления домашнего задания
+        if (addHomeworkBtn) {
+            addHomeworkBtn.addEventListener('click', () => {
+                homeworkModal.style.display = 'flex';
+            });
+        }
+        
+        // Показать модальное окно добавления пользователя
+        if (addUserBtn) {
+            addUserBtn.addEventListener('click', () => {
+                userModal.style.display = 'flex';
+            });
+        }
+        
+        // Закрыть модальные окна
+        closeModalBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.closest('.modal').style.display = 'none';
+            });
+        });
+        
+        // Закрыть модальные окна при клике вне их
+        window.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.style.display = 'none';
+            }
+        });
+        
+        // Обработка формы профиля
+        const profileForm = document.getElementById('profileForm');
+        if (profileForm) {
+            profileForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = {
+                    email: document.getElementById('profileEmail').value,
+                    phone: document.getElementById('profilePhone').value,
+                    password: document.getElementById('profilePassword').value,
+                    passwordConfirm: document.getElementById('profilePasswordConfirm').value
+                };
+                
+                // Проверка совпадения паролей
+                if (formData.password && formData.password !== formData.passwordConfirm) {
+                    alert('Пароли не совпадают!');
+                    return;
+                }
+                
+                // Отправка данных на сервер
+                fetch('/api/users/' + '{{ user.username }}', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Профиль успешно обновлен!');
+                    } else {
+                        alert('Ошибка при обновлении профиля: ' + (data.error || ''));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при обновлении профиля');
+                });
+            });
+        }
+        
+        // Обработка формы добавления домашнего задания
+        const addHomeworkForm = document.getElementById('addHomeworkForm');
+        if (addHomeworkForm) {
+            addHomeworkForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = {
+                    title: document.getElementById('hwTitle').value,
+                    description: document.getElementById('hwDescription').value,
+                    course: document.getElementById('hwCourse').value,
+                    deadline: document.getElementById('hwDeadline').value,
+                    students: Array.from(document.getElementById('hwStudents').selectedOptions).map(o => o.value)
+                };
+                
+                // Здесь должна быть обработка загрузки файлов
+                
+                // Отправка данных на сервер
+                fetch('/api/homework', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Домашнее задание успешно добавлено!');
+                        homeworkModal.style.display = 'none';
+                        // Обновить список заданий
+                    } else {
+                        alert('Ошибка при добавлении задания: ' + (data.error || ''));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при добавлении задания');
+                });
+            });
+        }
+        
+        // Обработка формы добавления пользователя
+        const addUserForm = document.getElementById('addUserForm');
+        if (addUserForm) {
+            addUserForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = {
+                    username: document.getElementById('userUsername').value,
+                    email: document.getElementById('userEmail').value,
+                    password: document.getElementById('userPassword').value,
+                    role: document.getElementById('userRole').value,
+                    courses: Array.from(document.getElementById('userCourses').selectedOptions).map(o => o.value)
+                };
+                
+                // Отправка данных на сервер
+                fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Пользователь успешно добавлен!');
+                        userModal.style.display = 'none';
+                        // Обновить список пользователей
+                    } else {
+                        alert('Ошибка при добавлении пользователя: ' + (data.error || ''));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при добавлении пользователя');
+                });
+            });
+        }
+        
+        // Выход из системы
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                fetch('/api/logout', {
+                    method: 'GET'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = '/';
+                    }
+                });
+            });
+        }
+        
+        // Инициализация - показать первый раздел
+        document.querySelector('.sidebar-menu a.active').click();
     </script>
 </body>
 </html>
