@@ -3,27 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zindaki Academy - Инновационная семейная онлайн школа</title>
+    <title>Zindaki Academy | Инновационная семейная онлайн школа</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #4361ee;
-            --primary-light: #4895ef;
-            --primary-dark: #3a0ca3;
-            --secondary: #7209b7;
-            --accent: #f72585;
-            --success: #4cc9f0;
-            --dark: #1a1a2e;
-            --darker: #16213e;
-            --light: #f8f9fa;
+            --primary: #3a5a78;
+            --primary-light: #4d7ca7;
+            --primary-dark: #2c4761;
+            --secondary: #6d4c41;
+            --accent: #c5a258;
+            --light: #f5f3f0;
             --lighter: #ffffff;
-            --text: #2b2d42;
-            --text-light: #8d99ae;
+            --dark: #1a1a2e;
+            --darker: #0a0a0a;
+            --text: #2a2a2a;
+            --text-light: #6d6d6d;
             --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            --gradient-accent: linear-gradient(135deg, var(--accent) 0%, #f72585 100%);
+            --gradient-accent: linear-gradient(135deg, var(--accent) 0%, #d4b15f 100%);
             --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
             --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
             --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
@@ -39,7 +38,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
         }
         
         body {
@@ -51,8 +50,10 @@
         }
         
         h1, h2, h3, h4, h5, h6 {
-            font-weight: 700;
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 600;
             line-height: 1.2;
+            color: var(--darker);
         }
         
         a {
@@ -80,15 +81,21 @@
         .navbar.scrolled {
             padding: 1rem 2rem;
             box-shadow: var(--shadow-md);
+            background-color: rgba(26, 26, 46, 0.95);
         }
         
         .logo {
             font-size: 1.8rem;
-            font-weight: 800;
+            font-weight: 700;
             color: var(--primary);
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            font-family: 'Cormorant Garamond', serif;
+        }
+        
+        .navbar.scrolled .logo {
+            color: var(--accent);
         }
         
         .logo-icon {
@@ -116,8 +123,16 @@
             padding: 0.5rem 0;
         }
         
+        .navbar.scrolled .nav-links a {
+            color: var(--light);
+        }
+        
         .nav-links a:hover {
             color: var(--primary);
+        }
+        
+        .navbar.scrolled .nav-links a:hover {
+            color: var(--accent);
         }
         
         .nav-links a:after {
@@ -129,6 +144,10 @@
             height: 2px;
             background-color: var(--primary);
             transition: width 0.3s ease;
+        }
+        
+        .navbar.scrolled .nav-links a:after {
+            background-color: var(--accent);
         }
         
         .nav-links a:hover:after {
@@ -143,6 +162,10 @@
             color: var(--primary);
             cursor: pointer;
             z-index: 1001;
+        }
+        
+        .navbar.scrolled .mobile-menu-btn {
+            color: var(--accent);
         }
         
         /* Личный кабинет (плавающий) */
@@ -241,7 +264,7 @@
         }
         
         .user-menu a:hover {
-            background-color: rgba(67, 97, 238, 0.1);
+            background-color: rgba(58, 90, 120, 0.1);
             color: var(--primary);
             transform: translateX(5px);
         }
@@ -298,7 +321,7 @@
         
         h1 {
             font-size: 4.5rem;
-            font-weight: 800;
+            font-weight: 700;
             margin-bottom: 1.5rem;
             background: linear-gradient(45deg, #fff, #E1F0FF);
             -webkit-background-clip: text;
@@ -387,8 +410,8 @@
             font-size: 2.8rem;
             margin-bottom: 5rem;
             width: 100%;
-            color: var(--text);
-            font-weight: 800;
+            color: var(--darker);
+            font-weight: 700;
             position: relative;
         }
         
@@ -397,7 +420,7 @@
             display: block;
             margin: 1.5rem auto 0;
             width: 80px;
-            height: 5px;
+            height: 3px;
             background: var(--gradient);
             border-radius: var(--rounded-full);
         }
@@ -450,15 +473,15 @@
             justify-content: center;
             width: 70px;
             height: 70px;
-            background: rgba(67, 97, 238, 0.1);
+            background: rgba(58, 90, 120, 0.1);
             border-radius: var(--rounded-lg);
         }
         
         .feature-card h3 {
             font-size: 1.5rem;
             margin-bottom: 1.2rem;
-            color: var(--text);
-            font-weight: 700;
+            color: var(--darker);
+            font-weight: 600;
         }
         
         .feature-card p {
@@ -508,8 +531,8 @@
         .about-content h2 {
             font-size: 2.5rem;
             margin-bottom: 1.5rem;
-            color: var(--text);
-            font-weight: 800;
+            color: var(--darker);
+            font-weight: 700;
         }
         
         .about-content p {
@@ -580,7 +603,7 @@
         .teacher-info h3 {
             font-size: 1.4rem;
             margin-bottom: 0.5rem;
-            color: var(--text);
+            color: var(--darker);
         }
         
         .teacher-info p {
@@ -598,94 +621,106 @@
         
         /* Programs Section */
         .programs-section {
-            background-color: var(--lighter);
+            background-color: var(--darker);
+            color: var(--light);
+            padding: 8rem 2rem;
         }
         
-        .program-tabs {
-            display: inline-flex;
-            justify-content: center;
-            margin-bottom: 3rem;
-            position: relative;
-            flex-wrap: wrap;
-            background: var(--light);
-            border-radius: var(--rounded-full);
-            padding: 0.5rem;
-            box-shadow: var(--shadow-sm);
-        }
-        
-        .tab-btn {
-            padding: 0.8rem 2rem;
-            background: none;
-            border: none;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            position: relative;
-            color: var(--text-light);
-            transition: all 0.3s ease;
-            border-radius: var(--rounded-full);
-        }
-        
-        .tab-btn.active {
-            color: white;
-            background: var(--gradient);
-            box-shadow: var(--shadow-sm);
-        }
-        
-        .program-container {
-            display: none;
-            animation: fadeIn 0.5s ease;
-        }
-        
-        .program-container.active {
-            display: block;
-        }
-        
-        .program-item {
-            background: var(--light);
-            border-radius: var(--rounded-xl);
-            padding: 2.5rem;
-            margin-bottom: 2rem;
-            box-shadow: var(--shadow-sm);
-            transition: all 0.3s ease;
-            border: 1px solid rgba(0,0,0,0.03);
-        }
-        
-        .program-item:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-lg);
-        }
-        
-        .program-item h3 {
-            font-size: 1.6rem;
-            margin-bottom: 1.2rem;
-            color: var(--primary);
-        }
-        
-        .program-item p {
-            color: var(--text-light);
-            margin-bottom: 1.5rem;
-            line-height: 1.8;
-            font-size: 1.1rem;
-        }
-        
-        .program-features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        
-        .program-feature {
+        .programs-header {
             display: flex;
-            align-items: flex-start;
-            gap: 0.8rem;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 3rem;
         }
         
-        .program-feature i {
-            color: var(--accent);
-            font-size: 1.2rem;
-            margin-top: 0.2rem;
+        .programs-header .section-title {
+            text-align: left;
+            margin-bottom: 0;
+            color: var(--light);
+        }
+        
+        .programs-header .section-title:after {
+            margin: 1.5rem 0 0;
+            background: var(--accent);
+        }
+        
+        .programs-scroll {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            gap: 30px;
+            padding-bottom: 30px;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .programs-scroll::-webkit-scrollbar {
+            height: 6px;
+        }
+        
+        .programs-scroll::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .programs-scroll::-webkit-scrollbar-thumb {
+            background-color: var(--accent);
+            border-radius: 3px;
+        }
+        
+        .program-card {
+            flex: 0 0 400px;
+            scroll-snap-align: start;
+            background-color: rgba(255,255,255,0.05);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            height: 500px;
+            position: relative;
+            overflow: hidden;
+            border-radius: var(--rounded-xl);
+        }
+        
+        .program-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(197,162,88,0.1) 0%, rgba(197,162,88,0) 100%);
+            z-index: 0;
+        }
+        
+        .program-card-number {
+            font-size: 80px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.05);
+            position: absolute;
+            top: 20px;
+            right: 40px;
+            z-index: 0;
+            font-family: 'Cormorant Garamond', serif;
+        }
+        
+        .program-card-content {
+            position: relative;
+            z-index: 1;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .program-card h3 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: var(--light);
+        }
+        
+        .program-card p {
+            font-weight: 300;
+            line-height: 1.8;
+            margin-bottom: 30px;
+            flex-grow: 1;
+            color: rgba(255,255,255,0.8);
         }
         
         /* Testimonials Section */
@@ -851,7 +886,7 @@
         .contact-info h3 {
             font-size: 2rem;
             margin-bottom: 1.5rem;
-            color: var(--text);
+            color: var(--darker);
         }
         
         .contact-info p {
@@ -920,7 +955,7 @@
             display: block;
             margin-bottom: 0.8rem;
             font-weight: 500;
-            color: var(--text);
+            color: var(--darker);
         }
         
         .form-control {
@@ -936,7 +971,7 @@
         .form-control:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+            box-shadow: 0 0 0 3px rgba(58, 90, 120, 0.1);
         }
         
         textarea.form-control {
@@ -946,7 +981,7 @@
         
         /* Footer */
         footer {
-            background: var(--dark);
+            background: var(--darker);
             color: white;
             padding: 6rem 2rem 3rem;
             position: relative;
@@ -979,7 +1014,7 @@
             color: white;
         }
         
-        .footer-column h3:after {
+        .footer-column h3::after {
             content: '';
             position: absolute;
             bottom: -8px;
@@ -1006,7 +1041,7 @@
         }
         
         .footer-column ul li a:hover {
-            color: white;
+            color: var(--accent);
             transform: translateX(5px);
         }
         
@@ -1024,7 +1059,7 @@
         }
         
         .footer-social-links a:hover {
-            color: var(--primary-light);
+            color: var(--accent);
             opacity: 1;
             transform: translateY(-3px);
         }
@@ -1130,6 +1165,12 @@
             .hero p {
                 font-size: 1.3rem;
             }
+            
+            .program-card {
+                flex: 0 0 350px;
+                height: 450px;
+                padding: 30px;
+            }
         }
         
         @media (max-width: 768px) {
@@ -1152,7 +1193,7 @@
                 top: 80px;
                 left: 0;
                 width: 100%;
-                background-color: white;
+                background-color: var(--darker);
                 flex-direction: column;
                 align-items: center;
                 padding: 2rem;
@@ -1184,9 +1225,22 @@
                 max-width: 350px;
                 margin: 0 auto;
             }
+            
+            .programs-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .programs-header .section-title {
+                margin-bottom: 30px;
+            }
         }
         
         @media (max-width: 576px) {
+            .container {
+                padding: 0 20px;
+            }
+            
             h1 {
                 font-size: 2.2rem;
             }
@@ -1213,23 +1267,6 @@
                 width: 100%;
             }
             
-            .program-tabs {
-                flex-direction: column;
-                background: none;
-                box-shadow: none;
-                padding: 0;
-                gap: 0.5rem;
-            }
-            
-            .tab-btn {
-                width: 100%;
-                border-radius: var(--rounded-md);
-            }
-            
-            .program-item {
-                padding: 1.5rem;
-            }
-            
             .testimonial-content {
                 padding: 2rem 1.5rem;
             }
@@ -1247,6 +1284,16 @@
             .author-info h4,
             .author-info p {
                 text-align: center;
+            }
+            
+            .footer-content {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+            
+            .footer-bottom {
+                flex-direction: column;
+                gap: 20px;
             }
         }
     </style>
@@ -1293,11 +1340,7 @@
             </div>
         </div>
         <ul class="user-menu">
-            <li><a href="/dashboard"><i class="fas fa-book"></i> Мои курсы</a></li>
-            <li><a href="#"><i class="fas fa-calendar-alt"></i> Расписание</a></li>
-            <li><a href="#"><i class="fas fa-video"></i> Видеоуроки</a></li>
-            <li><a href="#"><i class="fas fa-cog"></i> Настройки</a></li>
-            <li><a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Выйти</a></li>
+            <li><a href="/dashboard"><i class="fas fa-book"></i> Личный кабинет</a></li>
         </ul>
     </div>
     {% endif %}
@@ -1353,7 +1396,7 @@
             <p>Инновационный подход к семейному образованию с использованием современных технологий</p>
             <div class="cta-buttons">
                 <a href="#programs" class="btn btn-primary">Выбрать программу</a>
-                <a href="https://t.me/zindakiacademy_bot" class="btn btn-secondary">Telegram-бот <i class="fas fa-arrow-right"></i></a>
+                <a href="https://t.me/zindakiequipe" class="btn btn-secondary">Telegram-канал <i class="fas fa-arrow-right"></i></a>
             </div>
         </div>
     </section>
@@ -1451,136 +1494,46 @@
     <!-- Programs Section -->
     <section class="section programs-section" id="programs">
         <div class="container">
-            <h2 class="section-title">Наши программы</h2>
-            <div class="program-tabs">
-                <button class="tab-btn active" data-tab="languages">Языковые курсы</button>
-                <button class="tab-btn" data-tab="school">Школьные предметы</button>
-                <button class="tab-btn" data-tab="special">Специальные программы</button>
-            </div>
-            
-            <div id="languages-program" class="program-container active">
-                <div class="program-item">
-                    <h3>Английский язык для детей</h3>
-                    <p>Игровая методика обучения для дошкольников и младших школьников. Развитие разговорных навыков, пополнение словарного запаса, основы грамматики.</p>
-                    <div class="program-features">
-                        <div class="program-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Возраст: 4-12 лет</span>
-                        </div>
-                        <div class="program-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Уровни: Beginner - Intermediate</span>
-                        </div>
-                        <div class="program-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Формат: индивидуально/группа</span>
-                        </div>
-                    </div>
-                    <a href="#contact" class="btn btn-primary">Записаться</a>
+            <div class="programs-header">
+                <div class="section-title">
+                    <h2>Наши программы</h2>
                 </div>
-                
-                <div class="program-item">
-                    <h3>Подготовка к IELTS/TOEFL</h3>
-                    <p>Комплексная подготовка к международным экзаменам. Разбор всех секций экзамена, пробные тестирования, стратегии выполнения заданий.</p>
-                    <div class="program-features">
-                        <div class="program-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Возраст: 14+ лет</span>
-                        </div>
-                        <div class="program-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Уровни: Intermediate - Advanced</span>
-                        </div>
-                        <div class="program-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Формат: индивидуально</span>
-                        </div>
-                    </div>
-                    <a href="#contact" class="btn btn-primary">Записаться</a>
+                <div class="section-description">
+                    <p>Инновационные образовательные программы, разработанные совместно с лидерами индустрий и академическими партнерами.</p>
                 </div>
             </div>
-            
-            <div id="school-program" class="program-container">
-                <div class="program-item">
-                    <h3>Подготовка к школе</h3>
-                    <p>Комплексная программа для дошкольников: чтение, письмо, счет, развитие речи, логика. Индивидуальный подход к каждому ребенку.</p>
-                    <div class="program-features">
-                        <div class="program-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Возраст: 5-7 лет</span>
-                        </div>
-                        <div class="program-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Длительность: 6-12 месяцев</span>
-                        </div>
-                        <div class="program-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Формат: индивидуально/группа</span>
-                        </div>
+            <div class="programs-scroll">
+                <div class="program-card">
+                    <div class="program-card-number">01</div>
+                    <div class="program-card-content">
+                        <h3>Английский язык для детей</h3>
+                        <p>Игровая методика обучения для дошкольников и младших школьников. Развитие разговорных навыков, пополнение словарного запаса, основы грамматики.</p>
+                        <a href="#contact" class="btn btn-primary">Записаться</a>
                     </div>
-                    <a href="#contact" class="btn btn-primary">Записаться</a>
                 </div>
-                
-                <div class="program-item">
-                    <h3>Подготовка к ЕГЭ/ОГЭ</h3>
-                    <p>Эффективная подготовка к экзаменам по английскому, французскому, истории и обществознанию. Разбор всех заданий, пробные тестирования.</p>
-                    <div class="program-features">
-                        <div class="program-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Предметы: 4 на выбор</span>
-                        </div>
-                        <div class="program-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Формат: индивидуально/группа</span>
-                        </div>
-                        <div class="program-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Результаты: 80+ баллов</span>
-                        </div>
+                <div class="program-card">
+                    <div class="program-card-number">02</div>
+                    <div class="program-card-content">
+                        <h3>Подготовка к IELTS/TOEFL</h3>
+                        <p>Комплексная подготовка к международным экзаменам. Разбор всех секций экзамена, пробные тестирования, стратегии выполнения заданий.</p>
+                        <a href="#contact" class="btn btn-primary">Записаться</a>
                     </div>
-                    <a href="#contact" class="btn btn-primary">Записаться</a>
                 </div>
-            </div>
-            
-            <div id="special-program" class="program-container">
-                <div class="program-item">
-                    <h3>Логопедические занятия</h3>
-                    <p>Коррекция речевых нарушений у детей и взрослых. Работа с дислалией, дизартрией, алалией, заиканием, ЗРР, ЗПР, аутизмом, синдромом Дауна.</p>
-                    <div class="program-features">
-                        <div class="program-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Возраст: 3+ лет</span>
-                        </div>
-                        <div class="program-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Формат: индивидуально</span>
-                        </div>
-                        <div class="program-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Опыт: 45+ лет</span>
-                        </div>
+                <div class="program-card">
+                    <div class="program-card-number">03</div>
+                    <div class="program-card-content">
+                        <h3>Подготовка к школе</h3>
+                        <p>Комплексная программа для дошкольников: чтение, письмо, счет, развитие речи, логика. Индивидуальный подход к каждому ребенку.</p>
+                        <a href="#contact" class="btn btn-primary">Записаться</a>
                     </div>
-                    <a href="#contact" class="btn btn-primary">Записаться</a>
                 </div>
-                
-                <div class="program-item">
-                    <h3>Английский для взрослых</h3>
-                    <p>Программы для разных целей: бизнес-английский, для путешествий, для работы. Гибкий график, индивидуальный подход.</p>
-                    <div class="program-features">
-                        <div class="program-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Уровни: Beginner - Advanced</span>
-                        </div>
-                        <div class="program-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Формат: индивидуально/группа</span>
-                        </div>
-                        <div class="program-feature">
-                            <i class="fas fa-check"></i>
-                            <span>Гибкий график</span>
-                        </div>
+                <div class="program-card">
+                    <div class="program-card-number">04</div>
+                    <div class="program-card-content">
+                        <h3>Логопедические занятия</h3>
+                        <p>Коррекция речевых нарушений у детей и взрослых. Работа с дислалией, дизартрией, алалией, заиканием, ЗРР, ЗПР, аутизмом, синдромом Дауна.</p>
+                        <a href="#contact" class="btn btn-primary">Записаться</a>
                     </div>
-                    <a href="#contact" class="btn btn-primary">Записаться</a>
                 </div>
             </div>
         </div>
@@ -1618,7 +1571,7 @@
                 <p>Запишитесь на бесплатный пробный урок и оцените качество нашего преподавания</p>
                 <div class="cta-buttons">
                     <a href="#contact" class="btn btn-accent">Записаться на урок</a>
-                    <a href="https://t.me/zindakiacademy_bot" class="btn btn-secondary">Telegram-бот <i class="fas fa-arrow-right"></i></a>
+                    <a href="https://t.me/zindakiequipe" class="btn btn-secondary">Telegram-канал <i class="fas fa-arrow-right"></i></a>
                 </div>
             </div>
         </div>
@@ -1708,9 +1661,9 @@
                 <div class="footer-column">
                     <h3>Контакты</h3>
                     <ul>
-                        <li><a href="tel:+79991234567">+7 (999) 123-45-67</a></li>
+                        <li><a href="tel:+79165202916">+7 (916) 520-29-16</a></li>
                         <li><a href="mailto:info@zindakiacademy.ru">info@zindakiacademy.ru</a></li>
-                        <li><a href="https://t.me/zindakiacademy_bot">Telegram-бот</a></li>
+                        <li><a href="https://t.me/zindakiequipe">Telegram-канал</a></li>
                         <li><a href="#contact">Форма обратной связи</a></li>
                     </ul>
                 </div>
@@ -1875,29 +1828,9 @@
             }
         });
         
-        // Управление вкладками программ
-        document.addEventListener('DOMContentLoaded', function() {
-            const tabButtons = document.querySelectorAll('.tab-btn');
-            
-            tabButtons.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    tabButtons.forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    
-                    const tabId = this.getAttribute('data-tab');
-                    
-                    document.querySelectorAll('.program-container').forEach(container => {
-                        container.classList.remove('active');
-                    });
-                    
-                    document.getElementById(`${tabId}-program`).classList.add('active');
-                });
-            });
-        });
-        
         // Анимация появления элементов при скролле
         const animateOnScroll = function() {
-            const elements = document.querySelectorAll('.feature-card, .teacher-card, .section-title, .program-item, .testimonial');
+            const elements = document.querySelectorAll('.feature-card, .teacher-card, .section-title, .program-card, .testimonial');
             
             elements.forEach(element => {
                 const elementPosition = element.getBoundingClientRect().top;
@@ -1912,7 +1845,7 @@
 
         // Инициализация анимации
         window.addEventListener('load', function() {
-            document.querySelectorAll('.feature-card, .teacher-card, .section-title, .program-item, .testimonial').forEach(el => {
+            document.querySelectorAll('.feature-card, .teacher-card, .section-title, .program-card, .testimonial').forEach(el => {
                 el.style.opacity = '0';
                 el.style.transform = 'translateY(20px)';
                 el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
