@@ -404,46 +404,6 @@
             color: white;
         }
         
-        /* Расписание */
-        .schedule-widget table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        .schedule-widget th, .schedule-widget td {
-            padding: 0.8rem;
-            text-align: center;
-            border: 1px solid rgba(0,0,0,0.05);
-        }
-        
-        .schedule-widget th {
-            background: var(--primary);
-            color: white;
-            font-weight: 500;
-        }
-        
-        .schedule-widget tr:nth-child(even) {
-            background: rgba(0,0,0,0.02);
-        }
-        
-        .schedule-widget tr:hover {
-            background: rgba(58, 90, 120, 0.05);
-        }
-        
-        .lesson-time {
-            font-weight: 600;
-            color: var(--primary);
-        }
-        
-        .lesson-subject {
-            font-weight: 500;
-        }
-        
-        .lesson-teacher {
-            font-size: 0.9rem;
-            color: var(--text-light);
-        }
-        
         /* Домашние задания */
         .homework-list {
             display: grid;
@@ -794,7 +754,6 @@
             
             <ul class="sidebar-menu">
                 <li><a href="#" class="active" data-section="conference"><i class="fas fa-video"></i> Конференция</a></li>
-                <li><a href="#" data-section="schedule"><i class="fas fa-calendar-alt"></i> Расписание</a></li>
                 <li><a href="#" data-section="homework"><i class="fas fa-book"></i> Домашние задания</a></li>
                 <li><a href="#" data-section="profile"><i class="fas fa-user"></i> Профиль</a></li>
                 {% if user.role == 'teacher' %}
@@ -835,62 +794,6 @@
                 </div>
             </section>
             
-            <!-- Виджет расписания -->
-            <section class="widget schedule-widget" id="schedule-section" style="display: none;">
-                <div class="widget-header">
-                    <h3 class="widget-title">Мое расписание</h3>
-                    {% if user.role == 'teacher' %}
-                    <div class="widget-actions">
-                        <button class="btn btn-primary" id="addSchedule">
-                            <i class="fas fa-plus"></i> Добавить
-                        </button>
-                    </div>
-                    {% endif %}
-                </div>
-                
-                <div class="schedule-content">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Время</th>
-                                <th>Понедельник</th>
-                                <th>Вторник</th>
-                                <th>Среда</th>
-                                <th>Четверг</th>
-                                <th>Пятница</th>
-                                <th>Суббота</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for time_slot in ['09:00-10:30', '10:45-12:15', '12:30-14:00', '14:15-15:45', '16:00-17:30', '17:45-19:15'] %}
-                            <tr>
-                                <td class="lesson-time">{{ time_slot }}</td>
-                                {% for day in ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] %}
-                                <td>
-                                    {% if user.role == 'teacher' %}
-                                    <div class="lesson-edit">
-                                        <select class="form-control">
-                                            <option value="">-- Выберите --</option>
-                                            {% for course in ['Английский язык', 'Французский язык', 'Обществознание', 'История', 'Русский язык'] %}
-                                            <option value="{{ course }}">{{ course }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    {% else %}
-                                    <div class="lesson-info">
-                                        <div class="lesson-subject">Английский язык</div>
-                                        <div class="lesson-teacher">Пискарев М.Д.</div>
-                                    </div>
-                                    {% endif %}
-                                </td>
-                                {% endfor %}
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-            
             <!-- Виджет домашних заданий -->
             <section class="widget homework-widget" id="homework-section" style="display: none;">
                 <div class="widget-header">
@@ -904,38 +807,8 @@
                     {% endif %}
                 </div>
                 
-                <div class="homework-list">
-                    {% for i in range(3) %}
-                    <div class="homework-item">
-                        <div class="homework-header">
-                            <h4 class="homework-title">Домашнее задание по английскому языку #{{ i+1 }}</h4>
-                            <div class="homework-deadline">
-                                <i class="fas fa-clock"></i> Срок сдачи: {{ i+2 }} дней
-                            </div>
-                        </div>
-                        <div class="homework-description">
-                            Выполнить упражнения 1-10 на странице 45 учебника. Подготовить рассказ о своем дне.
-                        </div>
-                        <div class="homework-files">
-                            <div class="file-item">
-                                <i class="fas fa-file-pdf"></i> Упражнения.pdf
-                            </div>
-                            <div class="file-item">
-                                <i class="fas fa-file-word"></i> Текст.docx
-                            </div>
-                        </div>
-                        {% if user.role == 'student' %}
-                        <div class="homework-actions">
-                            <button class="btn btn-primary">
-                                <i class="fas fa-upload"></i> Загрузить работу
-                            </button>
-                            <button class="btn btn-secondary">
-                                <i class="fas fa-question-circle"></i> Задать вопрос
-                            </button>
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
+                <div class="homework-list" id="homeworkList">
+                    <!-- Динамически загружаемые домашние задания -->
                 </div>
             </section>
             
@@ -959,7 +832,7 @@
                     
                     <div class="form-group">
                         <label for="profilePhone">Телефон</label>
-                        <input type="tel" id="profilePhone" class="form-control" value="+7 (999) 123-45-67">
+                        <input type="tel" id="profilePhone" class="form-control" placeholder="Введите ваш телефон">
                     </div>
                     
                     <div class="form-group">
@@ -969,7 +842,7 @@
                     
                     <div class="form-group">
                         <label for="profilePasswordConfirm">Подтвердите пароль</label>
-                        <input type="password" id="profilePasswordConfirm" class="form-control">
+                        <input type="password" id="profilePasswordConfirm" class="form-control" placeholder="Подтвердите новый пароль">
                     </div>
                     
                     <button type="submit" class="btn btn-primary">
@@ -990,26 +863,8 @@
                     </div>
                 </div>
                 
-                <div class="users-list">
-                    {% for student in ['student1', 'student2', 'student3'] %}
-                    <div class="user-card">
-                        <div class="user-avatar-sm">
-                            <img src="https://i.pravatar.cc/150?u={{ student }}" alt="Аватар">
-                        </div>
-                        <div class="user-details">
-                            <div class="user-name-sm">{{ student }}</div>
-                            <span class="user-role-sm">Студент</span>
-                        </div>
-                        <div class="user-actions">
-                            <button class="btn btn-secondary btn-sm edit-user">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-secondary btn-sm delete-user">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                    {% endfor %}
+                <div class="users-list" id="usersList">
+                    <!-- Динамически загружаемые пользователи -->
                 </div>
             </section>
             {% endif %}
@@ -1065,16 +920,6 @@
                         </div>
                     </a>
                 </div>
-                
-                <div style="margin-top: 2rem; text-align: center;">
-                    <h4>Доступ к VPN (WireGuard)</h4>
-                    <div id="qrcode" style="margin: 1rem auto; width: 200px; height: 200px; background: #f5f5f5; display: flex; align-items: center; justify-content: center;">
-                        <span style="color: var(--text-light);">QR-код будет сгенерирован здесь</span>
-                    </div>
-                    <button class="btn btn-secondary">
-                        <i class="fas fa-download"></i> Скачать конфиг
-                    </button>
-                </div>
             </section>
         </main>
     </div>
@@ -1085,7 +930,7 @@
             <span class="close-modal">&times;</span>
             <h3 class="modal-title">Добавить домашнее задание</h3>
             
-            <form id="addHomeworkForm">
+            <form id="addHomeworkForm" enctype="multipart/form-data">
                 <div class="form-group">
                     <label for="hwTitle">Название задания</label>
                     <input type="text" id="hwTitle" class="form-control" required>
@@ -1098,25 +943,25 @@
                 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="hwCourse">Курс</label>
-                        <select id="hwCourse" class="form-control" required>
-                            <option value="">-- Выберите курс --</option>
-                            {% for course in ['Английский язык', 'Французский язык', 'Обществознание', 'История', 'Русский язык'] %}
-                            <option value="{{ course }}">{{ course }}</option>
+                        <label for="hwLesson">Урок</label>
+                        <select id="hwLesson" class="form-control" required>
+                            <option value="">-- Выберите урок --</option>
+                            {% for lesson in lessons %}
+                            <option value="{{ lesson.id }}">{{ lesson.title }}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="hwDeadline">Срок сдачи</label>
-                        <input type="date" id="hwDeadline" class="form-control" required>
+                        <input type="datetime-local" id="hwDeadline" class="form-control" required>
                     </div>
                 </div>
                 
                 <div class="form-group">
                     <label for="hwStudents">Ученики</label>
                     <select id="hwStudents" class="form-control" multiple style="height: auto;">
-                        {% for student in ['student1', 'student2', 'student3'] %}
-                        <option value="{{ student }}" selected>{{ student }}</option>
+                        {% for student in students %}
+                        <option value="{{ student.username }}" selected>{{ student.username }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -1163,15 +1008,6 @@
                     </select>
                 </div>
                 
-                <div class="form-group">
-                    <label for="userCourses">Курсы</label>
-                    <select id="userCourses" class="form-control" multiple style="height: auto;">
-                        {% for course in ['Английский язык', 'Французский язык', 'Обществознание', 'История', 'Русский язык'] %}
-                        <option value="{{ course }}">{{ course }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-save"></i> Сохранить пользователя
                 </button>
@@ -1212,6 +1048,13 @@
                 // Показываем выбранный раздел
                 const sectionId = this.getAttribute('data-section') + '-section';
                 document.getElementById(sectionId).style.display = 'block';
+                
+                // Загружаем данные при переходе на раздел
+                if (sectionId === 'homework-section') {
+                    loadHomeworks();
+                } else if (sectionId === 'users-section') {
+                    loadUsers();
+                }
             });
         });
         
@@ -1284,6 +1127,102 @@
             }
         });
         
+        // Загрузка домашних заданий
+        function loadHomeworks() {
+            fetch('/api/homework')
+                .then(response => response.json())
+                .then(data => {
+                    const homeworkList = document.getElementById('homeworkList');
+                    homeworkList.innerHTML = '';
+                    
+                    if (data.homeworks && data.homeworks.length > 0) {
+                        data.homeworks.forEach(hw => {
+                            const deadline = new Date(hw.deadline);
+                            const now = new Date();
+                            const diffDays = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+                            
+                            const homeworkItem = document.createElement('div');
+                            homeworkItem.className = 'homework-item';
+                            homeworkItem.innerHTML = `
+                                <div class="homework-header">
+                                    <h4 class="homework-title">${hw.title}</h4>
+                                    <div class="homework-deadline">
+                                        <i class="fas fa-clock"></i> Срок сдачи: ${diffDays > 0 ? diffDays + ' дней' : 'просрочено'}
+                                    </div>
+                                </div>
+                                <div class="homework-description">
+                                    ${hw.description}
+                                </div>
+                                ${hw.files && hw.files.length > 0 ? `
+                                <div class="homework-files">
+                                    ${hw.files.map(file => `
+                                    <div class="file-item">
+                                        <i class="fas fa-file"></i> ${file.name}
+                                    </div>
+                                    `).join('')}
+                                </div>
+                                ` : ''}
+                                ${'{{ user.role }}' === 'student' ? `
+                                <div class="homework-actions">
+                                    <button class="btn btn-primary" onclick="submitHomework(${hw.id})">
+                                        <i class="fas fa-upload"></i> Загрузить работу
+                                    </button>
+                                </div>
+                                ` : ''}
+                            `;
+                            homeworkList.appendChild(homeworkItem);
+                        });
+                    } else {
+                        homeworkList.innerHTML = '<p>Нет домашних заданий</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading homeworks:', error);
+                    document.getElementById('homeworkList').innerHTML = '<p>Ошибка загрузки заданий</p>';
+                });
+        }
+        
+        // Загрузка пользователей (для учителя)
+        function loadUsers() {
+            fetch('/api/users')
+                .then(response => response.json())
+                .then(data => {
+                    const usersList = document.getElementById('usersList');
+                    usersList.innerHTML = '';
+                    
+                    if (data.users && data.users.length > 0) {
+                        data.users.forEach(user => {
+                            const userCard = document.createElement('div');
+                            userCard.className = 'user-card';
+                            userCard.innerHTML = `
+                                <div class="user-avatar-sm">
+                                    <img src="${user.avatar || 'https://i.pravatar.cc/150?u=' + user.username}" alt="Аватар">
+                                </div>
+                                <div class="user-details">
+                                    <div class="user-name-sm">${user.username}</div>
+                                    <span class="user-role-sm">${user.role === 'teacher' ? 'Преподаватель' : 'Студент'}</span>
+                                </div>
+                                <div class="user-actions">
+                                    <button class="btn btn-secondary btn-sm" onclick="editUser('${user.username}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm" onclick="deleteUser('${user.username}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            `;
+                            usersList.appendChild(userCard);
+                        });
+                    } else {
+                        usersList.innerHTML = '<p>Нет пользователей</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading users:', error);
+                    document.getElementById('usersList').innerHTML = '<p>Ошибка загрузки пользователей</p>';
+                });
+        }
+        
         // Обработка формы профиля
         const profileForm = document.getElementById('profileForm');
         if (profileForm) {
@@ -1315,6 +1254,10 @@
                 .then(data => {
                     if (data.success) {
                         alert('Профиль успешно обновлен!');
+                        // Обновляем email в сессии
+                        if (data.user) {
+                            sessionStorage.setItem('user', JSON.stringify(data.user));
+                        }
                     } else {
                         alert('Ошибка при обновлении профиля: ' + (data.error || ''));
                     }
@@ -1332,30 +1275,32 @@
             addHomeworkForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 
-                const formData = {
-                    title: document.getElementById('hwTitle').value,
-                    description: document.getElementById('hwDescription').value,
-                    course: document.getElementById('hwCourse').value,
-                    deadline: document.getElementById('hwDeadline').value,
-                    students: Array.from(document.getElementById('hwStudents').selectedOptions).map(o => o.value)
-                };
+                const formData = new FormData();
+                formData.append('title', document.getElementById('hwTitle').value);
+                formData.append('description', document.getElementById('hwDescription').value);
+                formData.append('lesson_id', document.getElementById('hwLesson').value);
+                formData.append('deadline', document.getElementById('hwDeadline').value);
                 
-                // Здесь должна быть обработка загрузки файлов
+                const studentsSelect = document.getElementById('hwStudents');
+                const selectedStudents = Array.from(studentsSelect.selectedOptions).map(option => option.value);
+                formData.append('students', JSON.stringify(selectedStudents));
+                
+                const filesInput = document.getElementById('hwFiles');
+                for (let i = 0; i < filesInput.files.length; i++) {
+                    formData.append('files', filesInput.files[i]);
+                }
                 
                 // Отправка данных на сервер
                 fetch('/api/homework', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(formData)
+                    body: formData
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         alert('Домашнее задание успешно добавлено!');
                         homeworkModal.style.display = 'none';
-                        // Обновить список заданий
+                        loadHomeworks();
                     } else {
                         alert('Ошибка при добавлении задания: ' + (data.error || ''));
                     }
@@ -1377,8 +1322,7 @@
                     username: document.getElementById('userUsername').value,
                     email: document.getElementById('userEmail').value,
                     password: document.getElementById('userPassword').value,
-                    role: document.getElementById('userRole').value,
-                    courses: Array.from(document.getElementById('userCourses').selectedOptions).map(o => o.value)
+                    role: document.getElementById('userRole').value
                 };
                 
                 // Отправка данных на сервер
@@ -1394,7 +1338,7 @@
                     if (data.success) {
                         alert('Пользователь успешно добавлен!');
                         userModal.style.display = 'none';
-                        // Обновить список пользователей
+                        loadUsers();
                     } else {
                         alert('Ошибка при добавлении пользователя: ' + (data.error || ''));
                     }
@@ -1404,6 +1348,40 @@
                     alert('Произошла ошибка при добавлении пользователя');
                 });
             });
+        }
+        
+        // Функция для отправки домашнего задания
+        function submitHomework(homeworkId) {
+            // Здесь должна быть реализация отправки домашнего задания
+            alert('Функция отправки домашнего задания для ID: ' + homeworkId);
+        }
+        
+        // Функция для редактирования пользователя
+        function editUser(username) {
+            // Здесь должна быть реализация редактирования пользователя
+            alert('Редактирование пользователя: ' + username);
+        }
+        
+        // Функция для удаления пользователя
+        function deleteUser(username) {
+            if (confirm(`Вы уверены, что хотите удалить пользователя ${username}?`)) {
+                fetch(`/api/users/${username}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Пользователь успешно удален!');
+                        loadUsers();
+                    } else {
+                        alert('Ошибка при удалении пользователя: ' + (data.error || ''));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при удалении пользователя');
+                });
+            }
         }
         
         // Выход из системы
