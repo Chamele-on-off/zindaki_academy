@@ -705,7 +705,7 @@ def dashboard():
                              'path': PEERJS_PATH
                          })
 
-# Обработка контактной формы
+# Обработка контактной формы 
 @app.route('/api/contact', methods=['POST'])
 def api_contact():
     try:
