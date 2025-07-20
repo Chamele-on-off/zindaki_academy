@@ -805,7 +805,7 @@
                         <i class="fas fa-expand"></i>
                     </button>
                     <iframe id="conference-frame" allow="camera; microphone; display-capture" 
-                            src="https://conf.zindaki-edu.ru?room={{ user.username }}&user={{ user.username }}"></iframe>
+                            src="https://conf.zindaki-edu.ru?room={{ user.username }}&user={{ user.username }}&name={{ user.username }}&autostart=1"></iframe>
                 </div>
                 
                 <div class="conference-controls">
@@ -986,22 +986,22 @@
                 
                 <h4 style="margin: 2rem 0 1rem;">Альтернативные конференции</h4>
                 <div class="alternative-conferences">
-                    <a href="https://meet.google.com" target="_blank" class="conference-link">
+                    <a href="https://teams.live.com/meet/9480976290023?p=wqOkR5Ze8VJMKmpq" target="_blank" class="conference-link">
+                        <div class="conference-icon" style="background: #6264A7;">
+                            <i class="fab fa-microsoft"></i>
+                        </div>
+                        <div class="conference-info">
+                            <h4>Microsoft Teams</h4>
+                            <p>Резервная конференция</p>
+                        </div>
+                    </a>
+                    
+                    <a href="https://meet.google.com/eec-earm-gyd" target="_blank" class="conference-link">
                         <div class="conference-icon" style="background: #4285F4;">
                             <i class="fab fa-google"></i>
                         </div>
                         <div class="conference-info">
                             <h4>Google Meet</h4>
-                            <p>Резервная конференция</p>
-                        </div>
-                    </a>
-                    
-                    <a href="https://zoom.us" target="_blank" class="conference-link">
-                        <div class="conference-icon" style="background: #2D8CFF;">
-                            <i class="fas fa-video"></i>
-                        </div>
-                        <div class="conference-info">
-                            <h4>Zoom</h4>
                             <p>Резервная конференция</p>
                         </div>
                     </a>
@@ -1158,11 +1158,22 @@
         // Режим полного экрана
         fullscreenBtn.addEventListener('click', () => {
             if (conferenceFrame.requestFullscreen) {
-                conferenceFrame.requestFullscreen();
+                conferenceFrame.requestFullscreen().catch(err => {
+                    console.error('Error attempting to enable fullscreen:', err);
+                });
             } else if (conferenceFrame.webkitRequestFullscreen) {
                 conferenceFrame.webkitRequestFullscreen();
             } else if (conferenceFrame.msRequestFullscreen) {
                 conferenceFrame.msRequestFullscreen();
+            }
+        });
+        
+        // Обработчик изменения полноэкранного режима
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                // Выход из полноэкранного режима
+                conferenceFrame.style.width = '100%';
+                conferenceFrame.style.height = '500px';
             }
         });
         
@@ -1215,6 +1226,9 @@
                 .then(data => {
                     if (data.success) {
                         alert(`Ученик ${student} успешно назначен на конференцию в комнате ${room}`);
+                        
+                        // Автоматическое обновление конференции для учителя
+                        conferenceFrame.src = `https://conf.zindaki-edu.ru?room=${room}&user={{ user.username }}&name={{ user.username }}&autostart=1`;
                     } else {
                         alert('Ошибка при назначении: ' + (data.error || ''));
                     }
@@ -1550,7 +1564,7 @@
                     
                     if (activeInvite) {
                         if (confirm(`У вас назначена конференция с преподавателем ${activeInvite.teacher}. Хотите присоединиться?`)) {
-                            conferenceFrame.src = `https://conf.zindaki-edu.ru?room=${activeInvite.room_name}&user={{ user.username }}`;
+                            conferenceFrame.src = `https://conf.zindaki-edu.ru?room=${activeInvite.room_name}&user={{ user.username }}&name={{ user.username }}&autostart=1`;
                         }
                     }
                 })
