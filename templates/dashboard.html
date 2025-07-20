@@ -366,6 +366,23 @@
             border: none;
         }
         
+        .fullscreen-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+        }
+        
         .conference-controls {
             display: flex;
             justify-content: center;
@@ -609,6 +626,13 @@
             gap: 0.5rem;
         }
         
+        /* Назначение конференции */
+        .assign-conference {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+        
         /* Модальные окна */
         .modal {
             display: none;
@@ -777,6 +801,9 @@
                 </div>
                 
                 <div class="conference-container">
+                    <button class="fullscreen-btn" id="fullscreenBtn" title="На весь экран">
+                        <i class="fas fa-expand"></i>
+                    </button>
                     <iframe id="conference-frame" allow="camera; microphone; display-capture" 
                             src="https://conf.zindaki-edu.ru?room={{ user.username }}&user={{ user.username }}"></iframe>
                 </div>
@@ -792,6 +819,32 @@
                         <i class="fas fa-phone-slash"></i>
                     </button>
                 </div>
+
+                {% if user.role == 'teacher' %}
+                <div class="assign-conference">
+                    <h4>Назначить ученика на конференцию</h4>
+                    <form id="assignConferenceForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="conferenceStudent">Ученик</label>
+                                <select id="conferenceStudent" class="form-control" required>
+                                    <option value="">-- Выберите ученика --</option>
+                                    {% for student in students %}
+                                    <option value="{{ student.username }}">{{ student.username }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="conferenceRoom">Комната</label>
+                                <input type="text" id="conferenceRoom" class="form-control" value="{{ user.username }}" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-accent">
+                            <i class="fas fa-user-plus"></i> Назначить
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
             </section>
             
             <!-- Виджет домашних заданий -->
@@ -875,38 +928,48 @@
                     <h3 class="widget-title">Полезные ресурсы</h3>
                 </div>
                 
-                <h4 style="margin-bottom: 1rem;">Альтернативные конференции</h4>
+                <h4 style="margin-bottom: 1rem;">Словари и переводчики</h4>
                 <div class="alternative-conferences">
-                    <a href="https://teams.live.com/meet/9480976290023?p=wqOkR5Ze8VJMKmpq" target="_blank" class="conference-link">
-                        <div class="conference-icon">
-                            <i class="fab fa-microsoft"></i>
+                    <a href="https://context.reverso.net/" target="_blank" class="conference-link">
+                        <div class="conference-icon" style="background: #4a6baf;">
+                            <i class="fas fa-language"></i>
                         </div>
                         <div class="conference-info">
-                            <h4>Microsoft Teams</h4>
-                            <p>Резервная конференция</p>
+                            <h4>Reverso Context</h4>
+                            <p>Контекстный перевод с примерами</p>
                         </div>
                     </a>
                     
-                    <a href="https://meet.google.com/eec-earm-gyd" target="_blank" class="conference-link">
-                        <div class="conference-icon" style="background: #4285F4;">
-                            <i class="fab fa-google"></i>
+                    <a href="https://www.multitran.com/" target="_blank" class="conference-link">
+                        <div class="conference-icon" style="background: #3a5a78;">
+                            <i class="fas fa-book"></i>
                         </div>
                         <div class="conference-info">
-                            <h4>Google Meet</h4>
-                            <p>Резервная конференция</p>
+                            <h4>Multitran</h4>
+                            <p>Профессиональный словарь</p>
+                        </div>
+                    </a>
+                    
+                    <a href="https://www.linguee.com/" target="_blank" class="conference-link">
+                        <div class="conference-icon" style="background: #2c4761;">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <div class="conference-info">
+                            <h4>Linguee</h4>
+                            <p>Словарь с примерами из реальных текстов</p>
                         </div>
                     </a>
                 </div>
                 
-                <h4 style="margin: 2rem 0 1rem;">Другие ресурсы</h4>
+                <h4 style="margin: 2rem 0 1rem;">Учебные материалы</h4>
                 <div class="alternative-conferences">
-                    <a href="https://classroom.google.com" target="_blank" class="conference-link">
-                        <div class="conference-icon" style="background: #0F9D58;">
-                            <i class="fas fa-chalkboard-teacher"></i>
+                    <a href="https://t.me/zindaki_books" target="_blank" class="conference-link">
+                        <div class="conference-icon" style="background: #0088cc;">
+                            <i class="fab fa-telegram"></i>
                         </div>
                         <div class="conference-info">
-                            <h4>Google Classroom</h4>
-                            <p>Платформа для обучения</p>
+                            <h4>Telegram канал</h4>
+                            <p>Учебники и материалы для скачивания</p>
                         </div>
                     </a>
                     
@@ -916,7 +979,30 @@
                         </div>
                         <div class="conference-info">
                             <h4>Google Drive</h4>
-                            <p>Облачное хранилище</p>
+                            <p>Облачное хранилище с материалами</p>
+                        </div>
+                    </a>
+                </div>
+                
+                <h4 style="margin: 2rem 0 1rem;">Альтернативные конференции</h4>
+                <div class="alternative-conferences">
+                    <a href="https://meet.google.com" target="_blank" class="conference-link">
+                        <div class="conference-icon" style="background: #4285F4;">
+                            <i class="fab fa-google"></i>
+                        </div>
+                        <div class="conference-info">
+                            <h4>Google Meet</h4>
+                            <p>Резервная конференция</p>
+                        </div>
+                    </a>
+                    
+                    <a href="https://zoom.us" target="_blank" class="conference-link">
+                        <div class="conference-icon" style="background: #2D8CFF;">
+                            <i class="fas fa-video"></i>
+                        </div>
+                        <div class="conference-info">
+                            <h4>Zoom</h4>
+                            <p>Резервная конференция</p>
                         </div>
                     </a>
                 </div>
@@ -1064,9 +1150,21 @@
         const endCall = document.getElementById('endCall');
         const refreshConference = document.getElementById('refreshConference');
         const conferenceFrame = document.getElementById('conference-frame');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
         
         let isMicOn = true;
         let isCameraOn = true;
+        
+        // Режим полного экрана
+        fullscreenBtn.addEventListener('click', () => {
+            if (conferenceFrame.requestFullscreen) {
+                conferenceFrame.requestFullscreen();
+            } else if (conferenceFrame.webkitRequestFullscreen) {
+                conferenceFrame.webkitRequestFullscreen();
+            } else if (conferenceFrame.msRequestFullscreen) {
+                conferenceFrame.msRequestFullscreen();
+            }
+        });
         
         toggleMic.addEventListener('click', () => {
             isMicOn = !isMicOn;
@@ -1091,6 +1189,42 @@
         refreshConference.addEventListener('click', () => {
             conferenceFrame.src = conferenceFrame.src;
         });
+        
+        // Назначение ученика на конференцию (для учителя)
+        const assignConferenceForm = document.getElementById('assignConferenceForm');
+        if (assignConferenceForm) {
+            assignConferenceForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const student = document.getElementById('conferenceStudent').value;
+                const room = document.getElementById('conferenceRoom').value;
+                
+                fetch('/api/invites', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        teacher: '{{ user.username }}',
+                        student: student,
+                        room_name: room,
+                        status: 'active'
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`Ученик ${student} успешно назначен на конференцию в комнате ${room}`);
+                    } else {
+                        alert('Ошибка при назначении: ' + (data.error || ''));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при назначении ученика');
+                });
+            });
+        }
         
         // Модальные окна
         const homeworkModal = document.getElementById('homeworkModal');
@@ -1404,6 +1538,29 @@
         
         // Инициализация - показать первый раздел
         document.querySelector('.sidebar-menu a.active').click();
+        
+        // Проверка назначенных конференций для ученика
+        {% if user.role == 'student' %}
+        function checkAssignedConferences() {
+            fetch('/api/invites')
+                .then(response => response.json())
+                .then(data => {
+                    const invites = data.invites || [];
+                    const activeInvite = invites.find(i => i.student === '{{ user.username }}' && i.status === 'active');
+                    
+                    if (activeInvite) {
+                        if (confirm(`У вас назначена конференция с преподавателем ${activeInvite.teacher}. Хотите присоединиться?`)) {
+                            conferenceFrame.src = `https://conf.zindaki-edu.ru?room=${activeInvite.room_name}&user={{ user.username }}`;
+                        }
+                    }
+                })
+                .catch(error => console.error('Error checking invites:', error));
+        }
+        
+        // Проверяем каждые 5 минут
+        checkAssignedConferences();
+        setInterval(checkAssignedConferences, 5 * 60 * 1000);
+        {% endif %}
     </script>
 </body>
 </html>
