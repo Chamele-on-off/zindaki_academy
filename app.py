@@ -705,6 +705,140 @@ def dashboard():
                              'path': PEERJS_PATH
                          })
 
+# Приглашения на конференции
+@app.route('/api/invites', methods=['GET', 'POST'])
+def api_invites():
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if request.method == 'POST':
+        if session['user']['role'] != 'teacher':
+            return jsonify({'error': 'Only teachers can create invites'}), 403
+        
+        data = request.json
+        required_fields = ['teacher', 'student', 'room_name']
+        if not all(field in data for field in required_fields):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        # Проверяем, что учитель существует
+        teacher = DB.get_user(data['teacher'])
+        if not teacher or teacher['role'] != 'teacher':
+            return jsonify({'error': 'Teacher not found'}), 404
+        
+        # Проверяем, что ученик существует
+        student = DB.get_user(data['student'])
+        if not student or student['role'] != 'student':
+            return jsonify({'error': 'Student not found'}), 404
+        
+        invite = DB.save_invite(
+            data['teacher'],
+            data['student'],
+            data['room_name'],
+            data.get('status', 'active')
+        )
+        
+        return jsonify({'success': True, 'invite': invite})
+    
+    # GET запрос - возвращаем приглашения для текущего пользователя
+    if session['user']['role'] == 'teacher':
+        invites = DB.get_teacher_invites(session['user']['username'])
+    else:
+        invites = DB.get_user_invites(session['user']['username'])
+    
+    return jsonify({'invites': invites})
+
+@app.route('/api/invites/<int:invite_id>', methods=['PUT'])
+def api_update_invite(invite_id):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json
+    if 'status' not in data:
+        return jsonify({'error': 'Status is required'}), 400
+    
+    invites = DB.get_invites()
+    invite = next((i for i in invites if i['id'] == invite_id), None)
+    
+    if not invite:
+        return jsonify({'error': 'Invite not found'}), 404
+    
+    # Проверяем права доступа
+    if session['user']['role'] == 'teacher' and invite['teacher'] != session['user']['username']:
+        return jsonify({'error': 'Access denied'}), 403
+    if session['user']['role'] == 'student' and invite['student'] != session['user']['username']:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    if DB.update_invite_status(invite_id, data['status']):
+        return jsonify({'success': True})
+    return jsonify({'error': 'Failed to update invite'}), 500
+
+# Управление конференциями
+@app.route('/api/conferences', methods=['POST'])
+def api_conferences():
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json
+    required_fields = ['room_name']
+    if not all(field in data for field in required_fields):
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    conference = DB.save_conference(
+        data['room_name'],
+        session['user']['username'],
+        data.get('is_active', True)
+    )
+    
+    return jsonify({'success': True, 'conference': conference})
+
+@app.route('/api/conferences/<room_name>/participants', methods=['POST'])
+def api_add_participant(room_name):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json
+    if 'username' not in data:
+        return jsonify({'error': 'Username is required'}), 400
+    
+    # Проверяем, что пользователь существует
+    user = DB.get_user(data['username'])
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    if DB.add_participant(room_name, data['username']):
+        return jsonify({'success': True})
+    return jsonify({'error': 'Failed to add participant'}), 500
+
+@app.route('/api/conferences/<room_name>/participants/<username>', methods=['DELETE'])
+def api_remove_participant(room_name, username):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    # Проверяем, что пользователь имеет права (учитель или сам участник)
+    if session['user']['username'] != username and session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    if DB.remove_participant(room_name, username):
+        return jsonify({'success': True})
+    return jsonify({'error': 'Failed to remove participant'}), 500
+
+@app.route('/api/conferences/<room_name>/end', methods=['POST'])
+def api_end_conference(room_name):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    conference = DB.get_conference(room_name)
+    if not conference:
+        return jsonify({'error': 'Conference not found'}), 404
+    
+    # Проверяем, что пользователь - хост конференции или учитель
+    if session['user']['username'] != conference['host'] and session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    if DB.end_conference(room_name):
+        return jsonify({'success': True})
+    return jsonify({'error': 'Failed to end conference'}), 500
+
 # Обработка контактной формы 
 @app.route('/api/contact', methods=['POST'])
 def api_contact():
