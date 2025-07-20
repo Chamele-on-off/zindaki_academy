@@ -63,7 +63,7 @@ class DB:
     @staticmethod
     def get_user(username):
         users = DB.get_users()
-        return next((u for u in users if u['username'] == username), None
+        return next((u for u in users if u['username'] == username), None)
 
     @staticmethod
     def save_user(username, email, password, role='student', is_active=True):
@@ -116,7 +116,7 @@ class DB:
     @staticmethod
     def get_lesson(lesson_id):
         lessons = DB.get_lessons()
-        return next((l for l in lessons if l['id'] == lesson_id), None
+        return next((l for l in lessons if l['id'] == lesson_id), None)
 
     @staticmethod
     def save_lesson(title, description, teacher, schedule, duration=60, subject=None, students=None):
