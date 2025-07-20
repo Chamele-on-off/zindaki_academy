@@ -63,7 +63,7 @@ class DB:
     @staticmethod
     def get_user(username):
         users = DB.get_users()
-        return next((u for u in users if u['username'] == username), None)
+        return next((u for u in users if u['username'] == username), None
 
     @staticmethod
     def save_user(username, email, password, role='student', is_active=True):
@@ -116,7 +116,7 @@ class DB:
     @staticmethod
     def get_lesson(lesson_id):
         lessons = DB.get_lessons()
-        return next((l for l in lessons if l['id'] == lesson_id), None)
+        return next((l for l in lessons if l['id'] == lesson_id), None
 
     @staticmethod
     def save_lesson(title, description, teacher, schedule, duration=60, subject=None, students=None):
@@ -275,7 +275,7 @@ class DB:
     @staticmethod
     def get_conference(room_name):
         conferences = DB.get_conferences()
-        return next((c for c in conferences if c['room_name'] == room_name), None)
+        return next((c for c in conferences if c['room_name'] == room_name), None
 
     @staticmethod
     def save_conference(room_name, host_username, is_active=True):
@@ -334,6 +334,21 @@ class DB:
             DB._save_db('conferences', conferences)
             return True
         return False
+
+    @staticmethod
+    def get_active_conference(host_username=None):
+        conferences = DB.get_conferences()
+        now = datetime.now().isoformat()
+        
+        if host_username:
+            return [c for c in conferences 
+                   if c['host'] == host_username 
+                   and c['is_active'] 
+                   and c['updated_at'] > (datetime.now() - timedelta(hours=1)).isoformat()]
+        else:
+            return [c for c in conferences 
+                   if c['is_active'] 
+                   and c['updated_at'] > (datetime.now() - timedelta(hours=1)).isoformat()]
 
 # Инициализация базы данных
 if not os.path.exists(f'{DB_FOLDER}/users.json'):
@@ -790,6 +805,41 @@ def api_conferences():
     )
     
     return jsonify({'success': True, 'conference': conference})
+
+@app.route('/api/conferences/active', methods=['GET'])
+def api_get_active_conferences():
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    host_username = request.args.get('host')
+    conferences = DB.get_active_conference(host_username)
+    return jsonify({'conferences': conferences})
+
+@app.route('/api/conferences/join', methods=['POST'])
+def api_join_conference():
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json
+    required_fields = ['room_name', 'user_name']
+    if not all(field in data for field in required_fields):
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    # Обновляем время последней активности конференции
+    conference = DB.save_conference(
+        data['room_name'],
+        data.get('host', session['user']['username']),
+        True
+    )
+    
+    # Добавляем участника
+    DB.add_participant(data['room_name'], data['user_name'])
+    
+    return jsonify({
+        'success': True,
+        'conference': conference,
+        'join_url': f"https://conf.zindaki-edu.ru?room={data['room_name']}&user={data['user_name']}&name={data['user_name']}&autostart=1"
+    })
 
 @app.route('/api/conferences/<room_name>/participants', methods=['POST'])
 def api_add_participant(room_name):
