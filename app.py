@@ -314,7 +314,7 @@ class DB:
     @staticmethod
     def remove_participant(room_name, username):
         conferences = DB.get_conferences()
-        conference = next((c for c in conferences if c['room_name'] == room_name), None
+        conference = next((c for c in conferences if c['room_name'] == room_name), None)
         
         if conference and username in conference['participants']:
             conference['participants'].remove(username)
@@ -326,7 +326,7 @@ class DB:
     @staticmethod
     def end_conference(room_name):
         conferences = DB.get_conferences()
-        conference = next((c for c in conferences if c['room_name'] == room_name), None
+        conference = next((c for c in conferences if c['room_name'] == room_name), None)
         
         if conference:
             conference['is_active'] = False
