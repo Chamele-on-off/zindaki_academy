@@ -1230,13 +1230,8 @@
                         // Автоматическое обновление конференции для учителя
                         conferenceFrame.src = `https://conf.zindaki-edu.ru?room=${room}&user={{ user.username }}&name={{ user.username }}&autostart=1`;
                         
-                        // Отправляем сообщение в iframe с новыми параметрами
-                        conferenceFrame.contentWindow.postMessage({
-                            type: 'roomUpdate',
-                            room: room,
-                            user: '{{ user.username }}',
-                            name: '{{ user.username }}'
-                        }, 'https://conf.zindaki-edu.ru');
+                        // Автоматически обновляем поле комнаты для следующих приглашений
+                        document.getElementById('conferenceRoom').value = room;
                     } else {
                         alert('Ошибка при назначении: ' + (data.error || ''));
                     }
@@ -1247,19 +1242,6 @@
                 });
             });
         }
-        
-        // Слушаем сообщения от iframe конференции
-        window.addEventListener('message', function(event) {
-            // Проверяем источник сообщения
-            if (event.origin !== 'https://conf.zindaki-edu.ru') return;
-            
-            const data = event.data;
-            
-            if (data.type === 'roomUpdate') {
-                // Обновляем поле комнаты в форме
-                document.getElementById('conferenceRoom').value = data.room;
-            }
-        });
         
         // Модальные окна
         const homeworkModal = document.getElementById('homeworkModal');
