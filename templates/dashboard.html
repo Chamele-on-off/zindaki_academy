@@ -1229,6 +1229,9 @@
                         
                         // Автоматическое обновление конференции для учителя
                         conferenceFrame.src = `https://conf.zindaki-edu.ru?room=${room}&user={{ user.username }}&name={{ user.username }}&autostart=1`;
+                        
+                        // Автоматически обновляем поле комнаты для следующих приглашений
+                        document.getElementById('conferenceRoom').value = room;
                     } else {
                         alert('Ошибка при назначении: ' + (data.error || ''));
                     }
