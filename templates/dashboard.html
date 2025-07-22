@@ -836,7 +836,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="conferenceRoom">Комната</label>
-                                <input type="text" id="conferenceRoom" class="form-control" value="{{ user.username }}" required>
+                                <input type="text" id="conferenceRoom" class="form-control" value="{{ user.username }}" required readonly>
                             </div>
                         </div>
                         <button type="submit" class="btn btn-accent">
@@ -1227,8 +1227,8 @@
                     if (data.success) {
                         alert(`Ученик ${student} успешно назначен на конференцию в комнате ${room}`);
                         
-                        // Автоматическое обновление конференции для учителя
-                        conferenceFrame.src = `https://conf.zindaki-edu.ru?room=${room}&user={{ user.username }}&name={{ user.username }}&autostart=1`;
+                        // Создаем URL для ученика
+                        const studentJoinUrl = `https://conf.zindaki-edu.ru?room=${room}&user=${student}&name=${student}&autostart=1`;
                         
                         // Отправляем сообщение в iframe с новыми параметрами
                         conferenceFrame.contentWindow.postMessage({
@@ -1237,6 +1237,9 @@
                             user: '{{ user.username }}',
                             name: '{{ user.username }}'
                         }, 'https://conf.zindaki-edu.ru');
+                        
+                        // Отправляем приглашение ученику (можно через WebSocket или API)
+                        sendInvitationToStudent(student, studentJoinUrl);
                     } else {
                         alert('Ошибка при назначении: ' + (data.error || ''));
                     }
@@ -1245,6 +1248,32 @@
                     console.error('Error:', error);
                     alert('Произошла ошибка при назначении ученика');
                 });
+            });
+        }
+        
+        // Функция для отправки приглашения ученику
+        function sendInvitationToStudent(student, joinUrl) {
+            // Здесь должна быть реализация отправки приглашения ученику
+            // Например, через WebSocket или API вызов
+            console.log(`Отправка приглашения ученику ${student}: ${joinUrl}`);
+            
+            // В реальном приложении здесь будет вызов API для отправки уведомления
+            fetch('/api/send-invitation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    student: student,
+                    join_url: joinUrl,
+                    teacher: '{{ user.username }}'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    console.error('Ошибка отправки приглашения:', data.error);
+                }
             });
         }
         
