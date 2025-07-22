@@ -805,7 +805,7 @@
                         <i class="fas fa-expand"></i>
                     </button>
                     <iframe id="conference-frame" allow="camera; microphone; display-capture" 
-                            src="https://conf.zindaki-edu.ru?room={{ user.username }}&user={{ user.username }}&name={{ user.username }}&autostart=1"></iframe>
+                            src="https://conf.zindaki-edu.ru"></iframe>
                 </div>
                 
                 <div class="conference-controls">
@@ -1155,6 +1155,26 @@
         let isMicOn = true;
         let isCameraOn = true;
         
+        // Инициализация конференции
+        function initConference(roomName, userName) {
+            const conferenceUrl = `https://conf.zindaki-edu.ru`;
+            conferenceFrame.src = conferenceUrl;
+            
+            // Отправляем параметры через postMessage после загрузки iframe
+            conferenceFrame.onload = function() {
+                conferenceFrame.contentWindow.postMessage({
+                    type: 'initConference',
+                    room: roomName,
+                    user: userName,
+                    name: userName,
+                    autostart: 1
+                }, 'https://conf.zindaki-edu.ru');
+            };
+        }
+        
+        // Инициализация конференции при загрузке страницы
+        initConference('{{ user.username }}', '{{ user.username }}');
+        
         // Режим полного экрана
         fullscreenBtn.addEventListener('click', () => {
             if (conferenceFrame.requestFullscreen) {
@@ -1180,25 +1200,36 @@
         toggleMic.addEventListener('click', () => {
             isMicOn = !isMicOn;
             toggleMic.classList.toggle('muted', !isMicOn);
-            // Здесь должен быть код для управления микрофоном в iframe
-            console.log('Микрофон:', isMicOn ? 'включен' : 'выключен');
+            // Отправляем команду в iframe
+            conferenceFrame.contentWindow.postMessage({
+                type: 'toggleMic',
+                state: isMicOn
+            }, 'https://conf.zindaki-edu.ru');
         });
         
         toggleCamera.addEventListener('click', () => {
             isCameraOn = !isCameraOn;
             toggleCamera.classList.toggle('muted', !isCameraOn);
-            // Здесь должен быть код для управления камерой в iframe
-            console.log('Камера:', isCameraOn ? 'включена' : 'выключена');
+            // Отправляем команду в iframe
+            conferenceFrame.contentWindow.postMessage({
+                type: 'toggleCamera',
+                state: isCameraOn
+            }, 'https://conf.zindaki-edu.ru');
         });
         
         endCall.addEventListener('click', () => {
-            // Здесь должен быть код для завершения звонка
-            conferenceFrame.src = '';
-            alert('Конференция завершена');
+            // Отправляем команду завершения звонка
+            conferenceFrame.contentWindow.postMessage({
+                type: 'endCall'
+            }, 'https://conf.zindaki-edu.ru');
+            
+            // Перезагружаем iframe
+            conferenceFrame.src = conferenceFrame.src;
         });
         
         refreshConference.addEventListener('click', () => {
-            conferenceFrame.src = conferenceFrame.src;
+            // Перезагружаем iframe с теми же параметрами
+            initConference('{{ user.username }}', '{{ user.username }}');
         });
         
         // Назначение ученика на конференцию (для учителя)
@@ -1227,8 +1258,8 @@
                     if (data.success) {
                         alert(`Ученик ${student} успешно назначен на конференцию в комнате ${room}`);
                         
-                        // Автоматическое обновление конференции для учителя
-                        conferenceFrame.src = `https://conf.zindaki-edu.ru?room=${room}&user={{ user.username }}&name={{ user.username }}&autostart=1`;
+                        // Обновляем конференцию для учителя
+                        initConference(room, '{{ user.username }}');
                         
                         // Автоматически обновляем поле комнаты для следующих приглашений
                         document.getElementById('conferenceRoom').value = room;
@@ -1567,7 +1598,7 @@
                     
                     if (activeInvite) {
                         if (confirm(`У вас назначена конференция с преподавателем ${activeInvite.teacher}. Хотите присоединиться?`)) {
-                            conferenceFrame.src = `https://conf.zindaki-edu.ru?room=${activeInvite.room_name}&user={{ user.username }}&name={{ user.username }}&autostart=1`;
+                            initConference(activeInvite.room_name, '{{ user.username }}');
                         }
                     }
                 })
