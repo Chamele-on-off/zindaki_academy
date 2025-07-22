@@ -61,7 +61,6 @@
             color: inherit;
         }
         
-        /* Навигация */
         .navbar {
             position: fixed;
             top: 0;
@@ -168,7 +167,6 @@
             color: var(--accent);
         }
         
-        /* Основное содержимое */
         .dashboard-container {
             max-width: 1400px;
             margin: 100px auto 50px;
@@ -178,7 +176,6 @@
             gap: 30px;
         }
         
-        /* Боковая панель */
         .sidebar {
             background: var(--lighter);
             border-radius: var(--rounded-xl);
@@ -256,14 +253,12 @@
             color: var(--primary);
         }
         
-        /* Основное содержимое */
         .main-content {
             display: grid;
             grid-template-columns: 1fr;
             gap: 30px;
         }
         
-        /* Виджеты */
         .widget {
             background: var(--lighter);
             border-radius: var(--rounded-xl);
@@ -346,7 +341,6 @@
             box-shadow: var(--shadow-md);
         }
         
-        /* Видеоконференция */
         .conference-widget {
             grid-column: 1 / -1;
         }
@@ -421,7 +415,6 @@
             color: white;
         }
         
-        /* Домашние задания */
         .homework-list {
             display: grid;
             gap: 1rem;
@@ -491,7 +484,6 @@
             gap: 0.8rem;
         }
         
-        /* Формы */
         .form-group {
             margin-bottom: 1.5rem;
         }
@@ -530,7 +522,6 @@
             gap: 1.5rem;
         }
         
-        /* Альтернативные конференции */
         .alternative-conferences {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -575,7 +566,6 @@
             color: var(--text-light);
         }
         
-        /* Управление пользователями */
         .users-list {
             display: grid;
             gap: 1rem;
@@ -626,14 +616,12 @@
             gap: 0.5rem;
         }
         
-        /* Назначение конференции */
         .assign-conference {
             margin-top: 2rem;
             padding-top: 2rem;
             border-top: 1px solid rgba(0,0,0,0.1);
         }
         
-        /* Модальные окна */
         .modal {
             display: none;
             position: fixed;
@@ -673,7 +661,6 @@
             color: var(--darker);
         }
         
-        /* Адаптивность */
         @media (max-width: 1200px) {
             .dashboard-container {
                 grid-template-columns: 250px 1fr;
@@ -742,7 +729,6 @@
     </style>
 </head>
 <body>
-    <!-- Навигация -->
     <nav class="navbar">
         <a href="/" class="logo">
             <div class="logo-icon">
@@ -764,9 +750,7 @@
         </button>
     </nav>
 
-    <!-- Основное содержимое -->
     <div class="dashboard-container">
-        <!-- Боковая панель -->
         <aside class="sidebar">
             <div class="user-profile">
                 <div class="user-avatar">
@@ -787,9 +771,7 @@
             </ul>
         </aside>
         
-        <!-- Основной контент -->
         <main class="main-content">
-            <!-- Виджет конференции -->
             <section class="widget conference-widget" id="conference-section">
                 <div class="widget-header">
                     <h3 class="widget-title">Онлайн конференция</h3>
@@ -836,7 +818,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="conferenceRoom">Комната</label>
-                                <input type="text" id="conferenceRoom" class="form-control" value="{{ user.username }}" required readonly>
+                                <input type="text" id="conferenceRoom" class="form-control" value="{{ user.username }}" readonly required>
                             </div>
                         </div>
                         <button type="submit" class="btn btn-accent">
@@ -847,7 +829,6 @@
                 {% endif %}
             </section>
             
-            <!-- Виджет домашних заданий -->
             <section class="widget homework-widget" id="homework-section" style="display: none;">
                 <div class="widget-header">
                     <h3 class="widget-title">Домашние задания</h3>
@@ -865,7 +846,6 @@
                 </div>
             </section>
             
-            <!-- Виджет профиля -->
             <section class="widget profile-widget" id="profile-section" style="display: none;">
                 <div class="widget-header">
                     <h3 class="widget-title">Мой профиль</h3>
@@ -904,7 +884,6 @@
                 </form>
             </section>
             
-            <!-- Виджет управления пользователями (только для учителя) -->
             {% if user.role == 'teacher' %}
             <section class="widget users-widget" id="users-section" style="display: none;">
                 <div class="widget-header">
@@ -922,7 +901,6 @@
             </section>
             {% endif %}
             
-            <!-- Виджет ресурсов -->
             <section class="widget resources-widget" id="resources-section" style="display: none;">
                 <div class="widget-header">
                     <h3 class="widget-title">Полезные ресурсы</h3>
@@ -1010,7 +988,6 @@
         </main>
     </div>
     
-    <!-- Модальное окно добавления домашнего задания -->
     <div class="modal" id="homeworkModal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -1064,7 +1041,6 @@
         </div>
     </div>
     
-    <!-- Модальное окно добавления пользователя -->
     <div class="modal" id="userModal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -1102,7 +1078,6 @@
     </div>
     
     <script>
-        // Мобильное меню
         const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
         const navLinks = document.querySelector('.nav-links');
         
@@ -1112,30 +1087,20 @@
                 '<i class="fas fa-times"></i>' : '<i class="fas fa-bars"></i>';
         });
         
-        // Переключение разделов
         const sidebarLinks = document.querySelectorAll('.sidebar-menu a');
         const sections = document.querySelectorAll('.widget');
         
         sidebarLinks.forEach(link => {
             link.addEventListener('click', function(e) {
                 e.preventDefault();
-                
-                // Удаляем активный класс у всех ссылок
                 sidebarLinks.forEach(l => l.classList.remove('active'));
-                
-                // Добавляем активный класс текущей ссылке
                 this.classList.add('active');
-                
-                // Скрываем все разделы
                 sections.forEach(section => {
                     section.style.display = 'none';
                 });
-                
-                // Показываем выбранный раздел
                 const sectionId = this.getAttribute('data-section') + '-section';
                 document.getElementById(sectionId).style.display = 'block';
                 
-                // Загружаем данные при переходе на раздел
                 if (sectionId === 'homework-section') {
                     loadHomeworks();
                 } else if (sectionId === 'users-section') {
@@ -1144,7 +1109,6 @@
             });
         });
         
-        // Управление конференцией
         const toggleMic = document.getElementById('toggleMic');
         const toggleCamera = document.getElementById('toggleCamera');
         const endCall = document.getElementById('endCall');
@@ -1155,7 +1119,6 @@
         let isMicOn = true;
         let isCameraOn = true;
         
-        // Режим полного экрана
         fullscreenBtn.addEventListener('click', () => {
             if (conferenceFrame.requestFullscreen) {
                 conferenceFrame.requestFullscreen().catch(err => {
@@ -1168,10 +1131,8 @@
             }
         });
         
-        // Обработчик изменения полноэкранного режима
         document.addEventListener('fullscreenchange', () => {
             if (!document.fullscreenElement) {
-                // Выход из полноэкранного режима
                 conferenceFrame.style.width = '100%';
                 conferenceFrame.style.height = '500px';
             }
@@ -1180,19 +1141,16 @@
         toggleMic.addEventListener('click', () => {
             isMicOn = !isMicOn;
             toggleMic.classList.toggle('muted', !isMicOn);
-            // Здесь должен быть код для управления микрофоном в iframe
             console.log('Микрофон:', isMicOn ? 'включен' : 'выключен');
         });
         
         toggleCamera.addEventListener('click', () => {
             isCameraOn = !isCameraOn;
             toggleCamera.classList.toggle('muted', !isCameraOn);
-            // Здесь должен быть код для управления камерой в iframe
             console.log('Камера:', isCameraOn ? 'включена' : 'выключена');
         });
         
         endCall.addEventListener('click', () => {
-            // Здесь должен быть код для завершения звонка
             conferenceFrame.src = '';
             alert('Конференция завершена');
         });
@@ -1201,7 +1159,6 @@
             conferenceFrame.src = conferenceFrame.src;
         });
         
-        // Назначение ученика на конференцию (для учителя)
         const assignConferenceForm = document.getElementById('assignConferenceForm');
         if (assignConferenceForm) {
             assignConferenceForm.addEventListener('submit', function(e) {
@@ -1209,6 +1166,11 @@
                 
                 const student = document.getElementById('conferenceStudent').value;
                 const room = document.getElementById('conferenceRoom').value;
+                
+                if (!student) {
+                    alert('Пожалуйста, выберите ученика.');
+                    return;
+                }
                 
                 fetch('/api/invites', {
                     method: 'POST',
@@ -1227,10 +1189,9 @@
                     if (data.success) {
                         alert(`Ученик ${student} успешно назначен на конференцию в комнате ${room}`);
                         
-                        // Создаем URL для ученика
-                        const studentJoinUrl = `https://conf.zindaki-edu.ru?room=${room}&user=${student}&name=${student}&autostart=1`;
+                        const teacherJoinUrl = `https://conf.zindaki-edu.ru?room=${encodeURIComponent(room)}&user=${encodeURIComponent('{{ user.username }}')}&name=${encodeURIComponent('{{ user.username }}')}&autostart=1`;
+                        conferenceFrame.src = teacherJoinUrl;
                         
-                        // Отправляем сообщение в iframe с новыми параметрами
                         conferenceFrame.contentWindow.postMessage({
                             type: 'roomUpdate',
                             room: room,
@@ -1238,8 +1199,7 @@
                             name: '{{ user.username }}'
                         }, 'https://conf.zindaki-edu.ru');
                         
-                        // Отправляем приглашение ученику (можно через WebSocket или API)
-                        sendInvitationToStudent(student, studentJoinUrl);
+                        document.getElementById('conferenceStudent').value = '';
                     } else {
                         alert('Ошибка при назначении: ' + (data.error || ''));
                     }
@@ -1251,81 +1211,46 @@
             });
         }
         
-        // Функция для отправки приглашения ученику
-        function sendInvitationToStudent(student, joinUrl) {
-            // Здесь должна быть реализация отправки приглашения ученику
-            // Например, через WebSocket или API вызов
-            console.log(`Отправка приглашения ученику ${student}: ${joinUrl}`);
-            
-            // В реальном приложении здесь будет вызов API для отправки уведомления
-            fetch('/api/send-invitation', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    student: student,
-                    join_url: joinUrl,
-                    teacher: '{{ user.username }}'
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.success) {
-                    console.error('Ошибка отправки приглашения:', data.error);
-                }
-            });
-        }
-        
-        // Слушаем сообщения от iframe конференции
         window.addEventListener('message', function(event) {
-            // Проверяем источник сообщения
             if (event.origin !== 'https://conf.zindaki-edu.ru') return;
             
             const data = event.data;
             
             if (data.type === 'roomUpdate') {
-                // Обновляем поле комнаты в форме
                 document.getElementById('conferenceRoom').value = data.room;
             }
         });
         
-        // Модальные окна
         const homeworkModal = document.getElementById('homeworkModal');
         const userModal = document.getElementById('userModal');
         const addHomeworkBtn = document.getElementById('addHomework');
         const addUserBtn = document.getElementById('addUser');
         const closeModalBtns = document.querySelectorAll('.close-modal');
         
-        // Показать модальное окно добавления домашнего задания
         if (addHomeworkBtn) {
             addHomeworkBtn.addEventListener('click', () => {
                 homeworkModal.style.display = 'flex';
             });
         }
         
-        // Показать модальное окно добавления пользователя
         if (addUserBtn) {
             addUserBtn.addEventListener('click', () => {
                 userModal.style.display = 'flex';
             });
         }
         
-        // Закрыть модальные окна
         closeModalBtns.forEach(btn => {
             btn.addEventListener('click', function() {
                 this.closest('.modal').style.display = 'none';
             });
         });
         
-        // Закрыть модальные окна при клике вне их
         window.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal')) {
                 e.target.style.display = 'none';
             }
         });
         
-        // Загрузка домашних заданий
         function loadHomeworks() {
             fetch('/api/homework')
                 .then(response => response.json())
@@ -1380,7 +1305,6 @@
                 });
         }
         
-        // Загрузка пользователей (для учителя)
         function loadUsers() {
             fetch('/api/users')
                 .then(response => response.json())
@@ -1421,7 +1345,6 @@
                 });
         }
         
-        // Обработка формы профиля
         const profileForm = document.getElementById('profileForm');
         if (profileForm) {
             profileForm.addEventListener('submit', function(e) {
@@ -1434,13 +1357,11 @@
                     passwordConfirm: document.getElementById('profilePasswordConfirm').value
                 };
                 
-                // Проверка совпадения паролей
                 if (formData.password && formData.password !== formData.passwordConfirm) {
                     alert('Пароли не совпадают!');
                     return;
                 }
                 
-                // Отправка данных на сервер
                 fetch('/api/users/' + '{{ user.username }}', {
                     method: 'PUT',
                     headers: {
@@ -1452,7 +1373,6 @@
                 .then(data => {
                     if (data.success) {
                         alert('Профиль успешно обновлен!');
-                        // Обновляем email в сессии
                         if (data.user) {
                             sessionStorage.setItem('user', JSON.stringify(data.user));
                         }
@@ -1467,7 +1387,6 @@
             });
         }
         
-        // Обработка формы добавления домашнего задания
         const addHomeworkForm = document.getElementById('addHomeworkForm');
         if (addHomeworkForm) {
             addHomeworkForm.addEventListener('submit', function(e) {
@@ -1488,7 +1407,6 @@
                     formData.append('files', filesInput.files[i]);
                 }
                 
-                // Отправка данных на сервер
                 fetch('/api/homework', {
                     method: 'POST',
                     body: formData
@@ -1510,7 +1428,6 @@
             });
         }
         
-        // Обработка формы добавления пользователя
         const addUserForm = document.getElementById('addUserForm');
         if (addUserForm) {
             addUserForm.addEventListener('submit', function(e) {
@@ -1523,7 +1440,6 @@
                     role: document.getElementById('userRole').value
                 };
                 
-                // Отправка данных на сервер
                 fetch('/api/register', {
                     method: 'POST',
                     headers: {
@@ -1548,19 +1464,14 @@
             });
         }
         
-        // Функция для отправки домашнего задания
         function submitHomework(homeworkId) {
-            // Здесь должна быть реализация отправки домашнего задания
             alert('Функция отправки домашнего задания для ID: ' + homeworkId);
         }
         
-        // Функция для редактирования пользователя
         function editUser(username) {
-            // Здесь должна быть реализация редактирования пользователя
             alert('Редактирование пользователя: ' + username);
         }
         
-        // Функция для удаления пользователя
         function deleteUser(username) {
             if (confirm(`Вы уверены, что хотите удалить пользователя ${username}?`)) {
                 fetch(`/api/users/${username}`, {
@@ -1582,7 +1493,6 @@
             }
         }
         
-        // Выход из системы
         const logoutBtn = document.getElementById('logoutBtn');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', function(e) {
@@ -1600,10 +1510,8 @@
             });
         }
         
-        // Инициализация - показать первый раздел
         document.querySelector('.sidebar-menu a.active').click();
         
-        // Проверка назначенных конференций для ученика
         {% if user.role == 'student' %}
         function checkAssignedConferences() {
             fetch('/api/invites')
@@ -1621,7 +1529,6 @@
                 .catch(error => console.error('Error checking invites:', error));
         }
         
-        // Проверяем каждые 5 минут
         checkAssignedConferences();
         setInterval(checkAssignedConferences, 5 * 60 * 1000);
         {% endif %}
