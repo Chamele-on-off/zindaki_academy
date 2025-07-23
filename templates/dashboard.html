@@ -787,7 +787,7 @@
                         <i class="fas fa-expand"></i>
                     </button>
                     <iframe id="conference-frame" allow="camera; microphone; display-capture" 
-                            src="https://conf.zindaki-edu.ru?room={{ user.username }}&user={{ user.username }}&name={{ user.username }}&autostart=1"></iframe>
+                            src="https://conf.zindaki-edu.ru?room={{ user.username }}&user={{ user.username }}&name={{ user.username }}"></iframe>
                 </div>
                 
                 <div class="conference-controls">
@@ -818,7 +818,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="conferenceRoom">Комната</label>
-                                <input type="text" id="conferenceRoom" class="form-control" value="{{ user.username }}" readonly required>
+                                <input type="text" id="conferenceRoom" class="form-control" value="{{ user.username }}" required>
                             </div>
                         </div>
                         <button type="submit" class="btn btn-accent">
@@ -1177,7 +1177,7 @@
                     console.log("Assign conference form submitted");
 
                     const student = conferenceStudentSelect ? conferenceStudentSelect.value : null;
-                    const room = '{{ user.username }}'; // Название комнаты = логин учителя
+                    const room = conferenceRoomInput ? conferenceRoomInput.value : '{{ user.username }}';
 
                     if (!student) {
                         alert('Пожалуйста, выберите ученика.');
@@ -1186,8 +1186,8 @@
                     }
 
                     if (!room) {
-                        alert('Ошибка: Не удалось определить имя комнаты (логин учителя).');
-                        console.error("Room name (teacher username) is empty");
+                        alert('Ошибка: Не удалось определить имя комнаты.');
+                        console.error("Room name is empty");
                         return;
                     }
 
@@ -1213,47 +1213,23 @@
                             alert(`Ученик ${student} успешно назначен на конференцию в комнате ${room}`);
                             console.log(`Student ${student} assigned to room ${room}`);
 
-                            // Обновление конференции у учителя
-                            if (conferenceFrame) {
-                                console.log("Conference frame element found");
-                                const teacherJoinUrl = `https://conf.zindaki-edu.ru?room=${encodeURIComponent(room)}&user=${encodeURIComponent('{{ user.username }}')}&name=${encodeURIComponent('{{ user.username }}')}&autostart=1`;
-                                console.log("Setting conference frame src to:", teacherJoinUrl);
-                                conferenceFrame.src = teacherJoinUrl;
+                            // Обновляем iframe для учителя
+                            const teacherJoinUrl = `https://conf.zindaki-edu.ru?room=${encodeURIComponent(room)}&user=${encodeURIComponent('{{ user.username }}')}&name=${encodeURIComponent('{{ user.username }}')}&autostart=1`;
+                            conferenceFrame.src = teacherJoinUrl;
 
-                                // Обновление поля "Комната" в форме учителя
-                                if (conferenceRoomInput) {
-                                    conferenceRoomInput.value = room;
-                                    console.log("Conference room input updated to:", room);
-                                } else {
-                                    console.warn("Conference room input element (ID 'conferenceRoom') not found or not accessible.");
-                                }
-
-                                // Сброс выбора ученика
-                                conferenceStudentSelect.value = '';
-                                console.log("Student selection reset");
-
-                                // Отправка postMessage с задержкой
-                                setTimeout(() => {
-                                    if (conferenceFrame.contentWindow) {
-                                        try {
-                                            conferenceFrame.contentWindow.postMessage({
-                                                type: 'teacherAssignedRoom',
-                                                room: room,
-                                                user: '{{ user.username }}',
-                                                name: '{{ user.username }}'
-                                            }, 'https://conf.zindaki-edu.ru');
-                                            console.log("PostMessage sent to conference iframe (delayed).");
-                                        } catch (postError) {
-                                            console.error("Error sending postMessage (delayed):", postError);
-                                        }
-                                    } else {
-                                        console.warn("conferenceFrame.contentWindow is not accessible for postMessage (delayed).");
-                                    }
-                                }, 1000); // Задержка 1 секунда
-                            } else {
-                                console.error("Conference frame element (ID 'conference-frame') not found. Cannot update conference.");
-                                alert("Ошибка: Элемент конференции (iframe) не найден на странице.");
+                            // Отправляем приглашение ученику через postMessage
+                            if (window.parent !== window) {
+                                window.parent.postMessage({
+                                    type: 'teacherAssignedRoom',
+                                    room: room,
+                                    user: student,
+                                    name: student
+                                }, '*');
                             }
+
+                            // Сброс выбора ученика
+                            conferenceStudentSelect.value = '';
+                            console.log("Student selection reset");
                         } else {
                             const errorMsg = 'Ошибка при назначении: ' + (data.error || 'Неизвестная ошибка');
                             alert(errorMsg);
@@ -1286,273 +1262,6 @@
                     }
                 }
             });
-
-            // --- Модальные окна ---
-            const homeworkModal = document.getElementById('homeworkModal');
-            const userModal = document.getElementById('userModal');
-            const addHomeworkBtn = document.getElementById('addHomework');
-            const addUserBtn = document.getElementById('addUser');
-            const closeModalBtns = document.querySelectorAll('.close-modal');
-            
-            if (addHomeworkBtn) {
-                addHomeworkBtn.addEventListener('click', () => {
-                    homeworkModal.style.display = 'flex';
-                });
-            }
-            
-            if (addUserBtn) {
-                addUserBtn.addEventListener('click', () => {
-                    userModal.style.display = 'flex';
-                });
-            }
-            
-            closeModalBtns.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    this.closest('.modal').style.display = 'none';
-                });
-            });
-            
-            window.addEventListener('click', (e) => {
-                if (e.target.classList.contains('modal')) {
-                    e.target.style.display = 'none';
-                }
-            });
-
-            // --- Загрузка домашних заданий ---
-            function loadHomeworks() {
-                fetch('/api/homework')
-                    .then(response => response.json())
-                    .then(data => {
-                        const homeworkList = document.getElementById('homeworkList');
-                        homeworkList.innerHTML = '';
-                        
-                        if (data.homeworks && data.homeworks.length > 0) {
-                            data.homeworks.forEach(hw => {
-                                const deadline = new Date(hw.deadline);
-                                const now = new Date();
-                                const diffDays = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
-                                
-                                const homeworkItem = document.createElement('div');
-                                homeworkItem.className = 'homework-item';
-                                homeworkItem.innerHTML = `
-                                    <div class="homework-header">
-                                        <h4 class="homework-title">${hw.title}</h4>
-                                        <div class="homework-deadline">
-                                            <i class="fas fa-clock"></i> Срок сдачи: ${diffDays > 0 ? diffDays + ' дней' : 'просрочено'}
-                                        </div>
-                                    </div>
-                                    <div class="homework-description">
-                                        ${hw.description}
-                                    </div>
-                                    ${hw.files && hw.files.length > 0 ? `
-                                    <div class="homework-files">
-                                        ${hw.files.map(file => `
-                                        <div class="file-item">
-                                            <i class="fas fa-file"></i> ${file.name}
-                                        </div>
-                                        `).join('')}
-                                    </div>
-                                    ` : ''}
-                                    ${'{{ user.role }}' === 'student' ? `
-                                    <div class="homework-actions">
-                                        <button class="btn btn-primary" onclick="submitHomework(${hw.id})">
-                                            <i class="fas fa-upload"></i> Загрузить работу
-                                        </button>
-                                    </div>
-                                    ` : ''}
-                                `;
-                                homeworkList.appendChild(homeworkItem);
-                            });
-                        } else {
-                            homeworkList.innerHTML = '<p>Нет домашних заданий</p>';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error loading homeworks:', error);
-                        document.getElementById('homeworkList').innerHTML = '<p>Ошибка загрузки заданий</p>';
-                    });
-            }
-
-            // --- Загрузка пользователей ---
-            function loadUsers() {
-                fetch('/api/users')
-                    .then(response => response.json())
-                    .then(data => {
-                        const usersList = document.getElementById('usersList');
-                        usersList.innerHTML = '';
-                        
-                        if (data.users && data.users.length > 0) {
-                            data.users.forEach(user => {
-                                const userCard = document.createElement('div');
-                                userCard.className = 'user-card';
-                                userCard.innerHTML = `
-                                    <div class="user-avatar-sm">
-                                        <img src="${user.avatar || 'https://i.pravatar.cc/150?u=' + user.username}" alt="Аватар">
-                                    </div>
-                                    <div class="user-details">
-                                        <div class="user-name-sm">${user.username}</div>
-                                        <span class="user-role-sm">${user.role === 'teacher' ? 'Преподаватель' : 'Студент'}</span>
-                                    </div>
-                                    <div class="user-actions">
-                                        <button class="btn btn-secondary btn-sm" onclick="editUser('${user.username}')">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn btn-secondary btn-sm" onclick="deleteUser('${user.username}')">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                `;
-                                usersList.appendChild(userCard);
-                            });
-                        } else {
-                            usersList.innerHTML = '<p>Нет пользователей</p>';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error loading users:', error);
-                        document.getElementById('usersList').innerHTML = '<p>Ошибка загрузки пользователей</p>';
-                    });
-            }
-
-            // --- Форма профиля ---
-            const profileForm = document.getElementById('profileForm');
-            if (profileForm) {
-                profileForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    const formData = {
-                        email: document.getElementById('profileEmail').value,
-                        phone: document.getElementById('profilePhone').value,
-                        password: document.getElementById('profilePassword').value,
-                        passwordConfirm: document.getElementById('profilePasswordConfirm').value
-                    };
-                    
-                    if (formData.password && formData.password !== formData.passwordConfirm) {
-                        alert('Пароли не совпадают!');
-                        return;
-                    }
-                    
-                    fetch('/api/users/' + '{{ user.username }}', {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(formData)
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('Профиль успешно обновлен!');
-                            if (data.user) {
-                                sessionStorage.setItem('user', JSON.stringify(data.user));
-                            }
-                        } else {
-                            alert('Ошибка при обновлении профиля: ' + (data.error || ''));
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Произошла ошибка при обновлении профиля');
-                    });
-                });
-            }
-
-            // --- Форма добавления домашнего задания ---
-            const addHomeworkForm = document.getElementById('addHomeworkForm');
-            if (addHomeworkForm) {
-                addHomeworkForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    const formData = new FormData();
-                    formData.append('title', document.getElementById('hwTitle').value);
-                    formData.append('description', document.getElementById('hwDescription').value);
-                    formData.append('lesson_id', document.getElementById('hwLesson').value);
-                    formData.append('deadline', document.getElementById('hwDeadline').value);
-                    
-                    const studentsSelect = document.getElementById('hwStudents');
-                    const selectedStudents = Array.from(studentsSelect.selectedOptions).map(option => option.value);
-                    formData.append('students', JSON.stringify(selectedStudents));
-                    
-                    const filesInput = document.getElementById('hwFiles');
-                    for (let i = 0; i < filesInput.files.length; i++) {
-                        formData.append('files', filesInput.files[i]);
-                    }
-                    
-                    fetch('/api/homework', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('Домашнее задание успешно добавлено!');
-                            homeworkModal.style.display = 'none';
-                            loadHomeworks();
-                        } else {
-                            alert('Ошибка при добавлении задания: ' + (data.error || ''));
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Произошла ошибка при добавлении задания');
-                    });
-                });
-            }
-
-            // --- Форма добавления пользователя ---
-            const addUserForm = document.getElementById('addUserForm');
-            if (addUserForm) {
-                addUserForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    const formData = {
-                        username: document.getElementById('userUsername').value,
-                        email: document.getElementById('userEmail').value,
-                        password: document.getElementById('userPassword').value,
-                        role: document.getElementById('userRole').value
-                    };
-                    
-                    fetch('/api/register', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(formData)
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('Пользователь успешно добавлен!');
-                            userModal.style.display = 'none';
-                            loadUsers();
-                        } else {
-                            alert('Ошибка при добавлении пользователя: ' + (data.error || ''));
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Произошла ошибка при добавлении пользователя');
-                    });
-                });
-            }
-
-            // --- Выход из системы ---
-            const logoutBtn = document.getElementById('logoutBtn');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
-                    fetch('/api/logout', {
-                        method: 'GET'
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            window.location.href = '/';
-                        }
-                    });
-                });
-            }
 
             // --- Проверка назначенных конференций для студентов ---
             {% if user.role == 'student' %}
@@ -1608,6 +1317,100 @@
                     alert('Произошла ошибка при удалении пользователя');
                 });
             }
+        }
+        
+        function loadHomeworks() {
+            fetch('/api/homework')
+                .then(response => response.json())
+                .then(data => {
+                    const homeworkList = document.getElementById('homeworkList');
+                    homeworkList.innerHTML = '';
+                    
+                    if (data.homeworks && data.homeworks.length > 0) {
+                        data.homeworks.forEach(hw => {
+                            const deadline = new Date(hw.deadline);
+                            const now = new Date();
+                            const diffDays = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+                            
+                            const homeworkItem = document.createElement('div');
+                            homeworkItem.className = 'homework-item';
+                            homeworkItem.innerHTML = `
+                                <div class="homework-header">
+                                    <h4 class="homework-title">${hw.title}</h4>
+                                    <div class="homework-deadline">
+                                        <i class="fas fa-clock"></i> Срок сдачи: ${diffDays > 0 ? diffDays + ' дней' : 'просрочено'}
+                                    </div>
+                                </div>
+                                <div class="homework-description">
+                                    ${hw.description}
+                                </div>
+                                ${hw.files && hw.files.length > 0 ? `
+                                <div class="homework-files">
+                                    ${hw.files.map(file => `
+                                    <div class="file-item">
+                                        <i class="fas fa-file"></i> ${file.name}
+                                    </div>
+                                    `).join('')}
+                                </div>
+                                ` : ''}
+                                ${'{{ user.role }}' === 'student' ? `
+                                <div class="homework-actions">
+                                    <button class="btn btn-primary" onclick="submitHomework(${hw.id})">
+                                        <i class="fas fa-upload"></i> Загрузить работу
+                                    </button>
+                                </div>
+                                ` : ''}
+                            `;
+                            homeworkList.appendChild(homeworkItem);
+                        });
+                    } else {
+                        homeworkList.innerHTML = '<p>Нет домашних заданий</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading homeworks:', error);
+                    document.getElementById('homeworkList').innerHTML = '<p>Ошибка загрузки заданий</p>';
+                });
+        }
+        
+        function loadUsers() {
+            fetch('/api/users')
+                .then(response => response.json())
+                .then(data => {
+                    const usersList = document.getElementById('usersList');
+                    usersList.innerHTML = '';
+                    
+                    if (data.users && data.users.length > 0) {
+                        data.users.forEach(user => {
+                            const userCard = document.createElement('div');
+                            userCard.className = 'user-card';
+                            userCard.innerHTML = `
+                                <div class="user-avatar-sm">
+                                    <img src="${user.avatar || 'https://i.pravatar.cc/150?u=' + user.username}" alt="Аватар">
+                                </div>
+                                <div class="user-details">
+                                    <div class="user-name-sm">${user.username}</div>
+                                    <span class="user-role-sm">${user.role === 'teacher' ? 'Преподаватель' : 'Студент'}</span>
+                                </div>
+                                <div class="user-actions">
+                                    <button class="btn btn-secondary btn-sm" onclick="editUser('${user.username}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm" onclick="deleteUser('${user.username}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            `;
+                            usersList.appendChild(userCard);
+                        });
+                    } else {
+                        usersList.innerHTML = '<p>Нет пользователей</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading users:', error);
+                    document.getElementById('usersList').innerHTML = '<p>Ошибка загрузки пользователей</p>';
+                });
         }
     </script>
 </body>
