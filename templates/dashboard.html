@@ -1262,37 +1262,28 @@
                         });
                     }
 
-                    // Отправляем уведомление ученику (в реальном приложении)
-                    fetch('/api/notifications', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            recipient: student,
-                            message: `Преподаватель {{ user.username }} приглашает вас на конференцию. Ссылка: ${inviteUrl}`,
-                            type: 'conference_invite',
-                            expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 минут
-                        })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert(`Приглашение отправлено ученику ${student}. Ссылка действительна 5 минут.`);
-                            console.log(`Invitation sent to student ${student}`);
-                            
-                            // Сброс формы
-                            conferenceStudentSelect.value = '';
-                        } else {
-                            const errorMsg = 'Ошибка при отправке уведомления: ' + (data.error || 'Неизвестная ошибка');
-                            alert(errorMsg);
-                            console.error('Notification error:', data);
+                    // Отправляем сообщение в iframe конференции
+                    if (conferenceFrame.contentWindow) {
+                        try {
+                            conferenceFrame.contentWindow.postMessage({
+                                type: 'teacherInvite',
+                                room: room,
+                                student: student,
+                                inviteUrl: inviteUrl,
+                                expiresAt: Date.now() + 5 * 60 * 1000 // 5 минут
+                            }, 'https://conf.zindaki-edu.ru');
+                            console.log("PostMessage sent to conference iframe");
+                        } catch (postError) {
+                            console.error("Error sending postMessage:", postError);
                         }
-                    })
-                    .catch(error => {
-                        console.error('Fetch error:', error);
-                        alert('Приглашение создано, но произошла ошибка при отправке уведомления: ' + error.message);
-                    });
+                    } else {
+                        console.warn("conferenceFrame.contentWindow is not accessible for postMessage");
+                    }
+
+                    alert(`Приглашение для ученика ${student} создано. Ссылка действительна 5 минут.`);
+                    
+                    // Сброс формы
+                    conferenceStudentSelect.value = '';
                 });
             } else {
                 console.warn("Assign conference form (ID 'assignConferenceForm') not found.");
