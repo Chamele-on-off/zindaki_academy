@@ -845,7 +845,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="conferenceRoom">Комната</label>
-                                <input type="text" id="conferenceRoom" class="form-control" value="{{ user.username }}" required>
+                                <input type="text" id="conferenceRoom" class="form-control" value="{{ user.username }}" required readonly>
                             </div>
                         </div>
                         <button type="submit" class="btn btn-accent">
@@ -1235,7 +1235,7 @@
                     }
 
                     // Создаем ссылку для приглашения
-                    const inviteUrl = `https://conf.zindaki-edu.ru?room=${encodeURIComponent(room)}&user=${encodeURIComponent(student)}&name=${encodeURIComponent(student)}`;
+                    const inviteUrl = `https://conf.zindaki-edu.ru?room=${encodeURIComponent(room)}&user=${encodeURIComponent(student)}&name=${encodeURIComponent(student)}&autostart=1`;
                     
                     // Показываем ссылку для копирования
                     inviteLinkText.textContent = inviteUrl;
