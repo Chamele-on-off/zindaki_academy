@@ -377,44 +377,6 @@
             z-index: 100;
         }
         
-        .conference-controls {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-        
-        .conference-btn {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: var(--lighter);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: var(--shadow-sm);
-            transition: all 0.3s ease;
-            border: none;
-            font-size: 1.2rem;
-            color: var(--primary);
-        }
-        
-        .conference-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-md);
-        }
-        
-        .conference-btn.end-call {
-            background: #e74c3c;
-            color: white;
-        }
-        
-        .conference-btn.muted {
-            background: #e74c3c;
-            color: white;
-        }
-        
         .homework-list {
             display: grid;
             gap: 1rem;
@@ -616,12 +578,6 @@
             gap: 0.5rem;
         }
         
-        .assign-conference {
-            margin-top: 2rem;
-            padding-top: 2rem;
-            border-top: 1px solid rgba(0,0,0,0.1);
-        }
-        
         .modal {
             display: none;
             position: fixed;
@@ -659,33 +615,6 @@
         .modal-title {
             margin-bottom: 1.5rem;
             color: var(--darker);
-        }
-        
-        .invite-link-container {
-            margin-top: 1rem;
-            display: none;
-        }
-        
-        .invite-link {
-            display: flex;
-            align-items: center;
-            background: rgba(58, 90, 120, 0.1);
-            padding: 0.8rem 1rem;
-            border-radius: var(--rounded-md);
-            word-break: break-all;
-        }
-        
-        .copy-btn {
-            margin-left: 0.5rem;
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: var(--rounded-sm);
-            padding: 0.5rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
         
         @media (max-width: 1200px) {
@@ -802,11 +731,6 @@
             <section class="widget conference-widget" id="conference-section">
                 <div class="widget-header">
                     <h3 class="widget-title">Онлайн конференция</h3>
-                    <div class="widget-actions">
-                        <button class="btn btn-secondary" id="refreshConference">
-                            <i class="fas fa-sync-alt"></i> Обновить
-                        </button>
-                    </div>
                 </div>
                 
                 <div class="conference-container">
@@ -816,57 +740,6 @@
                     <iframe id="conference-frame" allow="camera; microphone; display-capture" 
                             src="https://conf.zindaki-edu.ru?room={{ user.username }}&user={{ user.username }}&name={{ user.username }}"></iframe>
                 </div>
-                
-                <div class="conference-controls">
-                    <button class="conference-btn" id="toggleMic">
-                        <i class="fas fa-microphone"></i>
-                    </button>
-                    <button class="conference-btn" id="toggleCamera">
-                        <i class="fas fa-video"></i>
-                    </button>
-                    <button class="conference-btn end-call" id="endCall">
-                        <i class="fas fa-phone-slash"></i>
-                    </button>
-                </div>
-
-                {% if user.role == 'teacher' %}
-                <div class="assign-conference">
-                    <h4>Пригласить ученика на конференцию</h4>
-                    <form id="assignConferenceForm">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="conferenceStudent">Ученик</label>
-                                <select id="conferenceStudent" class="form-control" required>
-                                    <option value="">-- Выберите ученика --</option>
-                                    {% for student in students %}
-                                    <option value="{{ student.username }}">{{ student.username }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="conferenceRoom">Комната</label>
-                                <input type="text" id="conferenceRoom" class="form-control" value="{{ user.username }}" required readonly>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-accent">
-                            <i class="fas fa-user-plus"></i> Создать приглашение
-                        </button>
-                    </form>
-                    
-                    <div class="invite-link-container" id="inviteLinkContainer">
-                        <label>Ссылка для приглашения:</label>
-                        <div class="invite-link">
-                            <span id="inviteLinkText"></span>
-                            <button class="copy-btn" id="copyInviteBtn" title="Копировать">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                        </div>
-                        <p style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-light);">
-                            Ссылка действительна в течение 5 минут
-                        </p>
-                    </div>
-                </div>
-                {% endif %}
             </section>
             
             <section class="widget homework-widget" id="homework-section" style="display: none;">
@@ -1155,15 +1028,8 @@
             });
 
             // --- Элементы конференции ---
-            const toggleMic = document.getElementById('toggleMic');
-            const toggleCamera = document.getElementById('toggleCamera');
-            const endCall = document.getElementById('endCall');
-            const refreshConference = document.getElementById('refreshConference');
             const conferenceFrame = document.getElementById('conference-frame');
             const fullscreenBtn = document.getElementById('fullscreenBtn');
-            
-            let isMicOn = true;
-            let isCameraOn = true;
             
             fullscreenBtn.addEventListener('click', () => {
                 if (conferenceFrame.requestFullscreen) {
@@ -1183,111 +1049,6 @@
                     conferenceFrame.style.height = '500px';
                 }
             });
-            
-            toggleMic.addEventListener('click', () => {
-                isMicOn = !isMicOn;
-                toggleMic.classList.toggle('muted', !isMicOn);
-                console.log('Микрофон:', isMicOn ? 'включен' : 'выключен');
-            });
-            
-            toggleCamera.addEventListener('click', () => {
-                isCameraOn = !isCameraOn;
-                toggleCamera.classList.toggle('muted', !isCameraOn);
-                console.log('Камера:', isCameraOn ? 'включена' : 'выключена');
-            });
-            
-            endCall.addEventListener('click', () => {
-                conferenceFrame.src = '';
-                alert('Конференция завершена');
-            });
-            
-            refreshConference.addEventListener('click', () => {
-                conferenceFrame.src = conferenceFrame.src;
-            });
-
-            // --- Назначение конференции (для преподавателей) ---
-            const assignConferenceForm = document.getElementById('assignConferenceForm');
-            const conferenceStudentSelect = document.getElementById('conferenceStudent');
-            const conferenceRoomInput = document.getElementById('conferenceRoom');
-            const inviteLinkContainer = document.getElementById('inviteLinkContainer');
-            const inviteLinkText = document.getElementById('inviteLinkText');
-            const copyInviteBtn = document.getElementById('copyInviteBtn');
-
-            if (assignConferenceForm) {
-                console.log("Assign conference form found");
-                assignConferenceForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    console.log("Assign conference form submitted");
-
-                    const student = conferenceStudentSelect ? conferenceStudentSelect.value : null;
-                    const room = conferenceRoomInput ? conferenceRoomInput.value : '{{ user.username }}';
-
-                    if (!student) {
-                        alert('Пожалуйста, выберите ученика.');
-                        console.warn("No student selected");
-                        return;
-                    }
-
-                    if (!room) {
-                        alert('Ошибка: Не удалось определить имя комнаты.');
-                        console.error("Room name is empty");
-                        return;
-                    }
-
-                    // Создаем ссылку для приглашения
-                    const inviteUrl = `https://conf.zindaki-edu.ru?room=${encodeURIComponent(room)}&user=${encodeURIComponent(student)}&name=${encodeURIComponent(student)}&autostart=1`;
-                    
-                    // Показываем ссылку для копирования
-                    inviteLinkText.textContent = inviteUrl;
-                    inviteLinkContainer.style.display = 'block';
-                    
-                    // Устанавливаем таймер на удаление ссылки через 5 минут
-                    setTimeout(() => {
-                        inviteLinkContainer.style.display = 'none';
-                        inviteLinkText.textContent = '';
-                    }, 5 * 60 * 1000); // 5 минут
-
-                    // Копирование ссылки по клику
-                    if (copyInviteBtn) {
-                        copyInviteBtn.addEventListener('click', () => {
-                            navigator.clipboard.writeText(inviteUrl).then(() => {
-                                const originalIcon = copyInviteBtn.innerHTML;
-                                copyInviteBtn.innerHTML = '<i class="fas fa-check"></i>';
-                                setTimeout(() => {
-                                    copyInviteBtn.innerHTML = originalIcon;
-                                }, 2000);
-                            }).catch(err => {
-                                console.error('Could not copy text: ', err);
-                            });
-                        });
-                    }
-
-                    // Отправляем сообщение в iframe конференции
-                    if (conferenceFrame.contentWindow) {
-                        try {
-                            conferenceFrame.contentWindow.postMessage({
-                                type: 'teacherInvite',
-                                room: room,
-                                student: student,
-                                inviteUrl: inviteUrl,
-                                expiresAt: Date.now() + 5 * 60 * 1000 // 5 минут
-                            }, 'https://conf.zindaki-edu.ru');
-                            console.log("PostMessage sent to conference iframe");
-                        } catch (postError) {
-                            console.error("Error sending postMessage:", postError);
-                        }
-                    } else {
-                        console.warn("conferenceFrame.contentWindow is not accessible for postMessage");
-                    }
-
-                    alert(`Приглашение для ученика ${student} создано. Ссылка действительна 5 минут.`);
-                    
-                    // Сброс формы
-                    conferenceStudentSelect.value = '';
-                });
-            } else {
-                console.warn("Assign conference form (ID 'assignConferenceForm') not found.");
-            }
 
             // --- Модальные окна ---
             const homeworkModal = document.getElementById('homeworkModal');
@@ -1562,7 +1323,57 @@
 
         // Глобальные функции для работы с домашними заданиями и пользователями
         function submitHomework(homeworkId) {
-            alert('Функция отправки домашнего задания для ID: ' + homeworkId);
+            const form = document.createElement('form');
+            form.method = 'post';
+            form.enctype = 'multipart/form-data';
+            form.action = `/api/homework/${homeworkId}/submit`;
+            
+            const commentInput = document.createElement('input');
+            commentInput.type = 'text';
+            commentInput.name = 'comment';
+            commentInput.value = prompt('Введите комментарий к работе:');
+            if (commentInput.value === null) return;
+            
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.name = 'files';
+            fileInput.multiple = true;
+            fileInput.onchange = function() {
+                if (this.files.length > 0) {
+                    form.submit();
+                } else {
+                    alert('Пожалуйста, выберите файл для загрузки');
+                }
+            };
+            
+            form.appendChild(commentInput);
+            form.appendChild(fileInput);
+            document.body.appendChild(form);
+            
+            const fileSelect = document.createElement('input');
+            fileSelect.type = 'button';
+            fileSelect.value = 'Выбрать файлы';
+            fileSelect.onclick = function() {
+                fileInput.click();
+            };
+            
+            const container = document.createElement('div');
+            container.style.position = 'fixed';
+            container.style.top = '50%';
+            container.style.left = '50%';
+            container.style.transform = 'translate(-50%, -50%)';
+            container.style.padding = '20px';
+            container.style.background = 'white';
+            container.style.borderRadius = '8px';
+            container.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+            container.style.zIndex = '1000';
+            
+            const message = document.createElement('p');
+            message.textContent = 'Нажмите "Выбрать файлы" для загрузки работы';
+            
+            container.appendChild(message);
+            container.appendChild(fileSelect);
+            document.body.appendChild(container);
         }
         
         function editUser(username) {
