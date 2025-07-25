@@ -761,7 +761,7 @@ def api_end_conference(room_name):
 @app.route('/api/contact', methods=['POST'])
 def api_contact():
     try:
-        data = request.json
+        data = request.json 
         return jsonify({'success': True, 'message': 'Ваше сообщение отправлено!'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
