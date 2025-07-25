@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, session, redirect, jsonify, send_from_directory
+from flask import Flask, render_template, request, session, redirect, jsonify, send_from_directory, url_for
 from flask_socketio import SocketIO
 from werkzeug.security import generate_password_hash, check_password_hash
 import json
@@ -57,7 +57,7 @@ class DB:
         return next((u for u in users if u['username'] == username), None)
 
     @staticmethod
-    def save_user(username, email, password, role='student', is_active=True):
+    def save_user(username, email, password, role='student', is_active=True, phone=''):
         users = DB.get_users()
         if any(u['username'] == username for u in users):
             return False
@@ -68,6 +68,7 @@ class DB:
             'password': generate_password_hash(password),
             'role': role,
             'is_active': is_active,
+            'phone': phone,
             'created_at': datetime.now().isoformat(),
             'avatar': f'https://i.pravatar.cc/150?u={username}'
         })
@@ -81,6 +82,8 @@ class DB:
             if user['username'] == username:
                 if 'email' in data:
                     users[i]['email'] = data['email']
+                if 'phone' in data:
+                    users[i]['phone'] = data['phone']
                 if 'password' in data and data['password']:
                     users[i]['password'] = generate_password_hash(data['password'])
                 if 'is_active' in data:
@@ -304,6 +307,7 @@ if not os.path.exists(f'{DB_FOLDER}/users.json'):
             'password': generate_password_hash('admin123'),
             'role': 'teacher',
             'is_active': True,
+            'phone': '+1234567890',
             'created_at': datetime.now().isoformat(),
             'avatar': 'https://i.pravatar.cc/150?u=admin'
         },
@@ -313,6 +317,7 @@ if not os.path.exists(f'{DB_FOLDER}/users.json'):
             'password': generate_password_hash('student123'),
             'role': 'student',
             'is_active': True,
+            'phone': '+9876543210',
             'created_at': datetime.now().isoformat(),
             'avatar': 'https://i.pravatar.cc/150?u=student1'
         }
@@ -398,7 +403,8 @@ def api_register():
         data['email'],
         data['password'],
         data.get('role', 'student'),
-        data.get('is_active', True)
+        data.get('is_active', True),
+        data.get('phone', '')
     ):
         return jsonify({'success': True})
     return jsonify({'error': 'Username already exists'}), 400
@@ -415,6 +421,7 @@ def api_login():
         session['user'] = {
             'username': user['username'],
             'email': user['email'],
+            'phone': user.get('phone', ''),
             'role': user['role'],
             'avatar': user['avatar']
         }
@@ -454,22 +461,27 @@ def api_update_user(username):
     
     data = request.json
     
-    # Проверка пароля для смены пароля
-    if 'password' in data:
-        if 'current_password' in data:
-            user = DB.get_user(username)
-            if not check_password_hash(user['password'], data['current_password']):
-                return jsonify({'error': 'Current password is incorrect'}), 400
-        elif session['user']['role'] != 'teacher':
-            return jsonify({'error': 'Current password is required'}), 400
+    # Проверка пароля для любых изменений
+    user = DB.get_user(username)
+    if not check_password_hash(user['password'], data.get('current_password', '')):
+        return jsonify({'error': 'Current password is incorrect'}), 400
     
-    if DB.update_user(username, data):
+    update_data = {}
+    if 'email' in data:
+        update_data['email'] = data['email']
+    if 'phone' in data:
+        update_data['phone'] = data['phone']
+    if 'password' in data and data['password']:
+        update_data['password'] = data['password']
+    
+    if DB.update_user(username, update_data):
         # Обновляем сессию, если пользователь обновляет свой профиль
         if session['user']['username'] == username:
             user = DB.get_user(username)
             session['user'] = {
                 'username': user['username'],
                 'email': user['email'],
+                'phone': user.get('phone', ''),
                 'role': user['role'],
                 'avatar': user['avatar']
             }
@@ -624,7 +636,7 @@ def api_submit_homework(homework_id):
                 })
     
     if DB.submit_homework(homework_id, student_username, comment, files):
-        return jsonify({'success': True})
+        return redirect(url_for('dashboard'))
     return jsonify({'error': 'Homework not found or access denied'}), 404
 
 # Загрузка файлов
