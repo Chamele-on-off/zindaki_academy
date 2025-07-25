@@ -435,6 +435,7 @@
             border-radius: var(--rounded-md);
             font-size: 0.9rem;
             gap: 0.5rem;
+            cursor: pointer;
         }
         
         .file-item i {
@@ -782,6 +783,11 @@
                     </div>
                     
                     <div class="form-group">
+                        <label for="currentPassword">Текущий пароль</label>
+                        <input type="password" id="currentPassword" class="form-control" placeholder="Введите текущий пароль" required>
+                    </div>
+                    
+                    <div class="form-group">
                         <label for="profilePassword">Новый пароль</label>
                         <input type="password" id="profilePassword" class="form-control" placeholder="Оставьте пустым, если не хотите менять">
                     </div>
@@ -971,6 +977,11 @@
                 </div>
                 
                 <div class="form-group">
+                    <label for="userPhone">Телефон</label>
+                    <input type="tel" id="userPhone" class="form-control" placeholder="Введите телефон">
+                </div>
+                
+                <div class="form-group">
                     <label for="userPassword">Пароль</label>
                     <input type="password" id="userPassword" class="form-control" required>
                 </div>
@@ -985,6 +996,30 @@
                 
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-save"></i> Сохранить пользователя
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="modal" id="submitHomeworkModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3 class="modal-title">Отправить домашнее задание</h3>
+            
+            <form id="submitHomeworkForm" enctype="multipart/form-data">
+                <input type="hidden" id="shHomeworkId">
+                <div class="form-group">
+                    <label for="shComment">Комментарий</label>
+                    <textarea id="shComment" class="form-control" placeholder="Введите комментарий к работе"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="shFiles">Файлы работы</label>
+                    <input type="file" id="shFiles" class="form-control" multiple>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-upload"></i> Отправить
                 </button>
             </form>
         </div>
@@ -1053,6 +1088,7 @@
             // --- Модальные окна ---
             const homeworkModal = document.getElementById('homeworkModal');
             const userModal = document.getElementById('userModal');
+            const submitHomeworkModal = document.getElementById('submitHomeworkModal');
             const addHomeworkBtn = document.getElementById('addHomework');
             const addUserBtn = document.getElementById('addUser');
             const closeModalBtns = document.querySelectorAll('.close-modal');
@@ -1110,15 +1146,15 @@
                                     ${hw.files && hw.files.length > 0 ? `
                                     <div class="homework-files">
                                         ${hw.files.map(file => `
-                                        <div class="file-item">
+                                        <a href="/uploads/${file.name}" target="_blank" class="file-item">
                                             <i class="fas fa-file"></i> ${file.name}
-                                        </div>
+                                        </a>
                                         `).join('')}
                                     </div>
                                     ` : ''}
                                     ${'{{ user.role }}' === 'student' ? `
                                     <div class="homework-actions">
-                                        <button class="btn btn-primary" onclick="submitHomework(${hw.id})">
+                                        <button class="btn btn-primary" onclick="showSubmitHomeworkModal(${hw.id})">
                                             <i class="fas fa-upload"></i> Загрузить работу
                                         </button>
                                     </div>
@@ -1186,13 +1222,18 @@
                     const formData = {
                         email: document.getElementById('profileEmail').value,
                         phone: document.getElementById('profilePhone').value,
-                        password: document.getElementById('profilePassword').value,
-                        passwordConfirm: document.getElementById('profilePasswordConfirm').value
+                        current_password: document.getElementById('currentPassword').value
                     };
                     
-                    if (formData.password && formData.password !== formData.passwordConfirm) {
-                        alert('Пароли не совпадают!');
-                        return;
+                    const newPassword = document.getElementById('profilePassword').value;
+                    const passwordConfirm = document.getElementById('profilePasswordConfirm').value;
+                    
+                    if (newPassword) {
+                        if (newPassword !== passwordConfirm) {
+                            alert('Пароли не совпадают!');
+                            return;
+                        }
+                        formData.password = newPassword;
                     }
                     
                     fetch('/api/users/' + '{{ user.username }}', {
@@ -1209,6 +1250,7 @@
                             if (data.user) {
                                 sessionStorage.setItem('user', JSON.stringify(data.user));
                             }
+                            window.location.reload();
                         } else {
                             alert('Ошибка при обновлении профиля: ' + (data.error || ''));
                         }
@@ -1271,6 +1313,7 @@
                     const formData = {
                         username: document.getElementById('userUsername').value,
                         email: document.getElementById('userEmail').value,
+                        phone: document.getElementById('userPhone').value,
                         password: document.getElementById('userPassword').value,
                         role: document.getElementById('userRole').value
                     };
@@ -1299,6 +1342,44 @@
                 });
             }
 
+            // --- Форма отправки домашнего задания ---
+            const submitHomeworkForm = document.getElementById('submitHomeworkForm');
+            if (submitHomeworkForm) {
+                submitHomeworkForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const homeworkId = document.getElementById('shHomeworkId').value;
+                    const comment = document.getElementById('shComment').value;
+                    const filesInput = document.getElementById('shFiles');
+                    
+                    const formData = new FormData();
+                    formData.append('comment', comment);
+                    
+                    for (let i = 0; i < filesInput.files.length; i++) {
+                        formData.append('files', filesInput.files[i]);
+                    }
+                    
+                    fetch(`/api/homework/${homeworkId}/submit`, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Домашнее задание успешно отправлено!');
+                            submitHomeworkModal.style.display = 'none';
+                            window.location.href = '/dashboard';
+                        } else {
+                            alert('Ошибка при отправке задания: ' + (data.error || ''));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Произошла ошибка при отправке задания');
+                    });
+                });
+            }
+
             // --- Выход из системы ---
             const logoutBtn = document.getElementById('logoutBtn');
             if (logoutBtn) {
@@ -1322,58 +1403,9 @@
         });
 
         // Глобальные функции для работы с домашними заданиями и пользователями
-        function submitHomework(homeworkId) {
-            const form = document.createElement('form');
-            form.method = 'post';
-            form.enctype = 'multipart/form-data';
-            form.action = `/api/homework/${homeworkId}/submit`;
-            
-            const commentInput = document.createElement('input');
-            commentInput.type = 'text';
-            commentInput.name = 'comment';
-            commentInput.value = prompt('Введите комментарий к работе:');
-            if (commentInput.value === null) return;
-            
-            const fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.name = 'files';
-            fileInput.multiple = true;
-            fileInput.onchange = function() {
-                if (this.files.length > 0) {
-                    form.submit();
-                } else {
-                    alert('Пожалуйста, выберите файл для загрузки');
-                }
-            };
-            
-            form.appendChild(commentInput);
-            form.appendChild(fileInput);
-            document.body.appendChild(form);
-            
-            const fileSelect = document.createElement('input');
-            fileSelect.type = 'button';
-            fileSelect.value = 'Выбрать файлы';
-            fileSelect.onclick = function() {
-                fileInput.click();
-            };
-            
-            const container = document.createElement('div');
-            container.style.position = 'fixed';
-            container.style.top = '50%';
-            container.style.left = '50%';
-            container.style.transform = 'translate(-50%, -50%)';
-            container.style.padding = '20px';
-            container.style.background = 'white';
-            container.style.borderRadius = '8px';
-            container.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
-            container.style.zIndex = '1000';
-            
-            const message = document.createElement('p');
-            message.textContent = 'Нажмите "Выбрать файлы" для загрузки работы';
-            
-            container.appendChild(message);
-            container.appendChild(fileSelect);
-            document.body.appendChild(container);
+        function showSubmitHomeworkModal(homeworkId) {
+            document.getElementById('shHomeworkId').value = homeworkId;
+            document.getElementById('submitHomeworkModal').style.display = 'flex';
         }
         
         function editUser(username) {
