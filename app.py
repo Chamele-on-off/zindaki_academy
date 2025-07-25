@@ -6,7 +6,6 @@ import json
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import logging
-import jwt
 from collections import defaultdict, deque
 import uuid
 
@@ -17,19 +16,11 @@ app.secret_key = os.environ.get('SECRET_KEY', 'your-very-secret-key-12345')
 # Настройка SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
-# Конфигурация PeerJS
-PEERJS_HOST = os.environ.get('PEERJS_HOST', 'peerjs.zindaki.academy')
-PEERJS_PORT = os.environ.get('PEERJS_PORT', '443')
-PEERJS_SECURE = os.environ.get('PEERJS_SECURE', 'true').lower() == 'true'
-PEERJS_PATH = os.environ.get('PEERJS_PATH', '/peerjs')
-
 # Конфигурация приложения
 UPLOAD_FOLDER = 'uploads'
 DB_FOLDER = 'data'
-INVITES_FOLDER = 'invites'
 os.makedirs(DB_FOLDER, exist_ok=True)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(INVITES_FOLDER, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
@@ -63,7 +54,7 @@ class DB:
     @staticmethod
     def get_user(username):
         users = DB.get_users()
-        return next((u for u in users if u['username'] == username), None)
+        return next((u for u in users if u['username'] == username), None
 
     @staticmethod
     def save_user(username, email, password, role='student', is_active=True):
@@ -151,7 +142,12 @@ class DB:
     # Домашние задания
     @staticmethod
     def get_homeworks():
-        return DB._get_db('homeworks')
+        homeworks = DB._get_db('homeworks')
+        # Автоматическое удаление заданий старше 2 недель
+        now = datetime.now()
+        homeworks = [hw for hw in homeworks if 
+                    (now - datetime.fromisoformat(hw['created_at'])) < timedelta(weeks=2)]
+        return homeworks
 
     @staticmethod
     def get_homework(homework_id):
@@ -215,57 +211,6 @@ class DB:
     @staticmethod
     def get_testimonials():
         return DB._get_db('testimonials')
-
-    # Приглашения
-    @staticmethod
-    def get_invites():
-        try:
-            with open(f'{INVITES_FOLDER}/invites.json', 'r') as f:
-                return json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            return []
-
-    @staticmethod
-    def save_invite(teacher_username, student_username, room_name, status='pending'):
-        invites = DB.get_invites()
-        invite_id = max([i.get('id', 0) for i in invites], default=0) + 1
-        
-        invite = {
-            'id': invite_id,
-            'teacher': teacher_username,
-            'student': student_username,
-            'room_name': room_name,
-            'status': status,
-            'created_at': datetime.now().isoformat(),
-            'updated_at': datetime.now().isoformat()
-        }
-        
-        invites.append(invite)
-        with open(f'{INVITES_FOLDER}/invites.json', 'w') as f:
-            json.dump(invites, f, indent=2)
-        return invite
-
-    @staticmethod
-    def update_invite_status(invite_id, status):
-        invites = DB.get_invites()
-        for invite in invites:
-            if invite['id'] == invite_id:
-                invite['status'] = status
-                invite['updated_at'] = datetime.now().isoformat()
-                with open(f'{INVITES_FOLDER}/invites.json', 'w') as f:
-                    json.dump(invites, f, indent=2)
-                return True
-        return False
-
-    @staticmethod
-    def get_user_invites(username):
-        invites = DB.get_invites()
-        return [i for i in invites if i['student'] == username and i['status'] == 'pending']
-
-    @staticmethod
-    def get_teacher_invites(username):
-        invites = DB.get_invites()
-        return [i for i in invites if i['teacher'] == username]
 
     # Конференции
     @staticmethod
@@ -425,10 +370,6 @@ if not os.path.exists(f'{DB_FOLDER}/users.json'):
     DB._save_db('homeworks', initial_homeworks)
     DB._save_db('conferences', initial_conferences)
     DB._save_db('testimonials', initial_testimonials)
-
-if not os.path.exists(f'{INVITES_FOLDER}/invites.json'):
-    with open(f'{INVITES_FOLDER}/invites.json', 'w') as f:
-        json.dump([], f)
 
 # Главная страница и все SPA-роуты
 @app.route('/')
@@ -712,80 +653,7 @@ def dashboard():
                          homeworks=homeworks,
                          students=students,
                          timedelta=timedelta,
-                         is_teacher=session['user']['role'] == 'teacher',
-                         peerjs_config={
-                             'host': PEERJS_HOST,
-                             'port': PEERJS_PORT,
-                             'secure': PEERJS_SECURE,
-                             'path': PEERJS_PATH
-                         })
-
-# Приглашения на конференции
-@app.route('/api/invites', methods=['GET', 'POST'])
-def api_invites():
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    if request.method == 'POST':
-        if session['user']['role'] != 'teacher':
-            return jsonify({'error': 'Only teachers can create invites'}), 403
-        
-        data = request.json
-        required_fields = ['teacher', 'student', 'room_name']
-        if not all(field in data for field in required_fields):
-            return jsonify({'error': 'Missing required fields'}), 400
-        
-        # Проверяем, что учитель существует
-        teacher = DB.get_user(data['teacher'])
-        if not teacher or teacher['role'] != 'teacher':
-            return jsonify({'error': 'Teacher not found'}), 404
-        
-        # Проверяем, что ученик существует
-        student = DB.get_user(data['student'])
-        if not student or student['role'] != 'student':
-            return jsonify({'error': 'Student not found'}), 404
-        
-        invite = DB.save_invite(
-            data['teacher'],
-            data['student'],
-            data['room_name'],
-            data.get('status', 'active')
-        )
-        
-        return jsonify({'success': True, 'invite': invite})
-    
-    # GET запрос - возвращаем приглашения для текущего пользователя
-    if session['user']['role'] == 'teacher':
-        invites = DB.get_teacher_invites(session['user']['username'])
-    else:
-        invites = DB.get_user_invites(session['user']['username'])
-    
-    return jsonify({'invites': invites})
-
-@app.route('/api/invites/<int:invite_id>', methods=['PUT'])
-def api_update_invite(invite_id):
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    data = request.json
-    if 'status' not in data:
-        return jsonify({'error': 'Status is required'}), 400
-    
-    invites = DB.get_invites()
-    invite = next((i for i in invites if i['id'] == invite_id), None)
-    
-    if not invite:
-        return jsonify({'error': 'Invite not found'}), 404
-    
-    # Проверяем права доступа
-    if session['user']['role'] == 'teacher' and invite['teacher'] != session['user']['username']:
-        return jsonify({'error': 'Access denied'}), 403
-    if session['user']['role'] == 'student' and invite['student'] != session['user']['username']:
-        return jsonify({'error': 'Access denied'}), 403
-    
-    if DB.update_invite_status(invite_id, data['status']):
-        return jsonify({'success': True})
-    return jsonify({'error': 'Failed to update invite'}), 500
+                         is_teacher=session['user']['role'] == 'teacher')
 
 # Управление конференциями
 @app.route('/api/conferences', methods=['POST'])
