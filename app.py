@@ -88,6 +88,10 @@ class DB:
                     users[i]['password'] = generate_password_hash(data['password'])
                 if 'is_active' in data:
                     users[i]['is_active'] = data['is_active']
+                if 'role' in data:
+                    users[i]['role'] = data['role']
+                if 'avatar' in data:
+                    users[i]['avatar'] = data['avatar']
                 DB._save_db('users', users)
                 return True
         return False
@@ -158,7 +162,7 @@ class DB:
         return next((h for h in homeworks if h['id'] == homework_id), None)
 
     @staticmethod
-    def save_homework(lesson_id, title, description, deadline, teacher, students=None, files=None):
+    def save_homework(lesson_id, title, description, deadline, teacher, students=None, files=None, subject=None):
         if students is None:
             students = []
         if files is None:
@@ -175,6 +179,7 @@ class DB:
             'teacher': teacher,
             'students': students,
             'files': files,
+            'subject': subject,
             'created_at': datetime.now().isoformat(),
             'submissions': {}
         }
@@ -347,6 +352,7 @@ if not os.path.exists(f'{DB_FOLDER}/users.json'):
             'teacher': 'admin',
             'students': ['student1'],
             'files': [],
+            'subject': 'Английский язык',
             'created_at': datetime.now().isoformat(),
             'submissions': {}
         }
@@ -450,6 +456,24 @@ def api_get_users():
     
     return jsonify({'users': safe_users})
 
+@app.route('/api/users/<username>', methods=['GET'])
+def api_get_user(username):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    # Проверяем, что пользователь запрашивает свой профиль или это учитель
+    if session['user']['username'] != username and session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    user = DB.get_user(username)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    safe_user = user.copy()
+    safe_user.pop('password', None)
+    
+    return jsonify({'user': safe_user})
+
 @app.route('/api/users/<username>', methods=['PUT'])
 def api_update_user(username):
     if 'user' not in session:
@@ -461,10 +485,11 @@ def api_update_user(username):
     
     data = request.json
     
-    # Проверка пароля для любых изменений
-    user = DB.get_user(username)
-    if not check_password_hash(user['password'], data.get('current_password', '')):
-        return jsonify({'error': 'Current password is incorrect'}), 400
+    # Проверка пароля для любых изменений (кроме учителя)
+    if session['user']['username'] == username:
+        user = DB.get_user(username)
+        if not check_password_hash(user['password'], data.get('current_password', '')):
+            return jsonify({'error': 'Current password is incorrect'}), 400
     
     update_data = {}
     if 'email' in data:
@@ -473,6 +498,10 @@ def api_update_user(username):
         update_data['phone'] = data['phone']
     if 'password' in data and data['password']:
         update_data['password'] = data['password']
+    if 'is_active' in data and session['user']['role'] == 'teacher':
+        update_data['is_active'] = data['is_active']
+    if 'role' in data and session['user']['role'] == 'teacher':
+        update_data['role'] = data['role']
     
     if DB.update_user(username, update_data):
         # Обновляем сессию, если пользователь обновляет свой профиль
@@ -487,6 +516,38 @@ def api_update_user(username):
             }
         return jsonify({'success': True, 'user': session.get('user')})
     return jsonify({'error': 'User not found'}), 404
+
+@app.route('/api/users/<username>/avatar', methods=['POST'])
+def api_update_avatar(username):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    # Проверяем, что пользователь обновляет свой профиль или это учитель
+    if session['user']['username'] != username and session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    if 'avatar' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    
+    file = request.files['avatar']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    
+    if file:
+        filename = secure_filename(f"{username}_{file.filename}")
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        avatar_url = url_for('uploaded_file', filename=filename, _external=True)
+        
+        if DB.update_user(username, {'avatar': avatar_url}):
+            # Обновляем сессию, если пользователь обновляет свой профиль
+            if session['user']['username'] == username:
+                session['user']['avatar'] = avatar_url
+            
+            return jsonify({'success': True, 'avatar': avatar_url})
+    
+    return jsonify({'error': 'Failed to update avatar'}), 500
 
 @app.route('/api/users/<username>', methods=['DELETE'])
 def api_delete_user(username):
@@ -574,9 +635,10 @@ def api_homework():
         title = request.form.get('title')
         description = request.form.get('description')
         deadline = request.form.get('deadline')
+        subject = request.form.get('subject')
         students = json.loads(request.form.get('students', '[]'))
         
-        if not all([lesson_id, title, description, deadline, students]):
+        if not all([lesson_id, title, description, deadline, students, subject]):
             return jsonify({'error': 'Missing required fields'}), 400
         
         homework = DB.save_homework(
@@ -586,7 +648,8 @@ def api_homework():
             deadline=deadline,
             teacher=session['user']['username'],
             students=students,
-            files=files
+            files=files,
+            subject=subject
         )
         
         return jsonify({'success': True, 'homework': homework})
