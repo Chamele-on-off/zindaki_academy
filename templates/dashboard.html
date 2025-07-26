@@ -200,12 +200,32 @@
             margin: 0 auto 1rem;
             overflow: hidden;
             border: 5px solid var(--primary-light);
+            position: relative;
+            cursor: pointer;
         }
         
         .user-avatar img {
             width: 100%;
             height: 100%;
             object-fit: cover;
+        }
+        
+        .user-avatar .avatar-edit {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            text-align: center;
+            padding: 5px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .user-avatar:hover .avatar-edit {
+            opacity: 1;
         }
         
         .user-name {
@@ -341,6 +361,20 @@
             box-shadow: var(--shadow-md);
         }
         
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+        
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+        
         .conference-widget {
             grid-column: 1 / -1;
         }
@@ -435,11 +469,16 @@
             border-radius: var(--rounded-md);
             font-size: 0.9rem;
             gap: 0.5rem;
-            cursor: pointer;
         }
         
         .file-item i {
             color: var(--primary);
+        }
+        
+        .file-item .delete-file {
+            color: #dc3545;
+            cursor: pointer;
+            margin-left: 5px;
         }
         
         .homework-actions {
@@ -618,6 +657,47 @@
             color: var(--darker);
         }
         
+        .subject-select {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .subject-option {
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: var(--rounded-md);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .subject-option:hover {
+            background-color: rgba(58, 90, 120, 0.1);
+        }
+        
+        .subject-option.selected {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .avatar-preview {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            overflow: hidden;
+            margin: 0 auto 1rem;
+            border: 5px solid var(--primary-light);
+        }
+        
+        .avatar-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
         @media (max-width: 1200px) {
             .dashboard-container {
                 grid-template-columns: 250px 1fr;
@@ -634,6 +714,10 @@
             }
             
             .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .subject-select {
                 grid-template-columns: 1fr;
             }
         }
@@ -710,8 +794,9 @@
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="user-profile">
-                <div class="user-avatar">
-                    <img src="{{ user.avatar }}" alt="Аватар пользователя">
+                <div class="user-avatar" id="avatarContainer">
+                    <img src="{{ user.avatar }}" alt="Аватар пользователя" id="userAvatarImg">
+                    <div class="avatar-edit">Изменить</div>
                 </div>
                 <h3 class="user-name">{{ user.username }}</h3>
                 <span class="user-role">{{ 'Преподаватель' if user.role == 'teacher' else 'Студент' }}</span>
@@ -779,7 +864,7 @@
                     
                     <div class="form-group">
                         <label for="profilePhone">Телефон</label>
-                        <input type="tel" id="profilePhone" class="form-control" placeholder="Введите ваш телефон">
+                        <input type="tel" id="profilePhone" class="form-control" value="{{ user.phone or '' }}" placeholder="Введите ваш телефон">
                     </div>
                     
                     <div class="form-group">
@@ -940,6 +1025,20 @@
                 </div>
                 
                 <div class="form-group">
+                    <label>Предмет</label>
+                    <div class="subject-select">
+                        <div class="subject-option" data-value="Английский язык">Английский язык</div>
+                        <div class="subject-option" data-value="Французский язык">Французский язык</div>
+                        <div class="subject-option" data-value="Русский язык">Русский язык</div>
+                        <div class="subject-option" data-value="История">История</div>
+                        <div class="subject-option" data-value="Обществознание">Обществознание</div>
+                        <div class="subject-option" data-value="Логопедия">Логопедия</div>
+                        <div class="subject-option" data-value="Дефектология">Дефектология</div>
+                    </div>
+                    <input type="hidden" id="hwSubject" name="subject">
+                </div>
+                
+                <div class="form-group">
                     <label for="hwStudents">Ученики</label>
                     <select id="hwStudents" class="form-control" multiple style="height: auto;">
                         {% for student in students %}
@@ -951,6 +1050,7 @@
                 <div class="form-group">
                     <label for="hwFiles">Файлы</label>
                     <input type="file" id="hwFiles" class="form-control" multiple>
+                    <div id="selectedFiles" style="margin-top: 10px;"></div>
                 </div>
                 
                 <button type="submit" class="btn btn-primary">
@@ -1001,6 +1101,51 @@
         </div>
     </div>
     
+    <div class="modal" id="editUserModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3 class="modal-title" id="editUserTitle">Редактирование пользователя</h3>
+            
+            <form id="editUserForm">
+                <input type="hidden" id="editUsername">
+                <div class="form-group">
+                    <label for="editEmail">Email</label>
+                    <input type="email" id="editEmail" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editPhone">Телефон</label>
+                    <input type="tel" id="editPhone" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="editPassword">Новый пароль</label>
+                    <input type="password" id="editPassword" class="form-control" placeholder="Оставьте пустым, если не хотите менять">
+                </div>
+                
+                <div class="form-group">
+                    <label for="editRole">Роль</label>
+                    <select id="editRole" class="form-control" required>
+                        <option value="student">Студент</option>
+                        <option value="teacher">Преподаватель</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editIsActive">Активен</label>
+                    <select id="editIsActive" class="form-control" required>
+                        <option value="true">Да</option>
+                        <option value="false">Нет</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Сохранить изменения
+                </button>
+            </form>
+        </div>
+    </div>
+    
     <div class="modal" id="submitHomeworkModal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -1016,10 +1161,33 @@
                 <div class="form-group">
                     <label for="shFiles">Файлы работы</label>
                     <input type="file" id="shFiles" class="form-control" multiple>
+                    <div id="submittedFiles" style="margin-top: 10px;"></div>
                 </div>
                 
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-upload"></i> Отправить
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="modal" id="avatarModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3 class="modal-title">Изменить аватар</h3>
+            
+            <form id="avatarForm" enctype="multipart/form-data">
+                <div class="avatar-preview">
+                    <img id="avatarPreview" src="{{ user.avatar }}" alt="Предпросмотр аватара">
+                </div>
+                
+                <div class="form-group">
+                    <label for="avatarFile">Выберите изображение</label>
+                    <input type="file" id="avatarFile" class="form-control" accept="image/*">
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Сохранить аватар
                 </button>
             </form>
         </div>
@@ -1088,10 +1256,13 @@
             // --- Модальные окна ---
             const homeworkModal = document.getElementById('homeworkModal');
             const userModal = document.getElementById('userModal');
+            const editUserModal = document.getElementById('editUserModal');
             const submitHomeworkModal = document.getElementById('submitHomeworkModal');
+            const avatarModal = document.getElementById('avatarModal');
             const addHomeworkBtn = document.getElementById('addHomework');
             const addUserBtn = document.getElementById('addUser');
             const closeModalBtns = document.querySelectorAll('.close-modal');
+            const avatarContainer = document.getElementById('avatarContainer');
             
             if (addHomeworkBtn) {
                 addHomeworkBtn.addEventListener('click', () => {
@@ -1105,6 +1276,12 @@
                 });
             }
             
+            if (avatarContainer) {
+                avatarContainer.addEventListener('click', () => {
+                    avatarModal.style.display = 'flex';
+                });
+            }
+            
             closeModalBtns.forEach(btn => {
                 btn.addEventListener('click', function() {
                     this.closest('.modal').style.display = 'none';
@@ -1114,6 +1291,118 @@
             window.addEventListener('click', (e) => {
                 if (e.target.classList.contains('modal')) {
                     e.target.style.display = 'none';
+                }
+            });
+
+            // --- Выбор предмета ---
+            const subjectOptions = document.querySelectorAll('.subject-option');
+            const hwSubjectInput = document.getElementById('hwSubject');
+            
+            subjectOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    subjectOptions.forEach(opt => opt.classList.remove('selected'));
+                    this.classList.add('selected');
+                    hwSubjectInput.value = this.getAttribute('data-value');
+                });
+            });
+
+            // --- Просмотр выбранных файлов для домашнего задания ---
+            const hwFilesInput = document.getElementById('hwFiles');
+            const selectedFilesDiv = document.getElementById('selectedFiles');
+            
+            hwFilesInput.addEventListener('change', function() {
+                selectedFilesDiv.innerHTML = '';
+                if (this.files.length > 0) {
+                    const filesList = document.createElement('div');
+                    filesList.style.marginTop = '10px';
+                    
+                    Array.from(this.files).forEach((file, index) => {
+                        const fileItem = document.createElement('div');
+                        fileItem.style.display = 'flex';
+                        fileItem.style.alignItems = 'center';
+                        fileItem.style.marginBottom = '5px';
+                        
+                        const fileName = document.createElement('span');
+                        fileName.textContent = file.name;
+                        fileName.style.flexGrow = '1';
+                        
+                        const deleteBtn = document.createElement('span');
+                        deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
+                        deleteBtn.style.cursor = 'pointer';
+                        deleteBtn.style.color = '#dc3545';
+                        deleteBtn.style.marginLeft = '10px';
+                        deleteBtn.addEventListener('click', () => {
+                            // Создаем новый DataTransfer и добавляем все файлы кроме удаленного
+                            const newFiles = new DataTransfer();
+                            Array.from(hwFilesInput.files).forEach((f, i) => {
+                                if (i !== index) {
+                                    newFiles.items.add(f);
+                                }
+                            });
+                            
+                            // Обновляем input files
+                            hwFilesInput.files = newFiles.files;
+                            
+                            // Перерисовываем список файлов
+                            hwFilesInput.dispatchEvent(new Event('change'));
+                        });
+                        
+                        fileItem.appendChild(fileName);
+                        fileItem.appendChild(deleteBtn);
+                        filesList.appendChild(fileItem);
+                    });
+                    
+                    selectedFilesDiv.appendChild(filesList);
+                }
+            });
+
+            // --- Просмотр файлов для отправки домашнего задания ---
+            const shFilesInput = document.getElementById('shFiles');
+            const submittedFilesDiv = document.getElementById('submittedFiles');
+            
+            shFilesInput.addEventListener('change', function() {
+                submittedFilesDiv.innerHTML = '';
+                if (this.files.length > 0) {
+                    const filesList = document.createElement('div');
+                    filesList.style.marginTop = '10px';
+                    
+                    Array.from(this.files).forEach((file, index) => {
+                        const fileItem = document.createElement('div');
+                        fileItem.style.display = 'flex';
+                        fileItem.style.alignItems = 'center';
+                        fileItem.style.marginBottom = '5px';
+                        
+                        const fileName = document.createElement('span');
+                        fileName.textContent = file.name;
+                        fileName.style.flexGrow = '1';
+                        
+                        const deleteBtn = document.createElement('span');
+                        deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
+                        deleteBtn.style.cursor = 'pointer';
+                        deleteBtn.style.color = '#dc3545';
+                        deleteBtn.style.marginLeft = '10px';
+                        deleteBtn.addEventListener('click', () => {
+                            // Создаем новый DataTransfer и добавляем все файлы кроме удаленного
+                            const newFiles = new DataTransfer();
+                            Array.from(shFilesInput.files).forEach((f, i) => {
+                                if (i !== index) {
+                                    newFiles.items.add(f);
+                                }
+                            });
+                            
+                            // Обновляем input files
+                            shFilesInput.files = newFiles.files;
+                            
+                            // Перерисовываем список файлов
+                            shFilesInput.dispatchEvent(new Event('change'));
+                        });
+                        
+                        fileItem.appendChild(fileName);
+                        fileItem.appendChild(deleteBtn);
+                        filesList.appendChild(fileItem);
+                    });
+                    
+                    submittedFilesDiv.appendChild(filesList);
                 }
             });
 
@@ -1143,6 +1432,7 @@
                                     <div class="homework-description">
                                         ${hw.description}
                                     </div>
+                                    ${hw.subject ? `<div><strong>Предмет:</strong> ${hw.subject}</div>` : ''}
                                     ${hw.files && hw.files.length > 0 ? `
                                     <div class="homework-files">
                                         ${hw.files.map(file => `
@@ -1191,12 +1481,15 @@
                                     <div class="user-details">
                                         <div class="user-name-sm">${user.username}</div>
                                         <span class="user-role-sm">${user.role === 'teacher' ? 'Преподаватель' : 'Студент'}</span>
+                                        <div style="font-size: 0.8rem; color: ${user.is_active ? 'green' : 'red'}">
+                                            ${user.is_active ? 'Активен' : 'Неактивен'}
+                                        </div>
                                     </div>
                                     <div class="user-actions">
                                         <button class="btn btn-secondary btn-sm" onclick="editUser('${user.username}')">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button class="btn btn-secondary btn-sm" onclick="deleteUser('${user.username}')">
+                                        <button class="btn btn-danger btn-sm" onclick="deleteUser('${user.username}')">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
@@ -1268,11 +1561,17 @@
                 addHomeworkForm.addEventListener('submit', function(e) {
                     e.preventDefault();
                     
+                    if (!hwSubjectInput.value) {
+                        alert('Пожалуйста, выберите предмет');
+                        return;
+                    }
+                    
                     const formData = new FormData();
                     formData.append('title', document.getElementById('hwTitle').value);
                     formData.append('description', document.getElementById('hwDescription').value);
                     formData.append('lesson_id', document.getElementById('hwLesson').value);
                     formData.append('deadline', document.getElementById('hwDeadline').value);
+                    formData.append('subject', hwSubjectInput.value);
                     
                     const studentsSelect = document.getElementById('hwStudents');
                     const selectedStudents = Array.from(studentsSelect.selectedOptions).map(option => option.value);
@@ -1342,6 +1641,49 @@
                 });
             }
 
+            // --- Форма редактирования пользователя ---
+            const editUserForm = document.getElementById('editUserForm');
+            if (editUserForm) {
+                editUserForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const username = document.getElementById('editUsername').value;
+                    const formData = {
+                        email: document.getElementById('editEmail').value,
+                        phone: document.getElementById('editPhone').value,
+                        role: document.getElementById('editRole').value,
+                        is_active: document.getElementById('editIsActive').value === 'true'
+                    };
+                    
+                    const newPassword = document.getElementById('editPassword').value;
+                    if (newPassword) {
+                        formData.password = newPassword;
+                    }
+                    
+                    fetch('/api/users/' + username, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Пользователь успешно обновлен!');
+                            editUserModal.style.display = 'none';
+                            loadUsers();
+                        } else {
+                            alert('Ошибка при обновлении пользователя: ' + (data.error || ''));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Произошла ошибка при обновлении пользователя');
+                    });
+                });
+            }
+
             // --- Форма отправки домашнего задания ---
             const submitHomeworkForm = document.getElementById('submitHomeworkForm');
             if (submitHomeworkForm) {
@@ -1363,19 +1705,79 @@
                         method: 'POST',
                         body: formData
                     })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('Домашнее задание успешно отправлено!');
-                            submitHomeworkModal.style.display = 'none';
-                            window.location.href = '/dashboard';
+                    .then(response => {
+                        if (response.redirected) {
+                            window.location.href = response.url;
                         } else {
+                            return response.json();
+                        }
+                    })
+                    .then(data => {
+                        if (data && !data.success) {
                             alert('Ошибка при отправке задания: ' + (data.error || ''));
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
                         alert('Произошла ошибка при отправке задания');
+                    });
+                });
+            }
+
+            // --- Форма изменения аватара ---
+            const avatarForm = document.getElementById('avatarForm');
+            const avatarFileInput = document.getElementById('avatarFile');
+            const avatarPreview = document.getElementById('avatarPreview');
+            
+            if (avatarFileInput) {
+                avatarFileInput.addEventListener('change', function() {
+                    const file = this.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            avatarPreview.src = e.target.result;
+                        }
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+            
+            if (avatarForm) {
+                avatarForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const formData = new FormData();
+                    if (avatarFileInput.files.length > 0) {
+                        formData.append('avatar', avatarFileInput.files[0]);
+                    } else {
+                        alert('Пожалуйста, выберите файл');
+                        return;
+                    }
+                    
+                    fetch('/api/users/{{ user.username }}/avatar', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Аватар успешно обновлен!');
+                            document.getElementById('userAvatarImg').src = data.avatar;
+                            avatarModal.style.display = 'none';
+                            
+                            // Обновляем аватар в сессии
+                            if (sessionStorage.getItem('user')) {
+                                const user = JSON.parse(sessionStorage.getItem('user'));
+                                user.avatar = data.avatar;
+                                sessionStorage.setItem('user', JSON.stringify(user));
+                            }
+                        } else {
+                            alert('Ошибка при обновлении аватара: ' + (data.error || ''));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Произошла ошибка при обновлении аватара');
                     });
                 });
             }
@@ -1400,16 +1802,42 @@
 
             // Активируем первую вкладку при загрузке
             document.querySelector('.sidebar-menu a.active').click();
+            
+            // Заполняем телефон в профиле, если есть
+            document.getElementById('profilePhone').value = '{{ user.phone or "" }}';
         });
 
         // Глобальные функции для работы с домашними заданиями и пользователями
         function showSubmitHomeworkModal(homeworkId) {
             document.getElementById('shHomeworkId').value = homeworkId;
             document.getElementById('submitHomeworkModal').style.display = 'flex';
+            document.getElementById('shFiles').value = '';
+            document.getElementById('submittedFiles').innerHTML = '';
         }
         
         function editUser(username) {
-            alert('Редактирование пользователя: ' + username);
+            fetch(`/api/users/${username}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.user) {
+                        const user = data.user;
+                        document.getElementById('editUserTitle').textContent = `Редактирование пользователя: ${username}`;
+                        document.getElementById('editUsername').value = username;
+                        document.getElementById('editEmail').value = user.email;
+                        document.getElementById('editPhone').value = user.phone || '';
+                        document.getElementById('editRole').value = user.role;
+                        document.getElementById('editIsActive').value = user.is_active ? 'true' : 'false';
+                        document.getElementById('editPassword').value = '';
+                        
+                        document.getElementById('editUserModal').style.display = 'flex';
+                    } else {
+                        alert('Пользователь не найден');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при загрузке данных пользователя');
+                });
         }
         
         function deleteUser(username) {
@@ -1431,6 +1859,104 @@
                     alert('Произошла ошибка при удалении пользователя');
                 });
             }
+        }
+        
+        function loadHomeworks() {
+            fetch('/api/homework')
+                .then(response => response.json())
+                .then(data => {
+                    const homeworkList = document.getElementById('homeworkList');
+                    homeworkList.innerHTML = '';
+                    
+                    if (data.homeworks && data.homeworks.length > 0) {
+                        data.homeworks.forEach(hw => {
+                            const deadline = new Date(hw.deadline);
+                            const now = new Date();
+                            const diffDays = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+                            
+                            const homeworkItem = document.createElement('div');
+                            homeworkItem.className = 'homework-item';
+                            homeworkItem.innerHTML = `
+                                <div class="homework-header">
+                                    <h4 class="homework-title">${hw.title}</h4>
+                                    <div class="homework-deadline">
+                                        <i class="fas fa-clock"></i> Срок сдачи: ${diffDays > 0 ? diffDays + ' дней' : 'просрочено'}
+                                    </div>
+                                </div>
+                                <div class="homework-description">
+                                    ${hw.description}
+                                </div>
+                                ${hw.subject ? `<div><strong>Предмет:</strong> ${hw.subject}</div>` : ''}
+                                ${hw.files && hw.files.length > 0 ? `
+                                <div class="homework-files">
+                                    ${hw.files.map(file => `
+                                    <a href="/uploads/${file.name}" target="_blank" class="file-item">
+                                        <i class="fas fa-file"></i> ${file.name}
+                                    </a>
+                                    `).join('')}
+                                </div>
+                                ` : ''}
+                                ${'{{ user.role }}' === 'student' ? `
+                                <div class="homework-actions">
+                                    <button class="btn btn-primary" onclick="showSubmitHomeworkModal(${hw.id})">
+                                        <i class="fas fa-upload"></i> Загрузить работу
+                                    </button>
+                                </div>
+                                ` : ''}
+                            `;
+                            homeworkList.appendChild(homeworkItem);
+                        });
+                    } else {
+                        homeworkList.innerHTML = '<p>Нет домашних заданий</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading homeworks:', error);
+                    document.getElementById('homeworkList').innerHTML = '<p>Ошибка загрузки заданий</p>';
+                });
+        }
+        
+        function loadUsers() {
+            fetch('/api/users')
+                .then(response => response.json())
+                .then(data => {
+                    const usersList = document.getElementById('usersList');
+                    usersList.innerHTML = '';
+                    
+                    if (data.users && data.users.length > 0) {
+                        data.users.forEach(user => {
+                            const userCard = document.createElement('div');
+                            userCard.className = 'user-card';
+                            userCard.innerHTML = `
+                                <div class="user-avatar-sm">
+                                    <img src="${user.avatar || 'https://i.pravatar.cc/150?u=' + user.username}" alt="Аватар">
+                                </div>
+                                <div class="user-details">
+                                    <div class="user-name-sm">${user.username}</div>
+                                    <span class="user-role-sm">${user.role === 'teacher' ? 'Преподаватель' : 'Студент'}</span>
+                                    <div style="font-size: 0.8rem; color: ${user.is_active ? 'green' : 'red'}">
+                                        ${user.is_active ? 'Активен' : 'Неактивен'}
+                                    </div>
+                                </div>
+                                <div class="user-actions">
+                                    <button class="btn btn-secondary btn-sm" onclick="editUser('${user.username}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteUser('${user.username}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            `;
+                            usersList.appendChild(userCard);
+                        });
+                    } else {
+                        usersList.innerHTML = '<p>Нет пользователей</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading users:', error);
+                    document.getElementById('usersList').innerHTML = '<p>Ошибка загрузки пользователей</p>';
+                });
         }
     </script>
 </body>
