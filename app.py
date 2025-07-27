@@ -206,6 +206,13 @@ class DB:
         return False
 
     @staticmethod
+    def delete_homework(homework_id):
+        homeworks = DB.get_homeworks()
+        homeworks = [hw for hw in homeworks if hw['id'] != homework_id]
+        DB._save_db('homeworks', homeworks)
+        return True
+
+    @staticmethod
     def get_student_homeworks(student_username):
         homeworks = DB.get_homeworks()
         return [hw for hw in homeworks if student_username in hw['students']]
@@ -323,7 +330,7 @@ if not os.path.exists(f'{DB_FOLDER}/users.json'):
             'role': 'student',
             'is_active': True,
             'phone': '+9876543210',
-            'created_at': datetime.now().isoformat(),
+            'created_name': datetime.now().isoformat(),
             'avatar': 'https://i.pravatar.cc/150?u=student1'
         }
     ]
@@ -676,6 +683,22 @@ def api_get_homework(homework_id):
         return jsonify({'error': 'Access denied'}), 403
     
     return jsonify({'homework': homework})
+
+@app.route('/api/homework/<int:homework_id>', methods=['DELETE'])
+def api_delete_homework(homework_id):
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    homework = DB.get_homework(homework_id)
+    if not homework:
+        return jsonify({'error': 'Homework not found'}), 404
+    
+    if homework['teacher'] != session['user']['username']:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    if DB.delete_homework(homework_id):
+        return jsonify({'success': True})
+    return jsonify({'error': 'Failed to delete homework'}), 500
 
 @app.route('/api/homework/<int:homework_id>/submit', methods=['POST'])
 def api_submit_homework(homework_id):
