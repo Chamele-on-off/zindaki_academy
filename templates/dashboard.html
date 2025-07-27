@@ -698,6 +698,24 @@
             object-fit: cover;
         }
         
+        .submission-files {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(0,0,0,0.05);
+            border-radius: var(--rounded-md);
+        }
+        
+        .submission-header {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+        
+        .submission-comment {
+            margin-bottom: 0.5rem;
+            font-style: italic;
+        }
+        
         @media (max-width: 1200px) {
             .dashboard-container {
                 grid-template-columns: 250px 1fr;
@@ -1422,6 +1440,38 @@
                                 
                                 const homeworkItem = document.createElement('div');
                                 homeworkItem.className = 'homework-item';
+                                
+                                let submissionContent = '';
+                                if (hw.submissions && hw.submissions['{{ user.username }}']) {
+                                    const submission = hw.submissions['{{ user.username }}'];
+                                    submissionContent = `
+                                        <div class="submission-files">
+                                            <div class="submission-header">Ваша отправка:</div>
+                                            ${submission.comment ? `<div class="submission-comment">${submission.comment}</div>` : ''}
+                                            ${submission.files && submission.files.length > 0 ? `
+                                            <div class="homework-files">
+                                                ${submission.files.map(file => `
+                                                <a href="/uploads/${file.name}" target="_blank" class="file-item">
+                                                    <i class="fas fa-file"></i> ${file.name}
+                                                </a>
+                                                `).join('')}
+                                            </div>
+                                            ` : ''}
+                                        </div>
+                                    `;
+                                }
+                                
+                                let teacherActions = '';
+                                if ('{{ user.role }}' === 'teacher') {
+                                    teacherActions = `
+                                        <div class="homework-actions">
+                                            <button class="btn btn-danger" onclick="deleteHomework(${hw.id})">
+                                                <i class="fas fa-trash"></i> Удалить
+                                            </button>
+                                        </div>
+                                    `;
+                                }
+                                
                                 homeworkItem.innerHTML = `
                                     <div class="homework-header">
                                         <h4 class="homework-title">${hw.title}</h4>
@@ -1442,6 +1492,7 @@
                                         `).join('')}
                                     </div>
                                     ` : ''}
+                                    ${submissionContent}
                                     ${'{{ user.role }}' === 'student' ? `
                                     <div class="homework-actions">
                                         <button class="btn btn-primary" onclick="showSubmitHomeworkModal(${hw.id})">
@@ -1449,6 +1500,7 @@
                                         </button>
                                     </div>
                                     ` : ''}
+                                    ${teacherActions}
                                 `;
                                 homeworkList.appendChild(homeworkItem);
                             });
@@ -1861,6 +1913,27 @@
             }
         }
         
+        function deleteHomework(homeworkId) {
+            if (confirm('Вы уверены, что хотите удалить это домашнее задание?')) {
+                fetch(`/api/homework/${homeworkId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Домашнее задание успешно удалено!');
+                        loadHomeworks();
+                    } else {
+                        alert('Ошибка при удалении задания: ' + (data.error || ''));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при удалении задания');
+                });
+            }
+        }
+        
         function loadHomeworks() {
             fetch('/api/homework')
                 .then(response => response.json())
@@ -1876,6 +1949,38 @@
                             
                             const homeworkItem = document.createElement('div');
                             homeworkItem.className = 'homework-item';
+                            
+                            let submissionContent = '';
+                            if (hw.submissions && hw.submissions['{{ user.username }}']) {
+                                const submission = hw.submissions['{{ user.username }}'];
+                                submissionContent = `
+                                    <div class="submission-files">
+                                        <div class="submission-header">Ваша отправка:</div>
+                                        ${submission.comment ? `<div class="submission-comment">${submission.comment}</div>` : ''}
+                                        ${submission.files && submission.files.length > 0 ? `
+                                        <div class="homework-files">
+                                            ${submission.files.map(file => `
+                                            <a href="/uploads/${file.name}" target="_blank" class="file-item">
+                                                <i class="fas fa-file"></i> ${file.name}
+                                            </a>
+                                            `).join('')}
+                                        </div>
+                                        ` : ''}
+                                    </div>
+                                `;
+                            }
+                            
+                            let teacherActions = '';
+                            if ('{{ user.role }}' === 'teacher') {
+                                teacherActions = `
+                                    <div class="homework-actions">
+                                        <button class="btn btn-danger" onclick="deleteHomework(${hw.id})">
+                                            <i class="fas fa-trash"></i> Удалить
+                                        </button>
+                                    </div>
+                                `;
+                            }
+                            
                             homeworkItem.innerHTML = `
                                 <div class="homework-header">
                                     <h4 class="homework-title">${hw.title}</h4>
@@ -1896,6 +2001,7 @@
                                     `).join('')}
                                 </div>
                                 ` : ''}
+                                ${submissionContent}
                                 ${'{{ user.role }}' === 'student' ? `
                                 <div class="homework-actions">
                                     <button class="btn btn-primary" onclick="showSubmitHomeworkModal(${hw.id})">
@@ -1903,6 +2009,7 @@
                                     </button>
                                 </div>
                                 ` : ''}
+                                ${teacherActions}
                             `;
                             homeworkList.appendChild(homeworkItem);
                         });
