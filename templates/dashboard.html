@@ -716,20 +716,18 @@
             font-style: italic;
         }
         
-        .student-submissions {
-            margin-top: 1.5rem;
-            border-top: 1px solid rgba(0,0,0,0.1);
-            padding-top: 1rem;
+        .submissions-list {
+            margin-top: 1rem;
         }
         
-        .student-submission {
-            margin-bottom: 1rem;
-            padding: 1rem;
+        .submission-item {
             background: rgba(0,0,0,0.03);
             border-radius: var(--rounded-md);
+            padding: 1rem;
+            margin-bottom: 1rem;
         }
         
-        .student-name {
+        .submission-student {
             font-weight: 600;
             margin-bottom: 0.5rem;
             color: var(--primary-dark);
@@ -1461,34 +1459,34 @@
                                 homeworkItem.className = 'homework-item';
                                 
                                 let submissionContent = '';
-                                if (hw.submissions && hw.submissions['{{ user.username }}']) {
-                                    const submission = hw.submissions['{{ user.username }}'];
-                                    submissionContent = `
-                                        <div class="submission-files">
-                                            <div class="submission-header">Ваша отправка:</div>
-                                            ${submission.comment ? `<div class="submission-comment">${submission.comment}</div>` : ''}
-                                            ${submission.files && submission.files.length > 0 ? `
-                                            <div class="homework-files">
-                                                ${submission.files.map(file => `
-                                                <a href="/uploads/${file.name}" target="_blank" class="file-item">
-                                                    <i class="fas fa-file"></i> ${file.name}
-                                                </a>
-                                                `).join('')}
+                                if ('{{ user.role }}' === 'student') {
+                                    // Для студента показываем только его отправку
+                                    if (hw.submissions && hw.submissions['{{ user.username }}']) {
+                                        const submission = hw.submissions['{{ user.username }}'];
+                                        submissionContent = `
+                                            <div class="submission-files">
+                                                <div class="submission-header">Ваша отправка:</div>
+                                                ${submission.comment ? `<div class="submission-comment">${submission.comment}</div>` : ''}
+                                                ${submission.files && submission.files.length > 0 ? `
+                                                <div class="homework-files">
+                                                    ${submission.files.map(file => `
+                                                    <a href="/uploads/${file.name}" target="_blank" class="file-item">
+                                                        <i class="fas fa-file"></i> ${file.name}
+                                                    </a>
+                                                    `).join('')}
+                                                </div>
+                                                ` : ''}
                                             </div>
-                                            ` : ''}
-                                        </div>
-                                    `;
-                                }
-                                
-                                // Добавляем блок с работами учеников для учителя
-                                let studentSubmissions = '';
-                                if ('{{ user.role }}' === 'teacher' && Object.keys(hw.submissions || {}).length > 0) {
-                                    studentSubmissions = `
-                                        <div class="student-submissions">
-                                            <div class="submission-header">Работы учеников:</div>
-                                            ${Object.entries(hw.submissions).map(([student, submission]) => `
-                                                <div class="student-submission">
-                                                    <div class="student-name">${student}</div>
+                                        `;
+                                    }
+                                } else if ('{{ user.role }}' === 'teacher') {
+                                    // Для учителя показываем все отправки
+                                    if (hw.submissions && Object.keys(hw.submissions).length > 0) {
+                                        submissionContent = '<div class="submissions-list">';
+                                        for (const [student, submission] of Object.entries(hw.submissions)) {
+                                            submissionContent += `
+                                                <div class="submission-item">
+                                                    <div class="submission-student">${student}</div>
                                                     ${submission.comment ? `<div class="submission-comment">${submission.comment}</div>` : ''}
                                                     ${submission.files && submission.files.length > 0 ? `
                                                     <div class="homework-files">
@@ -1500,9 +1498,10 @@
                                                     </div>
                                                     ` : ''}
                                                 </div>
-                                            `).join('')}
-                                        </div>
-                                    `;
+                                            `;
+                                        }
+                                        submissionContent += '</div>';
+                                    }
                                 }
                                 
                                 let teacherActions = '';
@@ -1537,7 +1536,6 @@
                                     </div>
                                     ` : ''}
                                     ${submissionContent}
-                                    ${studentSubmissions}
                                     ${'{{ user.role }}' === 'student' ? `
                                     <div class="homework-actions">
                                         <button class="btn btn-primary" onclick="showSubmitHomeworkModal(${hw.id})">
@@ -1996,34 +1994,34 @@
                             homeworkItem.className = 'homework-item';
                             
                             let submissionContent = '';
-                            if (hw.submissions && hw.submissions['{{ user.username }}']) {
-                                const submission = hw.submissions['{{ user.username }}'];
-                                submissionContent = `
-                                    <div class="submission-files">
-                                        <div class="submission-header">Ваша отправка:</div>
-                                        ${submission.comment ? `<div class="submission-comment">${submission.comment}</div>` : ''}
-                                        ${submission.files && submission.files.length > 0 ? `
-                                        <div class="homework-files">
-                                            ${submission.files.map(file => `
-                                            <a href="/uploads/${file.name}" target="_blank" class="file-item">
-                                                <i class="fas fa-file"></i> ${file.name}
-                                            </a>
-                                            `).join('')}
+                            if ('{{ user.role }}' === 'student') {
+                                // Для студента показываем только его отправку
+                                if (hw.submissions && hw.submissions['{{ user.username }}']) {
+                                    const submission = hw.submissions['{{ user.username }}'];
+                                    submissionContent = `
+                                        <div class="submission-files">
+                                            <div class="submission-header">Ваша отправка:</div>
+                                            ${submission.comment ? `<div class="submission-comment">${submission.comment}</div>` : ''}
+                                            ${submission.files && submission.files.length > 0 ? `
+                                            <div class="homework-files">
+                                                ${submission.files.map(file => `
+                                                <a href="/uploads/${file.name}" target="_blank" class="file-item">
+                                                    <i class="fas fa-file"></i> ${file.name}
+                                                </a>
+                                                `).join('')}
+                                            </div>
+                                            ` : ''}
                                         </div>
-                                        ` : ''}
-                                    </div>
-                                `;
-                            }
-                            
-                            // Добавляем блок с работами учеников для учителя
-                            let studentSubmissions = '';
-                            if ('{{ user.role }}' === 'teacher' && Object.keys(hw.submissions || {}).length > 0) {
-                                studentSubmissions = `
-                                    <div class="student-submissions">
-                                        <div class="submission-header">Работы учеников:</div>
-                                        ${Object.entries(hw.submissions).map(([student, submission]) => `
-                                            <div class="student-submission">
-                                                <div class="student-name">${student}</div>
+                                    `;
+                                }
+                            } else if ('{{ user.role }}' === 'teacher') {
+                                // Для учителя показываем все отправки
+                                if (hw.submissions && Object.keys(hw.submissions).length > 0) {
+                                    submissionContent = '<div class="submissions-list">';
+                                    for (const [student, submission] of Object.entries(hw.submissions)) {
+                                        submissionContent += `
+                                            <div class="submission-item">
+                                                <div class="submission-student">${student}</div>
                                                 ${submission.comment ? `<div class="submission-comment">${submission.comment}</div>` : ''}
                                                 ${submission.files && submission.files.length > 0 ? `
                                                 <div class="homework-files">
@@ -2035,9 +2033,10 @@
                                                 </div>
                                                 ` : ''}
                                             </div>
-                                        `).join('')}
-                                    </div>
-                                `;
+                                        `;
+                                    }
+                                    submissionContent += '</div>';
+                                }
                             }
                             
                             let teacherActions = '';
@@ -2072,7 +2071,6 @@
                                 </div>
                                 ` : ''}
                                 ${submissionContent}
-                                ${studentSubmissions}
                                 ${'{{ user.role }}' === 'student' ? `
                                 <div class="homework-actions">
                                     <button class="btn btn-primary" onclick="showSubmitHomeworkModal(${hw.id})">
