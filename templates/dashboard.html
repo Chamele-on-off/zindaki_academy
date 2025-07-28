@@ -716,6 +716,25 @@
             font-style: italic;
         }
         
+        .student-submissions {
+            margin-top: 1.5rem;
+            border-top: 1px solid rgba(0,0,0,0.1);
+            padding-top: 1rem;
+        }
+        
+        .student-submission {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: rgba(0,0,0,0.03);
+            border-radius: var(--rounded-md);
+        }
+        
+        .student-name {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--primary-dark);
+        }
+        
         @media (max-width: 1200px) {
             .dashboard-container {
                 grid-template-columns: 250px 1fr;
@@ -1461,6 +1480,31 @@
                                     `;
                                 }
                                 
+                                // Добавляем блок с работами учеников для учителя
+                                let studentSubmissions = '';
+                                if ('{{ user.role }}' === 'teacher' && Object.keys(hw.submissions || {}).length > 0) {
+                                    studentSubmissions = `
+                                        <div class="student-submissions">
+                                            <div class="submission-header">Работы учеников:</div>
+                                            ${Object.entries(hw.submissions).map(([student, submission]) => `
+                                                <div class="student-submission">
+                                                    <div class="student-name">${student}</div>
+                                                    ${submission.comment ? `<div class="submission-comment">${submission.comment}</div>` : ''}
+                                                    ${submission.files && submission.files.length > 0 ? `
+                                                    <div class="homework-files">
+                                                        ${submission.files.map(file => `
+                                                        <a href="/uploads/${file.name}" target="_blank" class="file-item">
+                                                            <i class="fas fa-file"></i> ${file.name}
+                                                        </a>
+                                                        `).join('')}
+                                                    </div>
+                                                    ` : ''}
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    `;
+                                }
+                                
                                 let teacherActions = '';
                                 if ('{{ user.role }}' === 'teacher') {
                                     teacherActions = `
@@ -1493,6 +1537,7 @@
                                     </div>
                                     ` : ''}
                                     ${submissionContent}
+                                    ${studentSubmissions}
                                     ${'{{ user.role }}' === 'student' ? `
                                     <div class="homework-actions">
                                         <button class="btn btn-primary" onclick="showSubmitHomeworkModal(${hw.id})">
@@ -1970,6 +2015,31 @@
                                 `;
                             }
                             
+                            // Добавляем блок с работами учеников для учителя
+                            let studentSubmissions = '';
+                            if ('{{ user.role }}' === 'teacher' && Object.keys(hw.submissions || {}).length > 0) {
+                                studentSubmissions = `
+                                    <div class="student-submissions">
+                                        <div class="submission-header">Работы учеников:</div>
+                                        ${Object.entries(hw.submissions).map(([student, submission]) => `
+                                            <div class="student-submission">
+                                                <div class="student-name">${student}</div>
+                                                ${submission.comment ? `<div class="submission-comment">${submission.comment}</div>` : ''}
+                                                ${submission.files && submission.files.length > 0 ? `
+                                                <div class="homework-files">
+                                                    ${submission.files.map(file => `
+                                                    <a href="/uploads/${file.name}" target="_blank" class="file-item">
+                                                        <i class="fas fa-file"></i> ${file.name}
+                                                    </a>
+                                                    `).join('')}
+                                                </div>
+                                                ` : ''}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                `;
+                            }
+                            
                             let teacherActions = '';
                             if ('{{ user.role }}' === 'teacher') {
                                 teacherActions = `
@@ -2002,6 +2072,7 @@
                                 </div>
                                 ` : ''}
                                 ${submissionContent}
+                                ${studentSubmissions}
                                 ${'{{ user.role }}' === 'student' ? `
                                 <div class="homework-actions">
                                     <button class="btn btn-primary" onclick="showSubmitHomeworkModal(${hw.id})">
