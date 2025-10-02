@@ -735,6 +735,39 @@
             color: var(--primary-dark);
         }
         
+        .ai-teacher-widget {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .ai-teacher-widget .widget-title {
+            color: white;
+        }
+        
+        .ai-teacher-widget .btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        .ai-teacher-widget .btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
         @media (max-width: 1200px) {
             .dashboard-container {
                 grid-template-columns: 250px 1fr;
@@ -841,6 +874,7 @@
             
             <ul class="sidebar-menu">
                 <li><a href="#" class="active" data-section="conference"><i class="fas fa-video"></i> Конференция</a></li>
+                <li><a href="#" data-section="ai-teacher"><i class="fas fa-robot"></i> AI-учитель</a></li>
                 <li><a href="#" data-section="homework"><i class="fas fa-book"></i> Домашние задания</a></li>
                 <li><a href="#" data-section="profile"><i class="fas fa-user"></i> Профиль</a></li>
                 {% if user.role == 'teacher' %}
@@ -851,6 +885,7 @@
         </aside>
         
         <main class="main-content">
+            <!-- Секция основной конференции -->
             <section class="widget conference-widget" id="conference-section">
                 <div class="widget-header">
                     <h3 class="widget-title">Онлайн конференция</h3>
@@ -862,6 +897,57 @@
                     </button>
                     <iframe id="conference-frame" allow="camera; microphone; display-capture" 
                             src="https://conf.zindaki-edu.ru?room={{ user.username }}&user={{ user.username }}&name={{ user.username }}"></iframe>
+                </div>
+            </section>
+
+            <!-- Секция AI-учителя -->
+            <section class="widget ai-teacher-widget" id="ai-teacher-section" style="display: none;">
+                <div class="widget-header">
+                    <h3 class="widget-title">AI-учитель</h3>
+                    <div class="widget-actions">
+                        <button class="btn" id="check-ai-status">
+                            <i class="fas fa-sync-alt"></i> Проверить статус
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="ai-teacher-status" style="padding: 1rem; background: rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 1rem;">
+                    <div class="loading-spinner"></div>
+                    <span>Проверка доступности AI-учителя...</span>
+                </div>
+                
+                <div class="ai-lessons-container" id="ai-lessons-container" style="display: none;">
+                    <div style="text-align: center; margin-bottom: 2rem;">
+                        <h4 style="margin-bottom: 1rem; color: white;">Интерактивные уроки с искусственным интеллектом</h4>
+                        <p style="color: rgba(255,255,255,0.8); margin-bottom: 1.5rem;">
+                            Персональный AI-учитель поможет вам освоить новые знания в интерактивном формате
+                        </p>
+                    </div>
+                    
+                    <div class="subject-select">
+                        <div class="form-group">
+                            <label style="color: white;">Выберите предмет:</label>
+                            <select id="ai-subject" class="form-control" style="background: rgba(255,255,255,0.9);">
+                                <option value="общее">Общий урок</option>
+                                <option value="математика">Математика</option>
+                                <option value="история">История</option>
+                                <option value="обществознание">Обществознание</option>
+                                <option value="физика">Физика</option>
+                                <option value="химия">Химия</option>
+                                <option value="биология">Биология</option>
+                                <option value="английский">Английский язык</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="lesson-actions" style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem; flex-wrap: wrap;">
+                        <button class="btn btn-accent" id="start-ai-lesson" style="font-size: 1.1rem;">
+                            <i class="fas fa-robot"></i> Начать урок с AI-учителем
+                        </button>
+                        <button class="btn" id="open-ai-panel">
+                            <i class="fas fa-cog"></i> Панель управления
+                        </button>
+                    </div>
                 </div>
             </section>
             
@@ -1027,6 +1113,22 @@
                 </div>
             </section>
         </main>
+    </div>
+    
+    <!-- Модальное окно AI-учителя -->
+    <div class="modal" id="aiTeacherModal">
+        <div class="modal-content" style="max-width: 95%; height: 95%; padding: 0;">
+            <div class="window-header" style="margin: 0; border-radius: 0;">
+                <div class="window-title">AI-учитель</div>
+                <button class="window-close" id="close-ai-teacher">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <iframe id="ai-teacher-frame" 
+                    style="width: 100%; height: calc(100% - 50px); border: none;"
+                    allow="camera; microphone; display-capture">
+            </iframe>
+        </div>
     </div>
     
     <div class="modal" id="homeworkModal">
@@ -1231,8 +1333,7 @@
     </div>
     
     <script>
-        // Дожидаемся полной загрузки DOM
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function() {
             console.log("DOM fully loaded and parsed");
 
             // --- Основные элементы интерфейса ---
@@ -1263,6 +1364,8 @@
                         loadHomeworks();
                     } else if (sectionId === 'users-section') {
                         loadUsers();
+                    } else if (sectionId === 'ai-teacher-section') {
+                        checkAITeacherStatus();
                     }
                 });
             });
@@ -1289,6 +1392,98 @@
                     conferenceFrame.style.height = '500px';
                 }
             });
+
+            // --- AI-учитель ---
+            const aiTeacherModal = document.getElementById('aiTeacherModal');
+            const aiTeacherFrame = document.getElementById('ai-teacher-frame');
+            const closeAiTeacherBtn = document.getElementById('close-ai-teacher');
+            const startAiLessonBtn = document.getElementById('start-ai-lesson');
+            const checkAiStatusBtn = document.getElementById('check-ai-status');
+            const openAiPanelBtn = document.getElementById('open-ai-panel');
+            const aiTeacherStatus = document.getElementById('ai-teacher-status');
+            const aiLessonsContainer = document.getElementById('ai-lessons-container');
+
+            // Проверка статуса AI-учителя
+            function checkAITeacherStatus() {
+                aiTeacherStatus.innerHTML = '<div class="loading-spinner"></div><span>Проверка доступности AI-учителя...</span>';
+                
+                // Создаем тестовый запрос к AI-учителю
+                const testFrame = document.createElement('iframe');
+                testFrame.src = 'https://ai.zindaki-edu.ru';
+                testFrame.style.display = 'none';
+                
+                testFrame.onload = () => {
+                    document.body.removeChild(testFrame);
+                    aiTeacherStatus.innerHTML = '<div style="color: lightgreen;"><i class="fas fa-check-circle"></i> AI-учитель доступен</div>';
+                    aiLessonsContainer.style.display = 'block';
+                };
+                
+                testFrame.onerror = () => {
+                    document.body.removeChild(testFrame);
+                    aiTeacherStatus.innerHTML = '<div style="color: #ffcc00;"><i class="fas fa-exclamation-triangle"></i> AI-учитель временно недоступен</div>';
+                    aiLessonsContainer.style.display = 'none';
+                };
+                
+                document.body.appendChild(testFrame);
+            }
+
+            // Запуск урока с AI-учителем
+            startAiLessonBtn.addEventListener('click', function() {
+                const subject = document.getElementById('ai-subject').value;
+                const roomName = '{{ user.username }}_ai_' + Date.now();
+                
+                aiTeacherFrame.src = `https://ai.zindaki-edu.ru/conference?room=${roomName}&embed=true&user_name={{ user.username }}`;
+                aiTeacherModal.style.display = 'flex';
+                
+                // Логируем начало сессии
+                logAISession(roomName, subject);
+            });
+
+            // Открытие панели управления AI-учителем
+            openAiPanelBtn.addEventListener('click', function() {
+                window.open('https://ai.zindaki-edu.ru', 'ai_teacher_panel', 'width=1200,height=800');
+            });
+
+            // Проверка статуса по кнопке
+            checkAiStatusBtn.addEventListener('click', checkAITeacherStatus);
+
+            // Закрытие модального окна AI-учителя
+            closeAiTeacherBtn.addEventListener('click', function() {
+                aiTeacherModal.style.display = 'none';
+                aiTeacherFrame.src = '';
+            });
+
+            // Закрытие по клику вне модального окна
+            aiTeacherModal.addEventListener('click', function(e) {
+                if (e.target === aiTeacherModal) {
+                    aiTeacherModal.style.display = 'none';
+                    aiTeacherFrame.src = '';
+                }
+            });
+
+            // Обработка сообщений от AI-учителя
+            window.addEventListener('message', function(event) {
+                if (event.origin !== 'https://ai.zindaki-edu.ru') return;
+                
+                if (event.data === 'conference_ended') {
+                    aiTeacherModal.style.display = 'none';
+                    aiTeacherFrame.src = '';
+                }
+            });
+
+            // Функция логирования сессий AI-учителя
+            function logAISession(roomId, subject) {
+                const sessionData = {
+                    room_id: roomId,
+                    user: '{{ user.username }}',
+                    subject: subject,
+                    started_at: new Date().toISOString(),
+                    type: 'ai_teacher'
+                };
+                
+                console.log('AI Teacher session started:', sessionData);
+                // Здесь можно добавить отправку на сервер для логирования
+            }
 
             // --- Модальные окна ---
             const homeworkModal = document.getElementById('homeworkModal');
@@ -1369,7 +1564,6 @@
                         deleteBtn.style.color = '#dc3545';
                         deleteBtn.style.marginLeft = '10px';
                         deleteBtn.addEventListener('click', () => {
-                            // Создаем новый DataTransfer и добавляем все файлы кроме удаленного
                             const newFiles = new DataTransfer();
                             Array.from(hwFilesInput.files).forEach((f, i) => {
                                 if (i !== index) {
@@ -1377,10 +1571,7 @@
                                 }
                             });
                             
-                            // Обновляем input files
                             hwFilesInput.files = newFiles.files;
-                            
-                            // Перерисовываем список файлов
                             hwFilesInput.dispatchEvent(new Event('change'));
                         });
                         
@@ -1419,7 +1610,6 @@
                         deleteBtn.style.color = '#dc3545';
                         deleteBtn.style.marginLeft = '10px';
                         deleteBtn.addEventListener('click', () => {
-                            // Создаем новый DataTransfer и добавляем все файлы кроме удаленного
                             const newFiles = new DataTransfer();
                             Array.from(shFilesInput.files).forEach((f, i) => {
                                 if (i !== index) {
@@ -1427,10 +1617,7 @@
                                 }
                             });
                             
-                            // Обновляем input files
                             shFilesInput.files = newFiles.files;
-                            
-                            // Перерисовываем список файлов
                             shFilesInput.dispatchEvent(new Event('change'));
                         });
                         
@@ -1480,7 +1667,6 @@
                                     `;
                                 }
                                 
-                                // Добавляем блок с работами учеников для учителя
                                 let studentSubmissions = '';
                                 if ('{{ user.role }}' === 'teacher' && Object.keys(hw.submissions || {}).length > 0) {
                                     studentSubmissions = `
@@ -1862,7 +2048,6 @@
                             document.getElementById('userAvatarImg').src = data.avatar;
                             avatarModal.style.display = 'none';
                             
-                            // Обновляем аватар в сессии
                             if (sessionStorage.getItem('user')) {
                                 const user = JSON.parse(sessionStorage.getItem('user'));
                                 user.avatar = data.avatar;
@@ -1902,6 +2087,9 @@
             
             // Заполняем телефон в профиле, если есть
             document.getElementById('profilePhone').value = '{{ user.phone or "" }}';
+
+            // Проверяем статус AI-учителя при загрузке
+            checkAITeacherStatus();
         });
 
         // Глобальные функции для работы с домашними заданиями и пользователями
@@ -2015,7 +2203,6 @@
                                 `;
                             }
                             
-                            // Добавляем блок с работами учеников для учителя
                             let studentSubmissions = '';
                             if ('{{ user.role }}' === 'teacher' && Object.keys(hw.submissions || {}).length > 0) {
                                 studentSubmissions = `
