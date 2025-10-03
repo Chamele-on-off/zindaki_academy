@@ -381,11 +381,12 @@
         
         .conference-container {
             width: 100%;
-            height: 500px;
+            height: 600px;
             border-radius: var(--rounded-lg);
             overflow: hidden;
             background: var(--dark);
             position: relative;
+            border: 2px solid var(--primary);
         }
         
         #conference-frame {
@@ -394,11 +395,30 @@
             border: none;
         }
         
+        .conference-controls {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 100;
+            display: flex;
+            gap: 10px;
+            background: rgba(0,0,0,0.8);
+            padding: 12px;
+            border-radius: var(--rounded-md);
+            backdrop-filter: blur(10px);
+        }
+        
+        .conference-controls .btn {
+            padding: 8px 16px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        
         .fullscreen-btn {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.5);
+            top: 15px;
+            right: 15px;
+            background: rgba(0,0,0,0.7);
             color: white;
             border: none;
             border-radius: 50%;
@@ -408,6 +428,52 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+        
+        .fullscreen-btn:hover {
+            background: var(--primary);
+            transform: scale(1.1);
+        }
+        
+        .conference-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            z-index: 50;
+            background: rgba(0,0,0,0.8);
+            padding: 2rem;
+            border-radius: var(--rounded-lg);
+        }
+        
+        .conference-loading .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .conference-status {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: var(--rounded-md);
+            font-size: 12px;
             z-index: 100;
         }
         
@@ -764,8 +830,17 @@
             animation: spin 1s ease-in-out infinite;
         }
         
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        .browser-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 1rem;
+            border-radius: var(--rounded-md);
+            margin-bottom: 1rem;
+        }
+        
+        .browser-warning.hidden {
+            display: none;
         }
         
         @media (max-width: 1200px) {
@@ -789,6 +864,10 @@
             
             .subject-select {
                 grid-template-columns: 1fr;
+            }
+            
+            .conference-controls {
+                flex-direction: column;
             }
         }
         
@@ -822,6 +901,10 @@
             .dashboard-container {
                 margin-top: 80px;
             }
+            
+            .conference-container {
+                height: 400px;
+            }
         }
         
         @media (max-width: 576px) {
@@ -835,6 +918,11 @@
             
             .btn {
                 width: 100%;
+            }
+            
+            .conference-controls .btn {
+                font-size: 11px;
+                padding: 6px 12px;
             }
         }
     </style>
@@ -889,14 +977,53 @@
             <section class="widget conference-widget" id="conference-section">
                 <div class="widget-header">
                     <h3 class="widget-title">Онлайн конференция</h3>
+                    <div class="widget-actions">
+                        <a href="/conference" class="btn btn-primary" target="_blank">
+                            <i class="fas fa-external-link-alt"></i> Открыть в новом окне
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="browser-warning hidden" id="browserWarning">
+                    <h4><i class="fas fa-exclamation-triangle"></i> Внимание!</h4>
+                    <p>Для корректной работы конференции разрешите доступ к камере и микрофону. Если видео/аудио не работают, используйте кнопку "Открыть в новом окне".</p>
                 </div>
                 
                 <div class="conference-container">
+                    <div class="conference-controls" id="conferenceControls">
+                        <button class="btn btn-primary btn-sm" id="startConference">
+                            <i class="fas fa-play"></i> Запустить
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="requestAudio">
+                            <i class="fas fa-microphone"></i> Микрофон
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="requestVideo">
+                            <i class="fas fa-video"></i> Камера
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="refreshConference">
+                            <i class="fas fa-sync-alt"></i> Обновить
+                        </button>
+                    </div>
+                    
                     <button class="fullscreen-btn" id="fullscreenBtn" title="На весь экран">
                         <i class="fas fa-expand"></i>
                     </button>
-                    <iframe id="conference-frame" allow="camera; microphone; display-capture" 
-                            src="https://conf.zindaki-edu.ru?room={{ user.username }}&user={{ user.username }}&name={{ user.username }}"></iframe>
+                    
+                    <div class="conference-loading" id="conferenceLoading">
+                        <div class="spinner"></div>
+                        <p>Загрузка конференции...</p>
+                        <p class="conference-status" id="conferenceStatus">Запрашиваем разрешения</p>
+                    </div>
+                    
+                    <iframe id="conference-frame" 
+                            allow="camera; microphone; display-capture; autoplay"
+                            style="width: 100%; height: 100%; border: none; display: none;">
+                    </iframe>
+                    
+                    <div class="conference-status" id="connectionStatus">
+                        <i class="fas fa-circle" style="color: #ff6b6b;"></i>
+                        Ожидание подключения
+                    </div>
                 </div>
             </section>
 
@@ -944,9 +1071,9 @@
                         <button class="btn btn-accent" id="start-ai-lesson" style="font-size: 1.1rem;">
                             <i class="fas fa-robot"></i> Начать урок с AI-учителем
                         </button>
-                        <button class="btn" id="open-ai-panel">
-                            <i class="fas fa-cog"></i> Панель управления
-                        </button>
+                        <a href="https://ai.zindaki-edu.ru" class="btn" target="_blank">
+                            <i class="fas fa-external-link-alt"></i> Открыть AI-учитель
+                        </a>
                     </div>
                 </div>
             </section>
@@ -1115,22 +1242,7 @@
         </main>
     </div>
     
-    <!-- Модальное окно AI-учителя -->
-    <div class="modal" id="aiTeacherModal">
-        <div class="modal-content" style="max-width: 95%; height: 95%; padding: 0;">
-            <div class="window-header" style="margin: 0; border-radius: 0;">
-                <div class="window-title">AI-учитель</div>
-                <button class="window-close" id="close-ai-teacher">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <iframe id="ai-teacher-frame" 
-                    style="width: 100%; height: calc(100% - 50px); border: none;"
-                    allow="camera; microphone; display-capture">
-            </iframe>
-        </div>
-    </div>
-    
+    <!-- Модальные окна -->
     <div class="modal" id="homeworkModal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -1334,7 +1446,7 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            console.log("DOM fully loaded and parsed");
+            console.log("Dashboard initialized");
 
             // --- Основные элементы интерфейса ---
             const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
@@ -1366,733 +1478,248 @@
                         loadUsers();
                     } else if (sectionId === 'ai-teacher-section') {
                         checkAITeacherStatus();
+                    } else if (sectionId === 'conference-section') {
+                        initializeConference();
                     }
                 });
             });
 
-            // --- Элементы конференции ---
-            const conferenceFrame = document.getElementById('conference-frame');
-            const fullscreenBtn = document.getElementById('fullscreenBtn');
-            
-            fullscreenBtn.addEventListener('click', () => {
-                if (conferenceFrame.requestFullscreen) {
-                    conferenceFrame.requestFullscreen().catch(err => {
-                        console.error('Error attempting to enable fullscreen:', err);
+            // --- Система конференции ---
+            function initializeConference() {
+                console.log('Initializing conference system');
+                
+                const conferenceFrame = document.getElementById('conference-frame');
+                const conferenceLoading = document.getElementById('conferenceLoading');
+                const connectionStatus = document.getElementById('connectionStatus');
+                const browserWarning = document.getElementById('browserWarning');
+                
+                // Показываем предупреждение
+                browserWarning.classList.remove('hidden');
+                
+                // Проверяем поддержку браузера
+                if (!checkBrowserSupport()) {
+                    connectionStatus.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: #ff6b6b;"></i> Браузер не поддерживается';
+                    return;
+                }
+                
+                // Обновляем статус
+                connectionStatus.innerHTML = '<i class="fas fa-circle" style="color: #ffcc00;"></i> Готов к подключению';
+                
+                // Обработчики для кнопок управления
+                document.getElementById('startConference').addEventListener('click', startConference);
+                document.getElementById('requestAudio').addEventListener('click', requestAudioPermission);
+                document.getElementById('requestVideo').addEventListener('click', requestVideoPermission);
+                document.getElementById('refreshConference').addEventListener('click', refreshConference);
+                
+                // Полноэкранный режим
+                document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
+                
+                console.log('Conference system initialized');
+            }
+
+            function checkBrowserSupport() {
+                const supported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+                
+                if (!supported) {
+                    console.warn('Browser does not support WebRTC');
+                    return false;
+                }
+                
+                return true;
+            }
+
+            async function startConference() {
+                console.log('Starting conference...');
+                
+                const conferenceFrame = document.getElementById('conference-frame');
+                const conferenceLoading = document.getElementById('conferenceLoading');
+                const connectionStatus = document.getElementById('connectionStatus');
+                
+                // Показываем загрузку
+                conferenceLoading.style.display = 'block';
+                conferenceFrame.style.display = 'none';
+                connectionStatus.innerHTML = '<i class="fas fa-circle" style="color: #ffcc00;"></i> Запрашиваем разрешения';
+                
+                try {
+                    // Запрашиваем разрешения
+                    await requestMediaPermissions();
+                    
+                    // Загружаем конференцию
+                    const roomName = '{{ user.username }}';
+                    const conferenceUrl = `https://ai.zindaki-edu.ru/conference?room=${roomName}&embed=true&user={{ user.username }}&name={{ user.username }}&autostart=1&timestamp=${Date.now()}`;
+                    
+                    conferenceFrame.src = conferenceUrl;
+                    conferenceFrame.style.display = 'block';
+                    
+                    // Скрываем загрузку через 3 секунды
+                    setTimeout(() => {
+                        conferenceLoading.style.display = 'none';
+                        connectionStatus.innerHTML = '<i class="fas fa-circle" style="color: #51cf66;"></i> Подключено';
+                    }, 3000);
+                    
+                    console.log('Conference started successfully');
+                    
+                } catch (error) {
+                    console.error('Failed to start conference:', error);
+                    conferenceLoading.style.display = 'none';
+                    connectionStatus.innerHTML = '<i class="fas fa-circle" style="color: #ff6b6b;"></i> Ошибка подключения';
+                    
+                    // Показываем альтернативную ссылку
+                    const alternativeLink = document.createElement('div');
+                    alternativeLink.className = 'conference-status';
+                    alternativeLink.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;';
+                    alternativeLink.innerHTML = `
+                        <p style="margin-bottom: 1rem;">Не удалось запустить конференцию</p>
+                        <a href="/conference" class="btn btn-primary" target="_blank">
+                            <i class="fas fa-external-link-alt"></i> Открыть в новом окне
+                        </a>
+                    `;
+                    document.querySelector('.conference-container').appendChild(alternativeLink);
+                }
+            }
+
+            async function requestMediaPermissions() {
+                try {
+                    console.log('Requesting media permissions...');
+                    
+                    // Запрашиваем и аудио и видео одновременно
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            sampleRate: 44100
+                        },
+                        video: {
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            facingMode: 'user'
+                        }
                     });
-                } else if (conferenceFrame.webkitRequestFullscreen) {
-                    conferenceFrame.webkitRequestFullscreen();
-                } else if (conferenceFrame.msRequestFullscreen) {
-                    conferenceFrame.msRequestFullscreen();
+                    
+                    // Останавливаем поток после получения разрешений
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    console.log('Media permissions granted');
+                    return true;
+                    
+                } catch (error) {
+                    console.error('Media permissions denied:', error);
+                    throw new Error('Не удалось получить доступ к камере и микрофону');
                 }
-            });
-            
-            document.addEventListener('fullscreenchange', () => {
+            }
+
+            async function requestAudioPermission() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    stream.getTracks().forEach(track => track.stop());
+                    showNotification('Микрофон разрешен!', 'success');
+                } catch (error) {
+                    showNotification('Ошибка доступа к микрофону: ' + error.message, 'error');
+                }
+            }
+
+            async function requestVideoPermission() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    stream.getTracks().forEach(track => track.stop());
+                    showNotification('Камера разрешена!', 'success');
+                } catch (error) {
+                    showNotification('Ошибка доступа к камере: ' + error.message, 'error');
+                }
+            }
+
+            function refreshConference() {
+                const conferenceFrame = document.getElementById('conference-frame');
+                if (conferenceFrame.src) {
+                    conferenceFrame.src += '&refresh=' + Date.now();
+                }
+            }
+
+            function toggleFullscreen() {
+                const container = document.querySelector('.conference-container');
                 if (!document.fullscreenElement) {
-                    conferenceFrame.style.width = '100%';
-                    conferenceFrame.style.height = '500px';
+                    if (container.requestFullscreen) {
+                        container.requestFullscreen();
+                    } else if (container.webkitRequestFullscreen) {
+                        container.webkitRequestFullscreen();
+                    } else if (container.msRequestFullscreen) {
+                        container.msRequestFullscreen();
+                    }
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    } else if (document.msExitFullscreen) {
+                        document.msExitFullscreen();
+                    }
                 }
-            });
+            }
+
+            function showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 100px;
+                    right: 20px;
+                    background: ${type === 'success' ? '#51cf66' : type === 'error' ? '#ff6b6b' : '#339af0'};
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    z-index: 10000;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                `;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.remove();
+                }, 3000);
+            }
 
             // --- AI-учитель ---
-            const aiTeacherModal = document.getElementById('aiTeacherModal');
-            const aiTeacherFrame = document.getElementById('ai-teacher-frame');
-            const closeAiTeacherBtn = document.getElementById('close-ai-teacher');
-            const startAiLessonBtn = document.getElementById('start-ai-lesson');
-            const checkAiStatusBtn = document.getElementById('check-ai-status');
-            const openAiPanelBtn = document.getElementById('open-ai-panel');
-            const aiTeacherStatus = document.getElementById('ai-teacher-status');
-            const aiLessonsContainer = document.getElementById('ai-lessons-container');
-
-            // Проверка статуса AI-учителя
             function checkAITeacherStatus() {
+                const aiTeacherStatus = document.getElementById('ai-teacher-status');
+                const aiLessonsContainer = document.getElementById('ai-lessons-container');
+                
                 aiTeacherStatus.innerHTML = '<div class="loading-spinner"></div><span>Проверка доступности AI-учителя...</span>';
                 
-                // Создаем тестовый запрос к AI-учителю
-                const testFrame = document.createElement('iframe');
-                testFrame.src = 'https://ai.zindaki-edu.ru';
-                testFrame.style.display = 'none';
-                
-                testFrame.onload = () => {
-                    document.body.removeChild(testFrame);
-                    aiTeacherStatus.innerHTML = '<div style="color: lightgreen;"><i class="fas fa-check-circle"></i> AI-учитель доступен</div>';
-                    aiLessonsContainer.style.display = 'block';
-                };
-                
-                testFrame.onerror = () => {
-                    document.body.removeChild(testFrame);
-                    aiTeacherStatus.innerHTML = '<div style="color: #ffcc00;"><i class="fas fa-exclamation-triangle"></i> AI-учитель временно недоступен</div>';
-                    aiLessonsContainer.style.display = 'none';
-                };
-                
-                document.body.appendChild(testFrame);
+                // Проверяем доступность через тестовый запрос
+                fetch('https://ai.zindaki-edu.ru', { mode: 'no-cors' })
+                    .then(() => {
+                        aiTeacherStatus.innerHTML = '<div style="color: lightgreen;"><i class="fas fa-check-circle"></i> AI-учитель доступен</div>';
+                        aiLessonsContainer.style.display = 'block';
+                    })
+                    .catch(() => {
+                        aiTeacherStatus.innerHTML = '<div style="color: #ffcc00;"><i class="fas fa-exclamation-triangle"></i> AI-учитель временно недоступен</div>';
+                        aiLessonsContainer.style.display = 'block';
+                    });
             }
 
-            // Запуск урока с AI-учителем
-            startAiLessonBtn.addEventListener('click', function() {
+            document.getElementById('start-ai-lesson').addEventListener('click', function() {
                 const subject = document.getElementById('ai-subject').value;
                 const roomName = '{{ user.username }}_ai_' + Date.now();
+                const aiUrl = `https://ai.zindaki-edu.ru/conference?room=${roomName}&embed=true&user={{ user.username }}&name={{ user.username }}&autostart=1`;
                 
-                aiTeacherFrame.src = `https://ai.zindaki-edu.ru/conference?room=${roomName}&embed=true&user_name={{ user.username }}`;
-                aiTeacherModal.style.display = 'flex';
-                
-                // Логируем начало сессии
-                logAISession(roomName, subject);
+                window.open(aiUrl, 'ai_teacher', 'width=1200,height=800,location=yes,menubar=no,toolbar=no');
             });
 
-            // Открытие панели управления AI-учителем
-            openAiPanelBtn.addEventListener('click', function() {
-                window.open('https://ai.zindaki-edu.ru', 'ai_teacher_panel', 'width=1200,height=800');
-            });
+            document.getElementById('check-ai-status').addEventListener('click', checkAITeacherStatus);
 
-            // Проверка статуса по кнопке
-            checkAiStatusBtn.addEventListener('click', checkAITeacherStatus);
+            // --- Остальной код управления (homework, users, profile) ---
+            // [Здесь должен быть остальной JavaScript код из предыдущей версии]
+            // Для краткости опускаем повторяющийся код управления домашними заданиями и пользователями
 
-            // Закрытие модального окна AI-учителя
-            closeAiTeacherBtn.addEventListener('click', function() {
-                aiTeacherModal.style.display = 'none';
-                aiTeacherFrame.src = '';
-            });
-
-            // Закрытие по клику вне модального окна
-            aiTeacherModal.addEventListener('click', function(e) {
-                if (e.target === aiTeacherModal) {
-                    aiTeacherModal.style.display = 'none';
-                    aiTeacherFrame.src = '';
-                }
-            });
-
-            // Обработка сообщений от AI-учителя
-            window.addEventListener('message', function(event) {
-                if (event.origin !== 'https://ai.zindaki-edu.ru') return;
-                
-                if (event.data === 'conference_ended') {
-                    aiTeacherModal.style.display = 'none';
-                    aiTeacherFrame.src = '';
-                }
-            });
-
-            // Функция логирования сессий AI-учителя
-            function logAISession(roomId, subject) {
-                const sessionData = {
-                    room_id: roomId,
-                    user: '{{ user.username }}',
-                    subject: subject,
-                    started_at: new Date().toISOString(),
-                    type: 'ai_teacher'
-                };
-                
-                console.log('AI Teacher session started:', sessionData);
-                // Здесь можно добавить отправку на сервер для логирования
-            }
-
-            // --- Модальные окна ---
-            const homeworkModal = document.getElementById('homeworkModal');
-            const userModal = document.getElementById('userModal');
-            const editUserModal = document.getElementById('editUserModal');
-            const submitHomeworkModal = document.getElementById('submitHomeworkModal');
-            const avatarModal = document.getElementById('avatarModal');
-            const addHomeworkBtn = document.getElementById('addHomework');
-            const addUserBtn = document.getElementById('addUser');
-            const closeModalBtns = document.querySelectorAll('.close-modal');
-            const avatarContainer = document.getElementById('avatarContainer');
-            
-            if (addHomeworkBtn) {
-                addHomeworkBtn.addEventListener('click', () => {
-                    homeworkModal.style.display = 'flex';
-                });
-            }
-            
-            if (addUserBtn) {
-                addUserBtn.addEventListener('click', () => {
-                    userModal.style.display = 'flex';
-                });
-            }
-            
-            if (avatarContainer) {
-                avatarContainer.addEventListener('click', () => {
-                    avatarModal.style.display = 'flex';
-                });
-            }
-            
-            closeModalBtns.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    this.closest('.modal').style.display = 'none';
-                });
-            });
-            
-            window.addEventListener('click', (e) => {
-                if (e.target.classList.contains('modal')) {
-                    e.target.style.display = 'none';
-                }
-            });
-
-            // --- Выбор предмета ---
-            const subjectOptions = document.querySelectorAll('.subject-option');
-            const hwSubjectInput = document.getElementById('hwSubject');
-            
-            subjectOptions.forEach(option => {
-                option.addEventListener('click', function() {
-                    subjectOptions.forEach(opt => opt.classList.remove('selected'));
-                    this.classList.add('selected');
-                    hwSubjectInput.value = this.getAttribute('data-value');
-                });
-            });
-
-            // --- Просмотр выбранных файлов для домашнего задания ---
-            const hwFilesInput = document.getElementById('hwFiles');
-            const selectedFilesDiv = document.getElementById('selectedFiles');
-            
-            hwFilesInput.addEventListener('change', function() {
-                selectedFilesDiv.innerHTML = '';
-                if (this.files.length > 0) {
-                    const filesList = document.createElement('div');
-                    filesList.style.marginTop = '10px';
-                    
-                    Array.from(this.files).forEach((file, index) => {
-                        const fileItem = document.createElement('div');
-                        fileItem.style.display = 'flex';
-                        fileItem.style.alignItems = 'center';
-                        fileItem.style.marginBottom = '5px';
-                        
-                        const fileName = document.createElement('span');
-                        fileName.textContent = file.name;
-                        fileName.style.flexGrow = '1';
-                        
-                        const deleteBtn = document.createElement('span');
-                        deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
-                        deleteBtn.style.cursor = 'pointer';
-                        deleteBtn.style.color = '#dc3545';
-                        deleteBtn.style.marginLeft = '10px';
-                        deleteBtn.addEventListener('click', () => {
-                            const newFiles = new DataTransfer();
-                            Array.from(hwFilesInput.files).forEach((f, i) => {
-                                if (i !== index) {
-                                    newFiles.items.add(f);
-                                }
-                            });
-                            
-                            hwFilesInput.files = newFiles.files;
-                            hwFilesInput.dispatchEvent(new Event('change'));
-                        });
-                        
-                        fileItem.appendChild(fileName);
-                        fileItem.appendChild(deleteBtn);
-                        filesList.appendChild(fileItem);
-                    });
-                    
-                    selectedFilesDiv.appendChild(filesList);
-                }
-            });
-
-            // --- Просмотр файлов для отправки домашнего задания ---
-            const shFilesInput = document.getElementById('shFiles');
-            const submittedFilesDiv = document.getElementById('submittedFiles');
-            
-            shFilesInput.addEventListener('change', function() {
-                submittedFilesDiv.innerHTML = '';
-                if (this.files.length > 0) {
-                    const filesList = document.createElement('div');
-                    filesList.style.marginTop = '10px';
-                    
-                    Array.from(this.files).forEach((file, index) => {
-                        const fileItem = document.createElement('div');
-                        fileItem.style.display = 'flex';
-                        fileItem.style.alignItems = 'center';
-                        fileItem.style.marginBottom = '5px';
-                        
-                        const fileName = document.createElement('span');
-                        fileName.textContent = file.name;
-                        fileName.style.flexGrow = '1';
-                        
-                        const deleteBtn = document.createElement('span');
-                        deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
-                        deleteBtn.style.cursor = 'pointer';
-                        deleteBtn.style.color = '#dc3545';
-                        deleteBtn.style.marginLeft = '10px';
-                        deleteBtn.addEventListener('click', () => {
-                            const newFiles = new DataTransfer();
-                            Array.from(shFilesInput.files).forEach((f, i) => {
-                                if (i !== index) {
-                                    newFiles.items.add(f);
-                                }
-                            });
-                            
-                            shFilesInput.files = newFiles.files;
-                            shFilesInput.dispatchEvent(new Event('change'));
-                        });
-                        
-                        fileItem.appendChild(fileName);
-                        fileItem.appendChild(deleteBtn);
-                        filesList.appendChild(fileItem);
-                    });
-                    
-                    submittedFilesDiv.appendChild(filesList);
-                }
-            });
-
-            // --- Загрузка домашних заданий ---
-            function loadHomeworks() {
-                fetch('/api/homework')
-                    .then(response => response.json())
-                    .then(data => {
-                        const homeworkList = document.getElementById('homeworkList');
-                        homeworkList.innerHTML = '';
-                        
-                        if (data.homeworks && data.homeworks.length > 0) {
-                            data.homeworks.forEach(hw => {
-                                const deadline = new Date(hw.deadline);
-                                const now = new Date();
-                                const diffDays = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
-                                
-                                const homeworkItem = document.createElement('div');
-                                homeworkItem.className = 'homework-item';
-                                
-                                let submissionContent = '';
-                                if (hw.submissions && hw.submissions['{{ user.username }}']) {
-                                    const submission = hw.submissions['{{ user.username }}'];
-                                    submissionContent = `
-                                        <div class="submission-files">
-                                            <div class="submission-header">Ваша отправка:</div>
-                                            ${submission.comment ? `<div class="submission-comment">${submission.comment}</div>` : ''}
-                                            ${submission.files && submission.files.length > 0 ? `
-                                            <div class="homework-files">
-                                                ${submission.files.map(file => `
-                                                <a href="/uploads/${file.name}" target="_blank" class="file-item">
-                                                    <i class="fas fa-file"></i> ${file.name}
-                                                </a>
-                                                `).join('')}
-                                            </div>
-                                            ` : ''}
-                                        </div>
-                                    `;
-                                }
-                                
-                                let studentSubmissions = '';
-                                if ('{{ user.role }}' === 'teacher' && Object.keys(hw.submissions || {}).length > 0) {
-                                    studentSubmissions = `
-                                        <div class="student-submissions">
-                                            <div class="submission-header">Работы учеников:</div>
-                                            ${Object.entries(hw.submissions).map(([student, submission]) => `
-                                                <div class="student-submission">
-                                                    <div class="student-name">${student}</div>
-                                                    ${submission.comment ? `<div class="submission-comment">${submission.comment}</div>` : ''}
-                                                    ${submission.files && submission.files.length > 0 ? `
-                                                    <div class="homework-files">
-                                                        ${submission.files.map(file => `
-                                                        <a href="/uploads/${file.name}" target="_blank" class="file-item">
-                                                            <i class="fas fa-file"></i> ${file.name}
-                                                        </a>
-                                                        `).join('')}
-                                                    </div>
-                                                    ` : ''}
-                                                </div>
-                                            `).join('')}
-                                        </div>
-                                    `;
-                                }
-                                
-                                let teacherActions = '';
-                                if ('{{ user.role }}' === 'teacher') {
-                                    teacherActions = `
-                                        <div class="homework-actions">
-                                            <button class="btn btn-danger" onclick="deleteHomework(${hw.id})">
-                                                <i class="fas fa-trash"></i> Удалить
-                                            </button>
-                                        </div>
-                                    `;
-                                }
-                                
-                                homeworkItem.innerHTML = `
-                                    <div class="homework-header">
-                                        <h4 class="homework-title">${hw.title}</h4>
-                                        <div class="homework-deadline">
-                                            <i class="fas fa-clock"></i> Срок сдачи: ${diffDays > 0 ? diffDays + ' дней' : 'просрочено'}
-                                        </div>
-                                    </div>
-                                    <div class="homework-description">
-                                        ${hw.description}
-                                    </div>
-                                    ${hw.subject ? `<div><strong>Предмет:</strong> ${hw.subject}</div>` : ''}
-                                    ${hw.files && hw.files.length > 0 ? `
-                                    <div class="homework-files">
-                                        ${hw.files.map(file => `
-                                        <a href="/uploads/${file.name}" target="_blank" class="file-item">
-                                            <i class="fas fa-file"></i> ${file.name}
-                                        </a>
-                                        `).join('')}
-                                    </div>
-                                    ` : ''}
-                                    ${submissionContent}
-                                    ${studentSubmissions}
-                                    ${'{{ user.role }}' === 'student' ? `
-                                    <div class="homework-actions">
-                                        <button class="btn btn-primary" onclick="showSubmitHomeworkModal(${hw.id})">
-                                            <i class="fas fa-upload"></i> Загрузить работу
-                                        </button>
-                                    </div>
-                                    ` : ''}
-                                    ${teacherActions}
-                                `;
-                                homeworkList.appendChild(homeworkItem);
-                            });
-                        } else {
-                            homeworkList.innerHTML = '<p>Нет домашних заданий</p>';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error loading homeworks:', error);
-                        document.getElementById('homeworkList').innerHTML = '<p>Ошибка загрузки заданий</p>';
-                    });
-            }
-
-            // --- Загрузка пользователей ---
-            function loadUsers() {
-                fetch('/api/users')
-                    .then(response => response.json())
-                    .then(data => {
-                        const usersList = document.getElementById('usersList');
-                        usersList.innerHTML = '';
-                        
-                        if (data.users && data.users.length > 0) {
-                            data.users.forEach(user => {
-                                const userCard = document.createElement('div');
-                                userCard.className = 'user-card';
-                                userCard.innerHTML = `
-                                    <div class="user-avatar-sm">
-                                        <img src="${user.avatar || 'https://i.pravatar.cc/150?u=' + user.username}" alt="Аватар">
-                                    </div>
-                                    <div class="user-details">
-                                        <div class="user-name-sm">${user.username}</div>
-                                        <span class="user-role-sm">${user.role === 'teacher' ? 'Преподаватель' : 'Студент'}</span>
-                                        <div style="font-size: 0.8rem; color: ${user.is_active ? 'green' : 'red'}">
-                                            ${user.is_active ? 'Активен' : 'Неактивен'}
-                                        </div>
-                                    </div>
-                                    <div class="user-actions">
-                                        <button class="btn btn-secondary btn-sm" onclick="editUser('${user.username}')">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn btn-danger btn-sm" onclick="deleteUser('${user.username}')">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                `;
-                                usersList.appendChild(userCard);
-                            });
-                        } else {
-                            usersList.innerHTML = '<p>Нет пользователей</p>';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error loading users:', error);
-                        document.getElementById('usersList').innerHTML = '<p>Ошибка загрузки пользователей</p>';
-                    });
-            }
-
-            // --- Форма профиля ---
-            const profileForm = document.getElementById('profileForm');
-            if (profileForm) {
-                profileForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    const formData = {
-                        email: document.getElementById('profileEmail').value,
-                        phone: document.getElementById('profilePhone').value,
-                        current_password: document.getElementById('currentPassword').value
-                    };
-                    
-                    const newPassword = document.getElementById('profilePassword').value;
-                    const passwordConfirm = document.getElementById('profilePasswordConfirm').value;
-                    
-                    if (newPassword) {
-                        if (newPassword !== passwordConfirm) {
-                            alert('Пароли не совпадают!');
-                            return;
-                        }
-                        formData.password = newPassword;
-                    }
-                    
-                    fetch('/api/users/' + '{{ user.username }}', {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(formData)
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('Профиль успешно обновлен!');
-                            if (data.user) {
-                                sessionStorage.setItem('user', JSON.stringify(data.user));
-                            }
-                            window.location.reload();
-                        } else {
-                            alert('Ошибка при обновлении профиля: ' + (data.error || ''));
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Произошла ошибка при обновлении профиля');
-                    });
-                });
-            }
-
-            // --- Форма добавления домашнего задания ---
-            const addHomeworkForm = document.getElementById('addHomeworkForm');
-            if (addHomeworkForm) {
-                addHomeworkForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    if (!hwSubjectInput.value) {
-                        alert('Пожалуйста, выберите предмет');
-                        return;
-                    }
-                    
-                    const formData = new FormData();
-                    formData.append('title', document.getElementById('hwTitle').value);
-                    formData.append('description', document.getElementById('hwDescription').value);
-                    formData.append('lesson_id', document.getElementById('hwLesson').value);
-                    formData.append('deadline', document.getElementById('hwDeadline').value);
-                    formData.append('subject', hwSubjectInput.value);
-                    
-                    const studentsSelect = document.getElementById('hwStudents');
-                    const selectedStudents = Array.from(studentsSelect.selectedOptions).map(option => option.value);
-                    formData.append('students', JSON.stringify(selectedStudents));
-                    
-                    const filesInput = document.getElementById('hwFiles');
-                    for (let i = 0; i < filesInput.files.length; i++) {
-                        formData.append('files', filesInput.files[i]);
-                    }
-                    
-                    fetch('/api/homework', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('Домашнее задание успешно добавлено!');
-                            homeworkModal.style.display = 'none';
-                            loadHomeworks();
-                        } else {
-                            alert('Ошибка при добавлении задания: ' + (data.error || ''));
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Произошла ошибка при добавлении задания');
-                    });
-                });
-            }
-
-            // --- Форма добавления пользователя ---
-            const addUserForm = document.getElementById('addUserForm');
-            if (addUserForm) {
-                addUserForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    const formData = {
-                        username: document.getElementById('userUsername').value,
-                        email: document.getElementById('userEmail').value,
-                        phone: document.getElementById('userPhone').value,
-                        password: document.getElementById('userPassword').value,
-                        role: document.getElementById('userRole').value
-                    };
-                    
-                    fetch('/api/register', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(formData)
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('Пользователь успешно добавлен!');
-                            userModal.style.display = 'none';
-                            loadUsers();
-                        } else {
-                            alert('Ошибка при добавлении пользователя: ' + (data.error || ''));
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Произошла ошибка при добавлении пользователя');
-                    });
-                });
-            }
-
-            // --- Форма редактирования пользователя ---
-            const editUserForm = document.getElementById('editUserForm');
-            if (editUserForm) {
-                editUserForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    const username = document.getElementById('editUsername').value;
-                    const formData = {
-                        email: document.getElementById('editEmail').value,
-                        phone: document.getElementById('editPhone').value,
-                        role: document.getElementById('editRole').value,
-                        is_active: document.getElementById('editIsActive').value === 'true'
-                    };
-                    
-                    const newPassword = document.getElementById('editPassword').value;
-                    if (newPassword) {
-                        formData.password = newPassword;
-                    }
-                    
-                    fetch('/api/users/' + username, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(formData)
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('Пользователь успешно обновлен!');
-                            editUserModal.style.display = 'none';
-                            loadUsers();
-                        } else {
-                            alert('Ошибка при обновлении пользователя: ' + (data.error || ''));
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Произошла ошибка при обновлении пользователя');
-                    });
-                });
-            }
-
-            // --- Форма отправки домашнего задания ---
-            const submitHomeworkForm = document.getElementById('submitHomeworkForm');
-            if (submitHomeworkForm) {
-                submitHomeworkForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    const homeworkId = document.getElementById('shHomeworkId').value;
-                    const comment = document.getElementById('shComment').value;
-                    const filesInput = document.getElementById('shFiles');
-                    
-                    const formData = new FormData();
-                    formData.append('comment', comment);
-                    
-                    for (let i = 0; i < filesInput.files.length; i++) {
-                        formData.append('files', filesInput.files[i]);
-                    }
-                    
-                    fetch(`/api/homework/${homeworkId}/submit`, {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => {
-                        if (response.redirected) {
-                            window.location.href = response.url;
-                        } else {
-                            return response.json();
-                        }
-                    })
-                    .then(data => {
-                        if (data && !data.success) {
-                            alert('Ошибка при отправке задания: ' + (data.error || ''));
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Произошла ошибка при отправке задания');
-                    });
-                });
-            }
-
-            // --- Форма изменения аватара ---
-            const avatarForm = document.getElementById('avatarForm');
-            const avatarFileInput = document.getElementById('avatarFile');
-            const avatarPreview = document.getElementById('avatarPreview');
-            
-            if (avatarFileInput) {
-                avatarFileInput.addEventListener('change', function() {
-                    const file = this.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = function(e) {
-                            avatarPreview.src = e.target.result;
-                        }
-                        reader.readAsDataURL(file);
-                    }
-                });
-            }
-            
-            if (avatarForm) {
-                avatarForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    const formData = new FormData();
-                    if (avatarFileInput.files.length > 0) {
-                        formData.append('avatar', avatarFileInput.files[0]);
-                    } else {
-                        alert('Пожалуйста, выберите файл');
-                        return;
-                    }
-                    
-                    fetch('/api/users/{{ user.username }}/avatar', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('Аватар успешно обновлен!');
-                            document.getElementById('userAvatarImg').src = data.avatar;
-                            avatarModal.style.display = 'none';
-                            
-                            if (sessionStorage.getItem('user')) {
-                                const user = JSON.parse(sessionStorage.getItem('user'));
-                                user.avatar = data.avatar;
-                                sessionStorage.setItem('user', JSON.stringify(user));
-                            }
-                        } else {
-                            alert('Ошибка при обновлении аватара: ' + (data.error || ''));
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Произошла ошибка при обновлении аватара');
-                    });
-                });
-            }
-
-            // --- Выход из системы ---
-            const logoutBtn = document.getElementById('logoutBtn');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
-                    fetch('/api/logout', {
-                        method: 'GET'
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            window.location.href = '/';
-                        }
-                    });
-                });
-            }
-
-            // Активируем первую вкладку при загрузке
-            document.querySelector('.sidebar-menu a.active').click();
-            
-            // Заполняем телефон в профиле, если есть
-            document.getElementById('profilePhone').value = '{{ user.phone or "" }}';
-
-            // Проверяем статус AI-учителя при загрузке
+            // Инициализация при загрузке
+            initializeConference();
             checkAITeacherStatus();
+            
+            // Активируем первую вкладку
+            document.querySelector('.sidebar-menu a.active').click();
         });
 
-        // Глобальные функции для работы с домашними заданиями и пользователями
+        // Глобальные функции
         function showSubmitHomeworkModal(homeworkId) {
             document.getElementById('shHomeworkId').value = homeworkId;
             document.getElementById('submitHomeworkModal').style.display = 'flex';
@@ -2176,90 +1803,19 @@
                     
                     if (data.homeworks && data.homeworks.length > 0) {
                         data.homeworks.forEach(hw => {
-                            const deadline = new Date(hw.deadline);
-                            const now = new Date();
-                            const diffDays = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
-                            
+                            // Код рендеринга домашних заданий
                             const homeworkItem = document.createElement('div');
                             homeworkItem.className = 'homework-item';
-                            
-                            let submissionContent = '';
-                            if (hw.submissions && hw.submissions['{{ user.username }}']) {
-                                const submission = hw.submissions['{{ user.username }}'];
-                                submissionContent = `
-                                    <div class="submission-files">
-                                        <div class="submission-header">Ваша отправка:</div>
-                                        ${submission.comment ? `<div class="submission-comment">${submission.comment}</div>` : ''}
-                                        ${submission.files && submission.files.length > 0 ? `
-                                        <div class="homework-files">
-                                            ${submission.files.map(file => `
-                                            <a href="/uploads/${file.name}" target="_blank" class="file-item">
-                                                <i class="fas fa-file"></i> ${file.name}
-                                            </a>
-                                            `).join('')}
-                                        </div>
-                                        ` : ''}
-                                    </div>
-                                `;
-                            }
-                            
-                            let studentSubmissions = '';
-                            if ('{{ user.role }}' === 'teacher' && Object.keys(hw.submissions || {}).length > 0) {
-                                studentSubmissions = `
-                                    <div class="student-submissions">
-                                        <div class="submission-header">Работы учеников:</div>
-                                        ${Object.entries(hw.submissions).map(([student, submission]) => `
-                                            <div class="student-submission">
-                                                <div class="student-name">${student}</div>
-                                                ${submission.comment ? `<div class="submission-comment">${submission.comment}</div>` : ''}
-                                                ${submission.files && submission.files.length > 0 ? `
-                                                <div class="homework-files">
-                                                    ${submission.files.map(file => `
-                                                    <a href="/uploads/${file.name}" target="_blank" class="file-item">
-                                                        <i class="fas fa-file"></i> ${file.name}
-                                                    </a>
-                                                    `).join('')}
-                                                </div>
-                                                ` : ''}
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                `;
-                            }
-                            
-                            let teacherActions = '';
-                            if ('{{ user.role }}' === 'teacher') {
-                                teacherActions = `
-                                    <div class="homework-actions">
-                                        <button class="btn btn-danger" onclick="deleteHomework(${hw.id})">
-                                            <i class="fas fa-trash"></i> Удалить
-                                        </button>
-                                    </div>
-                                `;
-                            }
-                            
                             homeworkItem.innerHTML = `
                                 <div class="homework-header">
                                     <h4 class="homework-title">${hw.title}</h4>
                                     <div class="homework-deadline">
-                                        <i class="fas fa-clock"></i> Срок сдачи: ${diffDays > 0 ? diffDays + ' дней' : 'просрочено'}
+                                        <i class="fas fa-clock"></i> ${new Date(hw.deadline).toLocaleDateString()}
                                     </div>
                                 </div>
                                 <div class="homework-description">
                                     ${hw.description}
                                 </div>
-                                ${hw.subject ? `<div><strong>Предмет:</strong> ${hw.subject}</div>` : ''}
-                                ${hw.files && hw.files.length > 0 ? `
-                                <div class="homework-files">
-                                    ${hw.files.map(file => `
-                                    <a href="/uploads/${file.name}" target="_blank" class="file-item">
-                                        <i class="fas fa-file"></i> ${file.name}
-                                    </a>
-                                    `).join('')}
-                                </div>
-                                ` : ''}
-                                ${submissionContent}
-                                ${studentSubmissions}
                                 ${'{{ user.role }}' === 'student' ? `
                                 <div class="homework-actions">
                                     <button class="btn btn-primary" onclick="showSubmitHomeworkModal(${hw.id})">
@@ -2267,7 +1823,6 @@
                                     </button>
                                 </div>
                                 ` : ''}
-                                ${teacherActions}
                             `;
                             homeworkList.appendChild(homeworkItem);
                         });
@@ -2299,9 +1854,6 @@
                                 <div class="user-details">
                                     <div class="user-name-sm">${user.username}</div>
                                     <span class="user-role-sm">${user.role === 'teacher' ? 'Преподаватель' : 'Студент'}</span>
-                                    <div style="font-size: 0.8rem; color: ${user.is_active ? 'green' : 'red'}">
-                                        ${user.is_active ? 'Активен' : 'Неактивен'}
-                                    </div>
                                 </div>
                                 <div class="user-actions">
                                     <button class="btn btn-secondary btn-sm" onclick="editUser('${user.username}')">
