@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Видеоконференция | Zindaki Academy</title>
+    <style>
+        /* Стили из вашего кода видеоконференции */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: #0f0f12;
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            background: #000;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .video-container.main-view {
+            grid-template-columns: 1fr;
+        }
+
+        .video-container.main-view .video-item:not(.main-video) {
+            position: absolute;
+            width: 200px;
+            height: 150px;
+            bottom: 20px;
+            right: 20px;
+            z-index: 10;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .video-container.main-view .video-item:not(.main-video):hover {
+            transform: scale(1.05);
+            border-color: rgba(0, 150, 255, 0.5);
+            box-shadow: 0 0 20px rgba(0, 150, 255, 0.3);
+        }
+
+        .video-item {
+            position: relative;
+            background: #1a1a1f;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .video-item.main-video {
+            grid-column: 1 / -1;
+            grid-row: 1 / -1;
+            z-index: 5;
+        }
+
+        .video-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .participant-info {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .participant-status {
+            width: 10px;
+            height: 10px;
+            background: #00ff88;
+            border-radius: 50%;
+        }
+
+        .control-panel {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            background: rgba(30, 30, 40, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 12px 24px;
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+        }
+
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 20px;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .control-btn.active {
+            background: #0095ff;
+        }
+
+        .control-btn.danger {
+            background: #ff3b30;
+        }
+
+        .control-btn.danger:hover {
+            background: #ff5a52;
+        }
+
+        .screen-share-item {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 90;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .screen-share-item video {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .screen-share-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 91;
+            display: flex;
+            gap: 10px;
+        }
+
+        .screen-share-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+        }
+
+        .header-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(26, 26, 46, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 101;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .control-panel {
+                bottom: 15px;
+                padding: 10px 15px;
+            }
+            
+            .control-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 18px;
+            }
+
+            .video-container.main-view .video-item:not(.main-video) {
+                width: 120px;
+                height: 90px;
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <!-- Панель заголовка -->
+    <div class="header-bar">
+        <button class="back-btn" onclick="goToDashboard()">
+            <i class="material-icons">arrow_back</i>
+            Назад в кабинет
+        </button>
+        <div class="header-title">
+            Zindaki Academy - Видеоконференция
+            <span id="roomInfo" style="font-size: 0.9rem; opacity: 0.8; margin-left: 1rem;"></span>
+        </div>
+        <div id="connectionStatus" style="font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="material-icons" style="color: #00ff88;">circle</i>
+            <span>Подключено</span>
+        </div>
+    </div>
+
+    <!-- Контейнер для видео участников -->
+    <div class="video-container" id="videoContainer">
+        <!-- Видео будет добавляться динамически -->
+    </div>
+
+    <!-- Контейнер для демонстрации экрана -->
+    <div id="screenShareContainer" style="display: none;">
+        <div class="screen-share-controls">
+            <button class="screen-share-btn" id="stopScreenShareBtn">
+                <i class="material-icons">stop</i>
+                Stop Sharing
+            </button>
+        </div>
+        <video id="screenShareVideo" autoplay playsinline></video>
+    </div>
+
+    <!-- Панель управления -->
+    <div class="control-panel" id="controlPanel">
+        <button class="control-btn" id="toggleVideoBtn" title="Toggle Video">
+            <i class="material-icons">videocam</i>
+        </button>
+        <button class="control-btn" id="toggleAudioBtn" title="Toggle Audio">
+            <i class="material-icons">mic</i>
+        </button>
+        <button class="control-btn" id="screenShareBtn" title="Share Screen">
+            <i class="material-icons">screen_share</i>
+        </button>
+        <button class="control-btn danger" id="leaveBtn" title="Leave Call">
+            <i class="material-icons">call_end</i>
+        </button>
+    </div>
+
+    <!-- Подключаем PeerJS библиотеку -->
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    
+    <script>
+        // Получаем параметры из URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomName = urlParams.get('room') || '{{ room_name }}';
+        const userName = '{{ user_name }}';
+        const userId = '{{ user.username }}';
+
+        // Обновляем информацию о комнате
+        document.getElementById('roomInfo').textContent = `Комната: ${roomName} | Пользователь: ${userName}`;
+
+        // Global variables
+        let localStream = null;
+        let screenStream = null;
+        let currentRoom = roomName;
+        let currentUser = userName;
+        let isVideoEnabled = true;
+        let isAudioEnabled = true;
+        let isScreenSharing = false;
+        let videoTrack = null;
+        let audioTrack = null;
+        let peer = null;
+        let peerId = null;
+        let connections = {};
+        let calls = {};
+        let mainVideoId = null;
+        
+        // Socket.io connection
+        const socket = io();
+        
+        // DOM elements
+        const leaveBtn = document.getElementById('leaveBtn');
+        const toggleVideoBtn = document.getElementById('toggleVideoBtn');
+        const toggleAudioBtn = document.getElementById('toggleAudioBtn');
+        const screenShareBtn = document.getElementById('screenShareBtn');
+        const stopScreenShareBtn = document.getElementById('stopScreenShareBtn');
+        const videoContainer = document.getElementById('videoContainer');
+        const screenShareContainer = document.getElementById('screenShareContainer');
+        const screenShareVideo = document.getElementById('screenShareVideo');
+        const controlPanel = document.getElementById('controlPanel');
+
+        // Initialize conference
+        async function initializeConference() {
+            try {
+                // Get user media
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 30 }
+                    },
+                    audio: {
+                        sampleRate: 16000,
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
+                });
+                
+                // Add local video
+                addLocalVideo(localStream);
+                
+                // Initialize PeerJS
+                peerId = `peer-${Math.random().toString(36).substr(2, 9)}`;
+                peer = new Peer(peerId);
+                
+                peer.on('open', async () => {
+                    console.log('PeerJS connected with ID:', peerId);
+                    
+                    // Join room on server
+                    socket.emit('join_room', {
+                        room_name: currentRoom,
+                        user_id: userId,
+                        user_name: currentUser
+                    });
+                });
+                
+                peer.on('error', (err) => {
+                    console.error('PeerJS error:', err);
+                    showNotification('Connection error: ' + err.message);
+                });
+                
+                peer.on('connection', (conn) => {
+                    console.log('Incoming connection:', conn.peer);
+                    
+                    conn.on('open', () => {
+                        console.log('Connection established with:', conn.peer);
+                        connections[conn.peer] = conn;
+                    });
+                    
+                    conn.on('close', () => {
+                        console.log('Connection closed with:', conn.peer);
+                        removeRemoteVideo(conn.peer);
+                        delete connections[conn.peer];
+                    });
+                });
+                
+                peer.on('call', (call) => {
+                    console.log('Incoming call from:', call.peer);
+                    
+                    // Answer with current stream
+                    const streamToAnswerWith = isScreenSharing && screenStream ? screenStream : localStream;
+                    call.answer(streamToAnswerWith);
+                    
+                    call.on('stream', (remoteStream) => {
+                        addRemoteVideo(call.peer, remoteStream);
+                    });
+                    
+                    call.on('close', () => {
+                        console.log('Call ended with:', call.peer);
+                        removeRemoteVideo(call.peer);
+                        if (calls[call.peer]) {
+                            delete calls[call.peer];
+                        }
+                    });
+                    
+                    calls[call.peer] = call;
+                });
+                
+            } catch (error) {
+                console.error('Error initializing conference:', error);
+                showNotification('Error: ' + error.message);
+            }
+        }
+
+        // Socket event handlers
+        socket.on('connected', (data) => {
+            console.log('Connected to server:', data.message);
+        });
+
+        socket.on('room_joined', (data) => {
+            console.log('Joined room:', data.room_name);
+            // Connect to existing participants
+            for (const [participantId, participant] of Object.entries(data.participants)) {
+                connectToPeer(participantId, participant.user_name);
+            }
+        });
+
+        socket.on('user_joined', (data) => {
+            console.log('User joined:', data.user_name);
+            connectToPeer(data.user_id, data.user_name);
+        });
+
+        socket.on('user_left', (data) => {
+            console.log('User left:', data.user_id);
+            removeRemoteVideo(data.user_id);
+        });
+
+        socket.on('webrtc_offer', (data) => {
+            // Handle WebRTC offer from another user
+            handleWebRTCOffer(data);
+        });
+
+        socket.on('webrtc_answer', (data) => {
+            // Handle WebRTC answer from another user
+            handleWebRTCAnswer(data);
+        });
+
+        socket.on('ice_candidate', (data) => {
+            // Handle ICE candidate from another user
+            handleICECandidate(data);
+        });
+
+        // WebRTC handlers
+        function handleWebRTCOffer(data) {
+            // ... (ваш существующий код обработки offer)
+        }
+
+        function handleWebRTCAnswer(data) {
+            // ... (ваш существующий код обработки answer)
+        }
+
+        function handleICECandidate(data) {
+            // ... (ваш существующий код обработки ICE candidate)
+        }
+
+        // Connect to specific peer
+        function connectToPeer(remotePeerId, remoteUserName) {
+            if (connections[remotePeerId]) return;
+            
+            try {
+                const conn = peer.connect(remotePeerId);
+                
+                conn.on('open', () => {
+                    console.log('Connected to:', remotePeerId);
+                    connections[remotePeerId] = conn;
+                    initiateVideoCall(remotePeerId);
+                });
+                
+                conn.on('close', () => {
+                    console.log('Connection closed with:', remotePeerId);
+                    removeRemoteVideo(remotePeerId);
+                    delete connections[remotePeerId];
+                });
+                
+            } catch (error) {
+                console.error('Error connecting to peer:', error);
+            }
+        }
+
+        // Initiate video call
+        function initiateVideoCall(remotePeerId) {
+            if (calls[remotePeerId]) return;
+            
+            try {
+                const streamToSend = isScreenSharing && screenStream ? screenStream : localStream;
+                const call = peer.call(remotePeerId, streamToSend);
+                
+                call.on('stream', (remoteStream) => {
+                    addRemoteVideo(remotePeerId, remoteStream);
+                });
+                
+                call.on('close', () => {
+                    console.log('Call ended with:', remotePeerId);
+                    removeRemoteVideo(remotePeerId);
+                    delete calls[remotePeerId];
+                });
+                
+                calls[remotePeerId] = call;
+            } catch (error) {
+                console.error('Error initiating call:', error);
+            }
+        }
+
+        // Add local video
+        function addLocalVideo(stream) {
+            const videoItem = document.createElement('div');
+            videoItem.className = 'video-item local-video';
+            videoItem.id = 'localVideoItem';
+            
+            const video = document.createElement('video');
+            video.id = 'localVideo';
+            video.autoplay = true;
+            video.muted = true;
+            video.playsInline = true;
+            video.srcObject = stream;
+            
+            const participantInfo = document.createElement('div');
+            participantInfo.className = 'participant-info';
+            participantInfo.innerHTML = `
+                <div class="participant-status"></div>
+                <span>${currentUser} (Вы)</span>
+            `;
+            
+            videoItem.appendChild(video);
+            videoItem.appendChild(participantInfo);
+            videoContainer.appendChild(videoItem);
+            
+            videoTrack = stream.getVideoTracks()[0];
+            audioTrack = stream.getAudioTracks()[0];
+            
+            // Add click handler for main video selection
+            videoItem.addEventListener('click', () => {
+                setMainVideo('localVideoItem');
+            });
+        }
+
+        // Add remote video
+        function addRemoteVideo(peerId, stream) {
+            if (document.getElementById(`remoteVideo-${peerId}`)) return;
+            
+            const videoItem = document.createElement('div');
+            videoItem.className = 'video-item';
+            videoItem.id = `videoItem-${peerId}`;
+            
+            const video = document.createElement('video');
+            video.id = `remoteVideo-${peerId}`;
+            video.autoplay = true;
+            video.playsInline = true;
+            video.srcObject = stream;
+            
+            const participantInfo = document.createElement('div');
+            participantInfo.className = 'participant-info';
+            participantInfo.innerHTML = `
+                <div class="participant-status"></div>
+                <span>${peerId}</span>
+            `;
+            
+            videoItem.appendChild(video);
+            videoItem.appendChild(participantInfo);
+            videoContainer.appendChild(videoItem);
+            
+            videoItem.addEventListener('click', () => {
+                setMainVideo(`videoItem-${peerId}`);
+            });
+            
+            if (!mainVideoId) {
+                setMainVideo(`videoItem-${peerId}`);
+            }
+        }
+
+        // Remove remote video
+        function removeRemoteVideo(peerId) {
+            const videoItem = document.getElementById(`videoItem-${peerId}`);
+            if (videoItem) {
+                if (videoItem.id === mainVideoId) {
+                    const remainingVideos = document.querySelectorAll('.video-item:not(.main-video)');
+                    if (remainingVideos.length > 0) {
+                        setMainVideo(remainingVideos[0].id);
+                    } else {
+                        exitFullscreenMode();
+                    }
+                }
+                videoItem.remove();
+            }
+        }
+
+        // Set main video
+        function setMainVideo(videoItemId) {
+            if (mainVideoId === videoItemId) {
+                exitFullscreenMode();
+                return;
+            }
+            
+            if (mainVideoId) {
+                const prevMainVideo = document.getElementById(mainVideoId);
+                if (prevMainVideo) {
+                    prevMainVideo.classList.remove('main-video');
+                }
+            }
+            
+            const newMainVideo = document.getElementById(videoItemId);
+            if (newMainVideo) {
+                newMainVideo.classList.add('main-video');
+                mainVideoId = videoItemId;
+                enterFullscreenMode();
+            }
+        }
+
+        // Enter fullscreen mode
+        function enterFullscreenMode() {
+            videoContainer.classList.add('main-view');
+        }
+        
+        // Exit fullscreen mode
+        function exitFullscreenMode() {
+            videoContainer.classList.remove('main-view');
+            mainVideoId = null;
+            document.querySelectorAll('.video-item').forEach(item => {
+                item.classList.remove('main-video');
+            });
+        }
+
+        // Control event listeners
+        toggleVideoBtn.addEventListener('click', () => {
+            isVideoEnabled = !isVideoEnabled;
+            if (videoTrack) {
+                videoTrack.enabled = isVideoEnabled;
+                toggleVideoBtn.innerHTML = isVideoEnabled 
+                    ? '<i class="material-icons">videocam</i>' 
+                    : '<i class="material-icons">videocam_off</i>';
+                toggleVideoBtn.classList.toggle('active', !isVideoEnabled);
+            }
+        });
+        
+        toggleAudioBtn.addEventListener('click', () => {
+            isAudioEnabled = !isAudioEnabled;
+            if (audioTrack) {
+                audioTrack.enabled = isAudioEnabled;
+                toggleAudioBtn.innerHTML = isAudioEnabled 
+                    ? '<i class="material-icons">mic</i>' 
+                    : '<i class="material-icons">mic_off</i>';
+                toggleAudioBtn.classList.toggle('active', !isAudioEnabled);
+            }
+        });
+        
+        screenShareBtn.addEventListener('click', toggleScreenShare);
+        stopScreenShareBtn.addEventListener('click', stopScreenShare);
+
+        // Screen sharing functions
+        async function toggleScreenShare() {
+            if (isScreenSharing) {
+                await stopScreenShare();
+            } else {
+                await startScreenShare();
+            }
+        }
+
+        async function startScreenShare() {
+            try {
+                screenStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 },
+                        frameRate: { ideal: 30 }
+                    },
+                    audio: false
+                });
+                
+                screenShareVideo.srcObject = screenStream;
+                screenShareContainer.style.display = 'block';
+                
+                screenShareBtn.innerHTML = '<i class="material-icons">stop_screen_share</i>';
+                screenShareBtn.classList.add('active');
+                
+                isScreenSharing = true;
+                
+                // Replace video track in all calls
+                const screenVideoTrack = screenStream.getVideoTracks()[0];
+                for (const call of Object.values(calls)) {
+                    if (call.peerConnection) {
+                        const senders = call.peerConnection.getSenders();
+                        for (const sender of senders) {
+                            if (sender.track && sender.track.kind === 'video') {
+                                await sender.replaceTrack(screenVideoTrack);
+                            }
+                        }
+                    }
+                }
+                
+                screenStream.getVideoTracks()[0].onended = () => {
+                    stopScreenShare();
+                };
+                
+            } catch (error) {
+                console.error('Error starting screen share:', error);
+                showNotification('Error: ' + error.message);
+            }
+        }
+
+        async function stopScreenShare() {
+            if (!isScreenSharing) return;
+            
+            screenShareContainer.style.display = 'none';
+            
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+                screenStream = null;
+            }
+            
+            screenShareBtn.innerHTML = '<i class="material-icons">screen_share</i>';
+            screenShareBtn.classList.remove('active');
+            
+            isScreenSharing = false;
+            
+            // Restore camera track
+            if (localStream) {
+                const cameraVideoTrack = localStream.getVideoTracks()[0];
+                for (const call of Object.values(calls)) {
+                    if (call.peerConnection) {
+                        const senders = call.peerConnection.getSenders();
+                        for (const sender of senders) {
+                            if (sender.track && sender.track.kind === 'video') {
+                                await sender.replaceTrack(cameraVideoTrack);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Leave conference
+        leaveBtn.addEventListener('click', () => {
+            if (confirm('Завершить конференцию?')) {
+                leaveConference();
+            }
+        });
+
+        function leaveConference() {
+            // Notify server
+            socket.emit('leave_room', {
+                room_name: currentRoom,
+                user_id: userId
+            });
+            
+            // Clean up
+            if (isScreenSharing) {
+                stopScreenShare();
+            }
+            
+            for (const conn of Object.values(connections)) {
+                conn.close();
+            }
+            
+            for (const call of Object.values(calls)) {
+                call.close();
+            }
+            
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+            
+            if (peer) {
+                peer.destroy();
+            }
+            
+            socket.disconnect();
+            
+            // Redirect to dashboard
+            goToDashboard();
+        }
+
+        function goToDashboard() {
+            window.location.href = '/dashboard';
+        }
+
+        function showNotification(message) {
+            // Simple notification implementation
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 80px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(0, 149, 255, 0.9);
+                color: white;
+                padding: 12px 24px;
+                border-radius: 8px;
+                z-index: 1000;
+                animation: slideIn 0.3s ease-out;
+            `;
+            notification.innerHTML = `
+                <i class="material-icons" style="margin-right: 10px;">info</i>
+                <span>${message}</span>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', initializeConference);
+
+        // Handle page unload
+        window.addEventListener('beforeunload', () => {
+            leaveConference();
+        });
+    </script>
+</body>
+</html>
