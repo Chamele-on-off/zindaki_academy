@@ -89,6 +89,14 @@
             animation: pulse 2s infinite;
         }
 
+        .status-indicator.connecting {
+            background: #ff9500;
+        }
+
+        .status-indicator.error {
+            background: #ff3b30;
+        }
+
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
@@ -217,7 +225,7 @@
             transform: translateX(-50%);
             display: flex;
             gap: 15px;
-            background: rgba(30, 30, 40, 0.8);
+            background: rgba(30, 30, 40, 0.9);
             backdrop-filter: blur(10px);
             padding: 12px 24px;
             border-radius: 50px;
@@ -336,7 +344,7 @@
             position: fixed;
             top: 80px;
             right: 20px;
-            background: rgba(30, 30, 40, 0.9);
+            background: rgba(30, 30, 40, 0.95);
             backdrop-filter: blur(10px);
             border-radius: 12px;
             padding: 1rem;
@@ -345,6 +353,7 @@
             overflow-y: auto;
             z-index: 99;
             display: none;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .participants-panel.active {
@@ -407,6 +416,15 @@
             gap: 10px;
             animation: slideIn 0.3s ease-out;
             backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .notification.error {
+            background: rgba(255, 59, 48, 0.9);
+        }
+
+        .notification.warning {
+            background: rgba(255, 149, 0, 0.9);
         }
 
         @keyframes slideIn {
@@ -422,6 +440,7 @@
             height: 100vh;
             flex-direction: column;
             gap: 1rem;
+            background: #0f0f12;
         }
 
         .spinner {
@@ -436,6 +455,11 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.1rem;
         }
 
         /* Empty State */
@@ -465,6 +489,59 @@
         .empty-state p {
             color: rgba(255, 255, 255, 0.6);
             max-width: 400px;
+        }
+
+        /* Connection Quality */
+        .connection-quality {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            gap: 2px;
+            opacity: 0.7;
+        }
+
+        .quality-bar {
+            width: 3px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 1px;
+        }
+
+        .quality-bar.active {
+            background: #00ff88;
+        }
+
+        /* Stats */
+        .stats-panel {
+            position: fixed;
+            top: 80px;
+            left: 20px;
+            background: rgba(30, 30, 40, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1rem;
+            min-width: 200px;
+            z-index: 99;
+            display: none;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.8rem;
+        }
+
+        .stats-panel.active {
+            display: block;
+        }
+
+        .stats-title {
+            color: #c5a258;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        .stats-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.3rem;
         }
 
         /* Responsive */
@@ -507,7 +584,7 @@
                 right: 270px;
             }
 
-            .participants-panel {
+            .participants-panel, .stats-panel {
                 right: 10px;
                 left: 10px;
                 min-width: auto;
@@ -545,51 +622,6 @@
                 right: 230px;
             }
         }
-
-        /* Fullscreen */
-        .fullscreen-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.5);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 10;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .video-item:hover .fullscreen-btn {
-            opacity: 1;
-        }
-
-        /* Connection Quality */
-        .connection-quality {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            display: flex;
-            gap: 2px;
-            opacity: 0.7;
-        }
-
-        .quality-bar {
-            width: 3px;
-            height: 10px;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 1px;
-        }
-
-        .quality-bar.active {
-            background: #00ff88;
-        }
     </style>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -611,19 +643,19 @@
             </div>
         </div>
         <div class="connection-status" id="connectionStatus">
-            <div class="status-indicator"></div>
+            <div class="status-indicator connecting"></div>
             <span>Подключение...</span>
         </div>
     </div>
 
+    <!-- Loading Screen -->
+    <div class="loading" id="loadingScreen">
+        <div class="spinner"></div>
+        <div class="loading-text">Подключение к конференции...</div>
+    </div>
+
     <!-- Video Container -->
-    <div class="video-container" id="videoContainer">
-        <div class="empty-state" id="emptyState">
-            <i class="fas fa-users"></i>
-            <h3>Подключение к конференции</h3>
-            <p>Инициализация видеосвязи...</p>
-            <div class="spinner"></div>
-        </div>
+    <div class="video-container" id="videoContainer" style="display: none;">
         <!-- Видео участников будет добавляться динамически -->
     </div>
 
@@ -649,8 +681,25 @@
         </ul>
     </div>
 
+    <!-- Stats Panel -->
+    <div class="stats-panel" id="statsPanel">
+        <div class="stats-title">Статистика соединения</div>
+        <div class="stats-item">
+            <span>Ping:</span>
+            <span id="pingValue">-</span>
+        </div>
+        <div class="stats-item">
+            <span>Участников:</span>
+            <span id="participantsValue">0</span>
+        </div>
+        <div class="stats-item">
+            <span>Подключение:</span>
+            <span id="connectionType">polling</span>
+        </div>
+    </div>
+
     <!-- Control Panel -->
-    <div class="control-panel" id="controlPanel">
+    <div class="control-panel" id="controlPanel" style="display: none;">
         <button class="control-btn" id="toggleVideoBtn" title="Включить/выключить видео">
             <i class="fas fa-video"></i>
         </button>
@@ -663,8 +712,8 @@
         <button class="control-btn" id="participantsBtn" title="Список участников">
             <i class="fas fa-users"></i>
         </button>
-        <button class="control-btn" id="fullscreenBtn" title="Полный экран">
-            <i class="fas fa-expand"></i>
+        <button class="control-btn" id="statsBtn" title="Статистика">
+            <i class="fas fa-chart-bar"></i>
         </button>
         <button class="control-btn danger" id="leaveBtn" title="Покинуть конференцию">
             <i class="fas fa-phone-slash"></i>
@@ -702,20 +751,37 @@
         let calls = {};
         let mainVideoId = null;
         let participants = new Map();
+        let pingInterval = null;
+        let lastPingTime = null;
+        let connectionStats = {
+            ping: 0,
+            packetLoss: 0,
+            participants: 0
+        };
         
-        // Socket.io connection
-        const socket = io();
+        // Socket.io connection с оптимизированным polling
+        const socket = io({
+            transports: ['polling'], // Используем только polling
+            upgrade: false, // Запрещаем апгрейд до WebSocket
+            forceNew: true,
+            reconnection: true,
+            reconnectionAttempts: 10,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            timeout: 20000,
+            autoConnect: true
+        });
         
         // DOM elements
         const videoContainer = document.getElementById('videoContainer');
-        const emptyState = document.getElementById('emptyState');
+        const loadingScreen = document.getElementById('loadingScreen');
         const controlPanel = document.getElementById('controlPanel');
         const toggleVideoBtn = document.getElementById('toggleVideoBtn');
         const toggleAudioBtn = document.getElementById('toggleAudioBtn');
         const screenShareBtn = document.getElementById('screenShareBtn');
         const stopScreenShareBtn = document.getElementById('stopScreenShareBtn');
         const participantsBtn = document.getElementById('participantsBtn');
-        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const statsBtn = document.getElementById('statsBtn');
         const leaveBtn = document.getElementById('leaveBtn');
         const screenShareContainer = document.getElementById('screenShareContainer');
         const screenShareVideo = document.getElementById('screenShareVideo');
@@ -723,11 +789,15 @@
         const participantList = document.getElementById('participantList');
         const participantsCount = document.getElementById('participantsCount');
         const connectionStatus = document.getElementById('connectionStatus');
+        const statsPanel = document.getElementById('statsPanel');
+        const pingValue = document.getElementById('pingValue');
+        const participantsValue = document.getElementById('participantsValue');
+        const connectionType = document.getElementById('connectionType');
 
         // Initialize conference
         async function initializeConference() {
             try {
-                showNotification('Подключение к конференции...');
+                showNotification('Инициализация медиаустройств...', 'info');
 
                 // Get user media
                 localStream = await navigator.mediaDevices.getUserMedia({
@@ -745,11 +815,8 @@
                     }
                 });
                 
-                // Add local video
-                addLocalVideo(localStream);
-                
                 // Initialize PeerJS
-                peerId = `peer-${userId}-${Math.random().toString(36).substr(2, 9)}`;
+                peerId = `peer-${userId}-${Date.now()}`;
                 peer = new Peer(peerId, {
                     config: {
                         iceServers: [
@@ -757,12 +824,16 @@
                             { urls: 'stun:stun1.l.google.com:19302' }
                         ]
                     },
-                    debug: 3
+                    debug: 0
                 });
                 
                 peer.on('open', async (id) => {
                     console.log('PeerJS connected with ID:', id);
-                    updateConnectionStatus('Подключено', true);
+                    
+                    // Add local video
+                    addLocalVideo(localStream);
+                    
+                    updateConnectionStatus('Подключение к комнате...', 'connecting');
                     
                     // Join room on server
                     socket.emit('join_room', {
@@ -771,16 +842,14 @@
                         user_name: currentUser
                     });
 
-                    // Hide loading state
-                    emptyState.style.display = 'none';
-                    controlPanel.style.display = 'flex';
-                    showNotification('Успешное подключение к комнате');
+                    // Start ping monitoring
+                    startPingMonitoring();
                 });
                 
                 peer.on('error', (err) => {
                     console.error('PeerJS error:', err);
-                    updateConnectionStatus('Ошибка подключения', false);
-                    showNotification('Ошибка подключения: ' + err.message, 'error');
+                    updateConnectionStatus('Ошибка PeerJS', 'error');
+                    showNotification('Ошибка медиасоединения: ' + err.message, 'error');
                 });
                 
                 peer.on('connection', (conn) => {
@@ -797,10 +866,6 @@
                         removeRemoteVideo(conn.peer);
                         delete connections[conn.peer];
                         updateParticipantsList();
-                    });
-
-                    conn.on('error', (err) => {
-                        console.error('Connection error:', err);
                     });
                 });
                 
@@ -825,17 +890,13 @@
                         }
                         updateParticipantsList();
                     });
-
-                    call.on('error', (err) => {
-                        console.error('Call error:', err);
-                    });
                     
                     calls[call.peer] = call;
                 });
                 
             } catch (error) {
                 console.error('Error initializing conference:', error);
-                updateConnectionStatus('Ошибка инициализации', false);
+                updateConnectionStatus('Ошибка инициализации', 'error');
                 
                 if (error.name === 'NotAllowedError') {
                     showNotification('Ошибка: Разрешите доступ к камере и микрофону', 'error');
@@ -845,11 +906,11 @@
                     showNotification('Ошибка инициализации: ' + error.message, 'error');
                 }
                 
-                emptyState.innerHTML = `
-                    <i class="fas fa-exclamation-triangle"></i>
+                loadingScreen.innerHTML = `
+                    <i class="fas fa-exclamation-triangle" style="font-size: 4rem; color: #ff3b30; margin-bottom: 1rem;"></i>
                     <h3>Ошибка подключения</h3>
                     <p>${error.message}</p>
-                    <button class="back-btn" onclick="goToDashboard()">
+                    <button class="back-btn" onclick="goToDashboard()" style="margin-top: 1rem;">
                         <i class="material-icons">arrow_back</i>
                         Вернуться в кабинет
                     </button>
@@ -859,14 +920,26 @@
 
         // Socket event handlers
         socket.on('connect', () => {
-            console.log('Connected to server');
-            updateConnectionStatus('Подключение к серверу...', true);
+            console.log('Connected to server via polling');
+            updateConnectionStatus('Подключено к серверу', 'connected');
+            connectionType.textContent = 'polling';
         });
 
-        socket.on('disconnect', () => {
-            console.log('Disconnected from server');
-            updateConnectionStatus('Отключено от сервера', false);
+        socket.on('disconnect', (reason) => {
+            console.log('Disconnected from server:', reason);
+            updateConnectionStatus('Отключено от сервера', 'error');
             showNotification('Потеряно соединение с сервером', 'error');
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Connection error:', error);
+            updateConnectionStatus('Ошибка подключения', 'error');
+        });
+
+        socket.on('reconnect', (attemptNumber) => {
+            console.log('Reconnected after', attemptNumber, 'attempts');
+            updateConnectionStatus('Переподключено', 'connected');
+            showNotification('Соединение восстановлено');
         });
 
         socket.on('connected', (data) => {
@@ -875,6 +948,13 @@
 
         socket.on('room_joined', (data) => {
             console.log('Joined room:', data.room_name);
+            updateConnectionStatus('В комнате: ' + data.room_name, 'connected');
+            
+            // Hide loading and show controls
+            loadingScreen.style.display = 'none';
+            videoContainer.style.display = 'grid';
+            controlPanel.style.display = 'flex';
+            
             showNotification(`Подключено к комнате: ${data.room_name}`);
             
             // Connect to existing participants
@@ -917,9 +997,12 @@
             }
         });
 
-        socket.on('error', (data) => {
-            console.error('Socket error:', data);
-            showNotification('Ошибка: ' + data.message, 'error');
+        socket.on('pong', (data) => {
+            if (lastPingTime) {
+                const ping = Date.now() - lastPingTime;
+                connectionStats.ping = ping;
+                pingValue.textContent = ping + 'ms';
+            }
         });
 
         // WebRTC handlers
@@ -983,10 +1066,6 @@
                     participants.delete(remotePeerId);
                     updateParticipantsList();
                 });
-
-                conn.on('error', (err) => {
-                    console.error('Connection error with', remotePeerId, ':', err);
-                });
                 
             } catch (error) {
                 console.error('Error connecting to peer:', error);
@@ -1014,10 +1093,6 @@
                     removeRemoteVideo(remotePeerId);
                     delete calls[remotePeerId];
                     updateParticipantsList();
-                });
-
-                call.on('error', (err) => {
-                    console.error('Call error with', remotePeerId, ':', err);
                 });
                 
                 calls[remotePeerId] = call;
@@ -1047,15 +1122,8 @@
                 <div class="audio-indicator" id="localAudioIndicator"></div>
             `;
             
-            const fullscreenBtn = document.createElement('button');
-            fullscreenBtn.className = 'fullscreen-btn';
-            fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
-            fullscreenBtn.title = 'Полный экран';
-            fullscreenBtn.onclick = () => setMainVideo('localVideoItem');
-            
             videoItem.appendChild(video);
             videoItem.appendChild(participantInfo);
-            videoItem.appendChild(fullscreenBtn);
             videoContainer.appendChild(videoItem);
             
             // Store tracks for later use
@@ -1072,9 +1140,6 @@
             });
             
             updateParticipantsList();
-            
-            // Monitor audio levels for local user
-            monitorAudioLevels(stream, 'localAudioIndicator');
         }
 
         // Add remote video
@@ -1101,24 +1166,8 @@
                 <div class="audio-indicator" id="audioIndicator-${peerId}"></div>
             `;
             
-            const fullscreenBtn = document.createElement('button');
-            fullscreenBtn.className = 'fullscreen-btn';
-            fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
-            fullscreenBtn.title = 'Полный экран';
-            fullscreenBtn.onclick = () => setMainVideo(`videoItem-${peerId}`);
-            
-            const connectionQuality = document.createElement('div');
-            connectionQuality.className = 'connection-quality';
-            connectionQuality.innerHTML = `
-                <div class="quality-bar"></div>
-                <div class="quality-bar"></div>
-                <div class="quality-bar"></div>
-            `;
-            
             videoItem.appendChild(video);
             videoItem.appendChild(participantInfo);
-            videoItem.appendChild(fullscreenBtn);
-            videoItem.appendChild(connectionQuality);
             videoContainer.appendChild(videoItem);
             
             // Update participants list
@@ -1130,9 +1179,6 @@
             });
             
             updateParticipantsList();
-            
-            // Monitor audio levels for remote user
-            monitorAudioLevels(stream, `audioIndicator-${peerId}`);
             
             // If this is the first participant, make it the main video
             if (!mainVideoId && peerId !== userId) {
@@ -1204,40 +1250,12 @@
             });
         }
 
-        // Monitor audio levels
-        function monitorAudioLevels(stream, indicatorId) {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const analyser = audioContext.createAnalyser();
-            const microphone = audioContext.createMediaStreamSource(stream);
-            const javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
-            
-            analyser.smoothingTimeConstant = 0.8;
-            analyser.fftSize = 1024;
-            
-            microphone.connect(analyser);
-            analyser.connect(javascriptNode);
-            javascriptNode.connect(audioContext.destination);
-            
-            javascriptNode.onaudioprocess = function() {
-                const array = new Uint8Array(analyser.frequencyBinCount);
-                analyser.getByteFrequencyData(array);
-                const values = array.reduce((a, b) => a + b) / array.length;
-                
-                const indicator = document.getElementById(indicatorId);
-                if (indicator) {
-                    if (values > 10) {
-                        indicator.classList.add('active');
-                    } else {
-                        indicator.classList.remove('active');
-                    }
-                }
-            };
-        }
-
         // Update participants list
         function updateParticipantsList() {
             participantList.innerHTML = '';
-            participantsCount.textContent = participants.size;
+            const count = participants.size;
+            participantsCount.textContent = count;
+            participantsValue.textContent = count;
             
             participants.forEach((participant, id) => {
                 const participantItem = document.createElement('li');
@@ -1264,17 +1282,28 @@
         }
 
         // Update connection status
-        function updateConnectionStatus(message, isConnected) {
+        function updateConnectionStatus(message, status) {
             const statusElement = connectionStatus.querySelector('span');
             const indicator = connectionStatus.querySelector('.status-indicator');
             
             statusElement.textContent = message;
+            indicator.className = 'status-indicator';
             
-            if (isConnected) {
-                indicator.style.background = '#00ff88';
-            } else {
-                indicator.style.background = '#ff3b30';
+            if (status === 'connected') {
+                indicator.classList.add('connected');
+            } else if (status === 'connecting') {
+                indicator.classList.add('connecting');
+            } else if (status === 'error') {
+                indicator.classList.add('error');
             }
+        }
+
+        // Start ping monitoring
+        function startPingMonitoring() {
+            pingInterval = setInterval(() => {
+                lastPingTime = Date.now();
+                socket.emit('ping');
+            }, 3000); // Ping every 3 seconds
         }
 
         // Show notification
@@ -1283,9 +1312,9 @@
             notification.className = 'notification';
             
             if (type === 'error') {
-                notification.style.background = 'rgba(255, 59, 48, 0.9)';
+                notification.classList.add('error');
             } else if (type === 'warning') {
-                notification.style.background = 'rgba(255, 149, 0, 0.9)';
+                notification.classList.add('warning');
             }
             
             notification.innerHTML = `
@@ -1344,16 +1373,12 @@
         
         participantsBtn.addEventListener('click', () => {
             participantsPanel.classList.toggle('active');
+            statsPanel.classList.remove('active');
         });
         
-        fullscreenBtn.addEventListener('click', () => {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => {
-                    console.error('Error attempting to enable fullscreen:', err);
-                });
-            } else {
-                document.exitFullscreen();
-            }
+        statsBtn.addEventListener('click', () => {
+            statsPanel.classList.toggle('active');
+            participantsPanel.classList.remove('active');
         });
         
         leaveBtn.addEventListener('click', () => {
@@ -1428,12 +1453,6 @@
             } catch (error) {
                 console.error('Error starting screen share:', error);
                 showNotification('Ошибка демонстрации экрана: ' + (error.message || 'Не поддерживается'), 'error');
-                
-                // Stop stream if it was partially created
-                if (screenStream) {
-                    screenStream.getTracks().forEach(track => track.stop());
-                    screenStream = null;
-                }
             }
         }
 
@@ -1497,6 +1516,11 @@
                 stopScreenShare();
             }
             
+            // Clear intervals
+            if (pingInterval) {
+                clearInterval(pingInterval);
+            }
+            
             // Close all connections
             for (const conn of Object.values(connections)) {
                 conn.close();
@@ -1544,18 +1568,13 @@
             }
         });
 
-        // Handle fullscreen changes
-        document.addEventListener('fullscreenchange', () => {
-            isFullscreen = !!document.fullscreenElement;
-            fullscreenBtn.innerHTML = isFullscreen 
-                ? '<i class="fas fa-compress"></i>' 
-                : '<i class="fas fa-expand"></i>';
-        });
-
-        // Close participants panel when clicking outside
+        // Close panels when clicking outside
         document.addEventListener('click', (e) => {
             if (!participantsPanel.contains(e.target) && !participantsBtn.contains(e.target)) {
                 participantsPanel.classList.remove('active');
+            }
+            if (!statsPanel.contains(e.target) && !statsBtn.contains(e.target)) {
+                statsPanel.classList.remove('active');
             }
         });
 
@@ -1569,24 +1588,9 @@
             
             // Escape to exit fullscreen or leave conference
             if (e.code === 'Escape') {
-                if (document.fullscreenElement) {
-                    document.exitFullscreen();
-                } else if (isFullscreen) {
+                if (isFullscreen) {
                     exitFullscreenMode();
                 }
-            }
-            
-            // F key for fullscreen
-            if (e.code === 'KeyF' && e.ctrlKey) {
-                e.preventDefault();
-                fullscreenBtn.click();
-            }
-        });
-
-        // Prevent context menu on video elements
-        document.addEventListener('contextmenu', (e) => {
-            if (e.target.tagName === 'VIDEO') {
-                e.preventDefault();
             }
         });
     </script>
