@@ -759,17 +759,138 @@
             participants: 0
         };
         
-        // Socket.io connection с оптимизированным polling
+        // Улучшенная конфигурация Socket.IO
         const socket = io({
-            transports: ['polling'], // Используем только polling
-            upgrade: false, // Запрещаем апгрейд до WebSocket
-            forceNew: true,
+            transports: ['websocket', 'polling'], // Разрешите оба
+            upgrade: true,
+            forceNew: false,
             reconnection: true,
-            reconnectionAttempts: 10,
+            reconnectionAttempts: Infinity,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
             timeout: 20000,
             autoConnect: true
+        });
+
+        // Обработчики событий соединения
+        socket.on('connect', () => {
+            console.log('✅ Connected to server, transport:', socket.io.engine.transport.name);
+            updateConnectionStatus('Подключено к серверу', 'connected');
+            connectionType.textContent = socket.io.engine.transport.name;
+            
+            // При переподключении - rejoiн комнаты
+            if (currentRoom && userId) {
+                socket.emit('join_room', {
+                    room_name: currentRoom,
+                    user_id: userId,
+                    user_name: currentUser
+                });
+            }
+        });
+
+        socket.on('disconnect', (reason) => {
+            console.log('❌ Disconnected:', reason);
+            updateConnectionStatus('Переподключение...', 'connecting');
+            
+            if (reason === 'io server disconnect') {
+                // Сервер принудительно отключил - нужно переподключиться
+                socket.connect();
+            }
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('❌ Connection error:', error);
+            updateConnectionStatus('Ошибка подключения', 'error');
+        });
+
+        socket.on('reconnect', (attemptNumber) => {
+            console.log('🔄 Reconnected after', attemptNumber, 'attempts');
+            updateConnectionStatus('Подключено к серверу', 'connected');
+            showNotification('Соединение восстановлено');
+        });
+
+        socket.on('reconnect_attempt', (attemptNumber) => {
+            console.log('🔄 Reconnection attempt:', attemptNumber);
+            updateConnectionStatus(`Переподключение... (попытка ${attemptNumber})`, 'connecting');
+        });
+
+        socket.on('reconnect_error', (error) => {
+            console.error('❌ Reconnection error:', error);
+            updateConnectionStatus('Ошибка переподключения', 'error');
+        });
+
+        socket.on('reconnect_failed', () => {
+            console.error('❌ Reconnection failed');
+            updateConnectionStatus('Не удалось подключиться', 'error');
+            showNotification('Не удалось восстановить соединение', 'error');
+        });
+
+        socket.on('connected', (data) => {
+            console.log('Server connected:', data.message);
+        });
+
+        socket.on('room_joined', (data) => {
+            console.log('✅ Joined room:', data.room_name);
+            updateConnectionStatus('В комнате: ' + data.room_name, 'connected');
+            
+            // Hide loading and show controls
+            loadingScreen.style.display = 'none';
+            videoContainer.style.display = 'grid';
+            controlPanel.style.display = 'flex';
+            
+            showNotification(`Подключено к комнате: ${data.room_name}`);
+            
+            // Connect to existing participants
+            for (const [participantId, participant] of Object.entries(data.participants)) {
+                connectToPeer(participantId, participant.user_name);
+            }
+            
+            updateParticipantsList();
+        });
+
+        socket.on('user_joined', (data) => {
+            console.log('👤 User joined:', data.user_name);
+            showNotification(`${data.user_name} присоединился к конференции`);
+            connectToPeer(data.user_id, data.user_name);
+            updateParticipantsList();
+        });
+
+        socket.on('user_left', (data) => {
+            console.log('👤 User left:', data.user_id);
+            const user = participants.get(data.user_id);
+            if (user) {
+                showNotification(`${user.name} покинул конференцию`);
+            }
+            removeRemoteVideo(data.user_id);
+            updateParticipantsList();
+        });
+
+        socket.on('webrtc_offer', handleWebRTCOffer);
+        socket.on('webrtc_answer', handleWebRTCAnswer);
+        socket.on('ice_candidate', handleICECandidate);
+
+        socket.on('screen_share_status', (data) => {
+            console.log('Screen share status:', data);
+            if (data.user_id !== userId) {
+                if (data.is_sharing) {
+                    showNotification(`${data.user_id} начал демонстрацию экрана`);
+                } else {
+                    showNotification(`${data.user_id} остановил демонстрацию экрана`);
+                }
+            }
+        });
+
+        socket.on('pong', (data) => {
+            if (lastPingTime) {
+                const ping = Date.now() - lastPingTime;
+                connectionStats.ping = ping;
+                pingValue.textContent = ping + 'ms';
+            }
+        });
+
+        socket.on('error', (data) => {
+            console.error('Server error:', data.message);
+            showNotification('Ошибка сервера: ' + data.message, 'error');
         });
         
         // DOM elements
@@ -828,7 +949,7 @@
                 });
                 
                 peer.on('open', async (id) => {
-                    console.log('PeerJS connected with ID:', id);
+                    console.log('✅ PeerJS connected with ID:', id);
                     
                     // Add local video
                     addLocalVideo(localStream);
@@ -847,22 +968,22 @@
                 });
                 
                 peer.on('error', (err) => {
-                    console.error('PeerJS error:', err);
+                    console.error('❌ PeerJS error:', err);
                     updateConnectionStatus('Ошибка PeerJS', 'error');
                     showNotification('Ошибка медиасоединения: ' + err.message, 'error');
                 });
                 
                 peer.on('connection', (conn) => {
-                    console.log('Incoming connection:', conn.peer);
+                    console.log('🔗 Incoming connection:', conn.peer);
                     
                     conn.on('open', () => {
-                        console.log('Connection established with:', conn.peer);
+                        console.log('✅ Connection established with:', conn.peer);
                         connections[conn.peer] = conn;
                         updateParticipantsList();
                     });
                     
                     conn.on('close', () => {
-                        console.log('Connection closed with:', conn.peer);
+                        console.log('🔗 Connection closed with:', conn.peer);
                         removeRemoteVideo(conn.peer);
                         delete connections[conn.peer];
                         updateParticipantsList();
@@ -870,20 +991,20 @@
                 });
                 
                 peer.on('call', (call) => {
-                    console.log('Incoming call from:', call.peer);
+                    console.log('📞 Incoming call from:', call.peer);
                     
                     // Answer with current stream
                     const streamToAnswerWith = isScreenSharing && screenStream ? screenStream : localStream;
                     call.answer(streamToAnswerWith);
                     
                     call.on('stream', (remoteStream) => {
-                        console.log('Received remote stream from:', call.peer);
+                        console.log('✅ Received remote stream from:', call.peer);
                         addRemoteVideo(call.peer, remoteStream);
                         updateParticipantsList();
                     });
                     
                     call.on('close', () => {
-                        console.log('Call ended with:', call.peer);
+                        console.log('📞 Call ended with:', call.peer);
                         removeRemoteVideo(call.peer);
                         if (calls[call.peer]) {
                             delete calls[call.peer];
@@ -895,7 +1016,7 @@
                 });
                 
             } catch (error) {
-                console.error('Error initializing conference:', error);
+                console.error('❌ Error initializing conference:', error);
                 updateConnectionStatus('Ошибка инициализации', 'error');
                 
                 if (error.name === 'NotAllowedError') {
@@ -918,96 +1039,9 @@
             }
         }
 
-        // Socket event handlers
-        socket.on('connect', () => {
-            console.log('Connected to server via polling');
-            updateConnectionStatus('Подключено к серверу', 'connected');
-            connectionType.textContent = 'polling';
-        });
-
-        socket.on('disconnect', (reason) => {
-            console.log('Disconnected from server:', reason);
-            updateConnectionStatus('Отключено от сервера', 'error');
-            showNotification('Потеряно соединение с сервером', 'error');
-        });
-
-        socket.on('connect_error', (error) => {
-            console.error('Connection error:', error);
-            updateConnectionStatus('Ошибка подключения', 'error');
-        });
-
-        socket.on('reconnect', (attemptNumber) => {
-            console.log('Reconnected after', attemptNumber, 'attempts');
-            updateConnectionStatus('Переподключено', 'connected');
-            showNotification('Соединение восстановлено');
-        });
-
-        socket.on('connected', (data) => {
-            console.log('Server connected:', data.message);
-        });
-
-        socket.on('room_joined', (data) => {
-            console.log('Joined room:', data.room_name);
-            updateConnectionStatus('В комнате: ' + data.room_name, 'connected');
-            
-            // Hide loading and show controls
-            loadingScreen.style.display = 'none';
-            videoContainer.style.display = 'grid';
-            controlPanel.style.display = 'flex';
-            
-            showNotification(`Подключено к комнате: ${data.room_name}`);
-            
-            // Connect to existing participants
-            for (const [participantId, participant] of Object.entries(data.participants)) {
-                connectToPeer(participantId, participant.user_name);
-            }
-            
-            updateParticipantsList();
-        });
-
-        socket.on('user_joined', (data) => {
-            console.log('User joined:', data.user_name);
-            showNotification(`${data.user_name} присоединился к конференции`);
-            connectToPeer(data.user_id, data.user_name);
-            updateParticipantsList();
-        });
-
-        socket.on('user_left', (data) => {
-            console.log('User left:', data.user_id);
-            const user = participants.get(data.user_id);
-            if (user) {
-                showNotification(`${user.name} покинул конференцию`);
-            }
-            removeRemoteVideo(data.user_id);
-            updateParticipantsList();
-        });
-
-        socket.on('webrtc_offer', handleWebRTCOffer);
-        socket.on('webrtc_answer', handleWebRTCAnswer);
-        socket.on('ice_candidate', handleICECandidate);
-
-        socket.on('screen_share_status', (data) => {
-            console.log('Screen share status:', data);
-            if (data.user_id !== userId) {
-                if (data.is_sharing) {
-                    showNotification(`${data.user_id} начал демонстрацию экрана`);
-                } else {
-                    showNotification(`${data.user_id} остановил демонстрацию экрана`);
-                }
-            }
-        });
-
-        socket.on('pong', (data) => {
-            if (lastPingTime) {
-                const ping = Date.now() - lastPingTime;
-                connectionStats.ping = ping;
-                pingValue.textContent = ping + 'ms';
-            }
-        });
-
         // WebRTC handlers
         function handleWebRTCOffer(data) {
-            console.log('Received WebRTC offer from:', data.caller_user_id);
+            console.log('📞 Received WebRTC offer from:', data.caller_user_id);
             
             if (!peer) {
                 console.error('Peer not initialized');
@@ -1024,12 +1058,12 @@
         }
 
         function handleWebRTCAnswer(data) {
-            console.log('Received WebRTC answer from:', data.answerer_user_id);
+            console.log('📞 Received WebRTC answer from:', data.answerer_user_id);
             // Answer is handled automatically by PeerJS
         }
 
         function handleICECandidate(data) {
-            console.log('Received ICE candidate from:', data.sender_user_id);
+            console.log('📞 Received ICE candidate from:', data.sender_user_id);
             // ICE candidates are handled automatically by PeerJS
         }
 
@@ -1037,7 +1071,7 @@
         function connectToPeer(remotePeerId, remoteUserName) {
             if (connections[remotePeerId] || remotePeerId === peerId) return;
             
-            console.log('Connecting to peer:', remotePeerId);
+            console.log('🔗 Connecting to peer:', remotePeerId);
             
             try {
                 const conn = peer.connect(remotePeerId, {
@@ -1045,7 +1079,7 @@
                 });
                 
                 conn.on('open', () => {
-                    console.log('Connected to:', remotePeerId);
+                    console.log('✅ Connected to:', remotePeerId);
                     connections[remotePeerId] = conn;
                     
                     // Add to participants list
@@ -1060,7 +1094,7 @@
                 });
                 
                 conn.on('close', () => {
-                    console.log('Connection closed with:', remotePeerId);
+                    console.log('🔗 Connection closed with:', remotePeerId);
                     removeRemoteVideo(remotePeerId);
                     delete connections[remotePeerId];
                     participants.delete(remotePeerId);
@@ -1068,7 +1102,7 @@
                 });
                 
             } catch (error) {
-                console.error('Error connecting to peer:', error);
+                console.error('❌ Error connecting to peer:', error);
             }
         }
 
@@ -1076,20 +1110,20 @@
         function initiateVideoCall(remotePeerId) {
             if (calls[remotePeerId]) return;
             
-            console.log('Initiating video call to:', remotePeerId);
+            console.log('📞 Initiating video call to:', remotePeerId);
             
             try {
                 const streamToSend = isScreenSharing && screenStream ? screenStream : localStream;
                 const call = peer.call(remotePeerId, streamToSend);
                 
                 call.on('stream', (remoteStream) => {
-                    console.log('Received stream from:', remotePeerId);
+                    console.log('✅ Received stream from:', remotePeerId);
                     addRemoteVideo(remotePeerId, remoteStream);
                     updateParticipantsList();
                 });
                 
                 call.on('close', () => {
-                    console.log('Call ended with:', remotePeerId);
+                    console.log('📞 Call ended with:', remotePeerId);
                     removeRemoteVideo(remotePeerId);
                     delete calls[remotePeerId];
                     updateParticipantsList();
@@ -1097,7 +1131,7 @@
                 
                 calls[remotePeerId] = call;
             } catch (error) {
-                console.error('Error initiating call:', error);
+                console.error('❌ Error initiating call:', error);
             }
         }
 
