@@ -13,8 +13,27 @@ import uuid
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = os.environ.get('SECRET_KEY', 'your-very-secret-key-12345')
 
-# Настройка SocketIO
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+# Настройки для SocketIO
+app.config['SESSION_COOKIE_SECURE'] = False
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+
+# Настройка SocketIO с оптимизированным polling
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    async_mode='eventlet',
+    manage_session=False,  # Важно для избежания проблем с сессиями
+    logger=True,
+    engineio_logger=False,  # Отключаем для уменьшения логов
+    ping_timeout=10,
+    ping_interval=5,
+    max_http_buffer_size=100000000,  # 100MB для больших данных
+    transports=['polling'],  # Используем только polling для стабильности
+    allow_upgrades=False,   # Запрещаем апгрейд до WebSocket
+    http_compression=True,  # Включаем сжатие для polling
+    compression_threshold=1024  # Сжимаем данные больше 1KB
+)
 
 # Конфигурация приложения
 UPLOAD_FOLDER = 'uploads'
@@ -31,6 +50,8 @@ logger = logging.getLogger(__name__)
 
 # Хранилище для комнат видеоконференций: {room_name: {user_id: user_data}}
 video_rooms = defaultdict(dict)
+# Хранилище для последних событий (для быстрого восстановления)
+room_events = defaultdict(deque)
 
 class DB:
     @staticmethod
@@ -410,7 +431,7 @@ def video_conference():
 @socketio.on('connect')
 def handle_connect():
     print(f'Client connected: {request.sid}')
-    emit('connected', {'message': 'Connected to server'})
+    emit('connected', {'message': 'Connected to server', 'sid': request.sid})
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -437,7 +458,8 @@ def join_room_handler(data):
         video_rooms[room_name][user_id] = {
             'socket_id': request.sid,
             'user_name': user_name,
-            'user_id': user_id
+            'user_id': user_id,
+            'joined_at': datetime.now().isoformat()
         }
         
         join_room(room_name)
@@ -453,14 +475,16 @@ def join_room_handler(data):
         emit('room_joined', {
             'room_name': room_name,
             'user_id': user_id,
-            'participants': participants
+            'participants': participants,
+            'room_state': list(video_rooms[room_name].keys())
         }, room=request.sid)
         
         # Уведомляем других участников о новом пользователе
         emit('user_joined', {
             'user_id': user_id,
             'user_name': user_name,
-            'socket_id': request.sid
+            'socket_id': request.sid,
+            'room_state': list(video_rooms[room_name].keys())
         }, room=room_name, include_self=False)
         
     except Exception as e:
@@ -487,7 +511,8 @@ def leave_room_handler(data):
             
             # Уведомляем других участников
             emit('user_left', {
-                'user_id': user_id
+                'user_id': user_id,
+                'room_state': list(video_rooms.get(room_name, {}).keys())
             }, room=room_name)
             
     except Exception as e:
@@ -515,7 +540,8 @@ def handle_webrtc_offer(data):
         emit('webrtc_offer', {
             'offer': offer,
             'caller_user_id': caller_user_id,
-            'target_user_id': target_user_id
+            'target_user_id': target_user_id,
+            'timestamp': datetime.now().isoformat()
         }, room=target_user['socket_id'])
         
         print(f'Forwarded WebRTC offer from {caller_user_id} to {target_user_id}')
@@ -546,7 +572,8 @@ def handle_webrtc_answer(data):
         emit('webrtc_answer', {
             'answer': answer,
             'answerer_user_id': answerer_user_id,
-            'target_user_id': target_user_id
+            'target_user_id': target_user_id,
+            'timestamp': datetime.now().isoformat()
         }, room=target_user['socket_id'])
         
         print(f'Forwarded WebRTC answer from {answerer_user_id} to {target_user_id}')
@@ -577,7 +604,8 @@ def handle_ice_candidate(data):
         emit('ice_candidate', {
             'candidate': candidate,
             'sender_user_id': sender_user_id,
-            'target_user_id': target_user_id
+            'target_user_id': target_user_id,
+            'timestamp': datetime.now().isoformat()
         }, room=target_user['socket_id'])
         
         print(f'Forwarded ICE candidate from {sender_user_id} to {target_user_id}')
@@ -604,7 +632,8 @@ def handle_screen_share_status(data):
             # Уведомляем других участников
             emit('screen_share_status', {
                 'user_id': user_id,
-                'is_sharing': is_sharing
+                'is_sharing': is_sharing,
+                'timestamp': datetime.now().isoformat()
             }, room=room_name, include_self=False)
             
             print(f'User {user_id} screen share status: {is_sharing}')
@@ -613,13 +642,29 @@ def handle_screen_share_status(data):
         print(f'Error handling screen share status: {e}')
         emit('error', {'message': str(e)})
 
+@socketio.on('ping')
+def handle_ping():
+    emit('pong', {'timestamp': datetime.now().isoformat()})
+
 @app.route('/api/video/health')
 def video_health_check():
     return jsonify({
         'status': 'ok', 
         'rooms_count': len(video_rooms),
-        'total_users': sum(len(users) for users in video_rooms.values())
+        'total_users': sum(len(users) for users in video_rooms.values()),
+        'timestamp': datetime.now().isoformat()
     })
+
+@app.route('/api/video/rooms')
+def video_rooms_status():
+    rooms_info = {}
+    for room_name, users in video_rooms.items():
+        rooms_info[room_name] = {
+            'user_count': len(users),
+            'users': list(users.keys()),
+            'active_since': min(user.get('joined_at', datetime.now().isoformat()) for user in users.values())
+        }
+    return jsonify(rooms_info)
 
 # ===== КОНЕЦ КОДА ВИДЕОКОНФЕРЕНЦИЙ =====
 
@@ -1099,10 +1144,19 @@ def api_contact():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':  
-    print("Starting Zindaki Academy server...")
+    print("Starting Zindaki Academy server with optimized polling...")
     print("Available routes:")
     print("  - Main site: http://localhost:8000")
     print("  - Dashboard: http://localhost:8000/dashboard") 
     print("  - Video Conference: http://localhost:8000/video-conference")
     print("  - API Health: http://localhost:8000/api/video/health")
-    socketio.run(app, host='0.0.0.0', port=8000, debug=True)
+    
+    # Запуск с оптимизированными настройками для polling
+    socketio.run(
+        app,
+        host='0.0.0.0',
+        port=8000,
+        debug=False,
+        log_output=True,
+        use_reloader=False
+    )
