@@ -8,31 +8,28 @@ from werkzeug.utils import secure_filename
 import logging
 from collections import defaultdict, deque
 import uuid
+import time
+from threading import Thread
 
 # Инициализация приложения
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = os.environ.get('SECRET_KEY', 'your-very-secret-key-12345')
 
-# Настройки для SocketIO
-app.config['SESSION_COOKIE_SECURE'] = False
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-
-# Настройка SocketIO с оптимизированным polling
+# НАСТРОЙКИ ДЛЯ PRODUCTION
 socketio = SocketIO(
     app,
     cors_allowed_origins="*",
     async_mode='eventlet',
-    manage_session=False,  # Важно для избежания проблем с сессиями
+    manage_session=True,  # Измените на True
     logger=True,
-    engineio_logger=False,  # Отключаем для уменьшения логов
-    ping_timeout=10,
-    ping_interval=5,
-    max_http_buffer_size=100000000,  # 100MB для больших данных
-    transports=['polling'],  # Используем только polling для стабильности
-    allow_upgrades=False,   # Запрещаем апгрейд до WebSocket
-    http_compression=True,  # Включаем сжатие для polling
-    compression_threshold=1024  # Сжимаем данные больше 1KB
+    engineio_logger=True,  # Включите для дебага
+    ping_timeout=60,       # Увеличьте таймауты
+    ping_interval=25,
+    max_http_buffer_size=100000000,
+    transports=['websocket', 'polling'],  # Разрешите оба транспорта
+    allow_upgrades=True,   # Разрешите апгрейд
+    http_compression=True,
+    compression_threshold=1024
 )
 
 # Конфигурация приложения
@@ -52,6 +49,57 @@ logger = logging.getLogger(__name__)
 video_rooms = defaultdict(dict)
 # Хранилище для последних событий (для быстрого восстановления)
 room_events = defaultdict(deque)
+
+# Глобальные переменные для мониторинга
+connection_stats = {
+    'total_connections': 0,
+    'active_rooms': 0,
+    'last_cleanup': time.time()
+}
+
+# Фоновая задача для очистки неактивных комнат
+def cleanup_inactive_rooms():
+    while True:
+        try:
+            current_time = time.time()
+            # Очищаем каждые 5 минут
+            if current_time - connection_stats['last_cleanup'] > 300:
+                inactive_rooms = []
+                for room_name, users in video_rooms.items():
+                    # Если комната пуста более 10 минут
+                    if not users:
+                        inactive_rooms.append(room_name)
+                    else:
+                        # Удаляем неактивных пользователей
+                        inactive_users = []
+                        for user_id, user_data in users.items():
+                            last_active = datetime.fromisoformat(user_data.get('joined_at', datetime.now().isoformat()))
+                            if (datetime.now() - last_active).total_seconds() > 3600:  # 1 час
+                                inactive_users.append(user_id)
+                        
+                        for user_id in inactive_users:
+                            del video_rooms[room_name][user_id]
+                
+                for room_name in inactive_rooms:
+                    if room_name in video_rooms:
+                        del video_rooms[room_name]
+                    if room_name in room_events:
+                        del room_events[room_name]
+                
+                connection_stats['last_cleanup'] = current_time
+                connection_stats['active_rooms'] = len(video_rooms)
+                connection_stats['total_connections'] = sum(len(users) for users in video_rooms.values())
+                
+                logger.info(f"Cleanup completed. Active rooms: {len(video_rooms)}, Total users: {sum(len(users) for users in video_rooms.values())}")
+            
+            time.sleep(60)  # Проверяем каждую минуту
+        except Exception as e:
+            logger.error(f"Error in cleanup task: {e}")
+            time.sleep(60)
+
+# Запускаем фоновую задачу при старте
+cleanup_thread = Thread(target=cleanup_inactive_rooms, daemon=True)
+cleanup_thread.start()
 
 class DB:
     @staticmethod
@@ -430,18 +478,45 @@ def video_conference():
 
 @socketio.on('connect')
 def handle_connect():
-    print(f'Client connected: {request.sid}')
-    emit('connected', {'message': 'Connected to server', 'sid': request.sid})
+    try:
+        connection_stats['total_connections'] += 1
+        logger.info(f'Client connected: {request.sid}. Total connections: {connection_stats["total_connections"]}')
+        
+        # Отправляем подтверждение с дополнительными данными
+        emit('connected', {
+            'message': 'Connected to server', 
+            'sid': request.sid,
+            'server_time': datetime.now().isoformat(),
+            'ping_interval': 25,
+            'ping_timeout': 60
+        })
+    except Exception as e:
+        logger.error(f"Error in handle_connect: {e}")
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    print(f'Client disconnected: {request.sid}')
-    # Удаляем пользователя из всех комнат при отключении
-    for room_name, users in list(video_rooms.items()):
-        for user_id, user_data in list(users.items()):
-            if user_data.get('socket_id') == request.sid:
-                leave_room_handler({'room_name': room_name, 'user_id': user_id})
-                break
+    try:
+        connection_stats['total_connections'] -= 1
+        logger.info(f'Client disconnected: {request.sid}. Reason: {request.environ.get("disconnect_reason", "unknown")}')
+        
+        # Более аккуратная очистка при отключении
+        for room_name, users in list(video_rooms.items()):
+            users_to_remove = []
+            for user_id, user_data in users.items():
+                if user_data.get('socket_id') == request.sid:
+                    users_to_remove.append(user_id)
+            
+            for user_id in users_to_remove:
+                # Уведомляем других участников
+                leave_data = {
+                    'room_name': room_name,
+                    'user_id': user_id
+                }
+                leave_room_handler(leave_data)
+                
+        logger.info(f'Remaining connections: {connection_stats["total_connections"]}')
+    except Exception as e:
+        logger.error(f"Error in handle_disconnect: {e}")
 
 @socketio.on('join_room')
 def join_room_handler(data):
@@ -454,20 +529,31 @@ def join_room_handler(data):
             emit('error', {'message': 'Missing required fields'})
             return
         
-        # Сохраняем информацию о пользователе
-        video_rooms[room_name][user_id] = {
-            'socket_id': request.sid,
-            'user_name': user_name,
-            'user_id': user_id,
-            'joined_at': datetime.now().isoformat()
-        }
+        # Проверяем, не присоединен ли уже пользователь
+        if room_name in video_rooms and user_id in video_rooms[room_name]:
+            # Обновляем socket_id для существующего пользователя
+            video_rooms[room_name][user_id]['socket_id'] = request.sid
+            video_rooms[room_name][user_id]['last_activity'] = datetime.now().isoformat()
+        else:
+            # Добавляем нового пользователя
+            video_rooms[room_name][user_id] = {
+                'socket_id': request.sid,
+                'user_name': user_name,
+                'user_id': user_id,
+                'joined_at': datetime.now().isoformat(),
+                'last_activity': datetime.now().isoformat()
+            }
         
         join_room(room_name)
-        print(f'User {user_name} ({user_id}) joined room {room_name}')
+        logger.info(f'User {user_name} ({user_id}) joined room {room_name}')
         
         # Отправляем текущему пользователю список всех участников комнаты
         participants = {
-            uid: {'user_name': data['user_name'], 'user_id': uid}
+            uid: {
+                'user_name': data['user_name'], 
+                'user_id': uid,
+                'socket_id': data.get('socket_id')
+            }
             for uid, data in video_rooms[room_name].items()
             if uid != user_id
         }
@@ -476,7 +562,8 @@ def join_room_handler(data):
             'room_name': room_name,
             'user_id': user_id,
             'participants': participants,
-            'room_state': list(video_rooms[room_name].keys())
+            'room_state': list(video_rooms[room_name].keys()),
+            'server_time': datetime.now().isoformat()
         }, room=request.sid)
         
         # Уведомляем других участников о новом пользователе
@@ -484,12 +571,13 @@ def join_room_handler(data):
             'user_id': user_id,
             'user_name': user_name,
             'socket_id': request.sid,
-            'room_state': list(video_rooms[room_name].keys())
+            'room_state': list(video_rooms[room_name].keys()),
+            'timestamp': datetime.now().isoformat()
         }, room=room_name, include_self=False)
         
     except Exception as e:
-        print(f'Error in join_room: {e}')
-        emit('error', {'message': str(e)})
+        logger.error(f'Error in join_room: {e}')
+        emit('error', {'message': 'Internal server error'})
 
 @socketio.on('leave_room')
 def leave_room_handler(data):
@@ -499,24 +587,27 @@ def leave_room_handler(data):
         
         if room_name in video_rooms and user_id in video_rooms[room_name]:
             # Удаляем пользователя из комнаты
+            user_data = video_rooms[room_name][user_id]
             del video_rooms[room_name][user_id]
             leave_room(room_name)
             
-            print(f'User {user_id} left room {room_name}')
+            logger.info(f'User {user_id} left room {room_name}')
             
             # Если комната пуста, удаляем ее
             if not video_rooms[room_name]:
                 del video_rooms[room_name]
-                print(f'Room {room_name} deleted (empty)')
+                logger.info(f'Room {room_name} deleted (empty)')
             
             # Уведомляем других участников
             emit('user_left', {
                 'user_id': user_id,
-                'room_state': list(video_rooms.get(room_name, {}).keys())
+                'user_name': user_data.get('user_name', user_id),
+                'room_state': list(video_rooms.get(room_name, {}).keys()),
+                'timestamp': datetime.now().isoformat()
             }, room=room_name)
             
     except Exception as e:
-        print(f'Error in leave_room: {e}')
+        logger.error(f'Error in leave_room: {e}')
 
 @socketio.on('webrtc_offer')
 def handle_webrtc_offer(data):
@@ -544,10 +635,10 @@ def handle_webrtc_offer(data):
             'timestamp': datetime.now().isoformat()
         }, room=target_user['socket_id'])
         
-        print(f'Forwarded WebRTC offer from {caller_user_id} to {target_user_id}')
+        logger.info(f'Forwarded WebRTC offer from {caller_user_id} to {target_user_id}')
         
     except Exception as e:
-        print(f'Error handling WebRTC offer: {e}')
+        logger.error(f'Error handling WebRTC offer: {e}')
         emit('error', {'message': str(e)})
 
 @socketio.on('webrtc_answer')
@@ -576,10 +667,10 @@ def handle_webrtc_answer(data):
             'timestamp': datetime.now().isoformat()
         }, room=target_user['socket_id'])
         
-        print(f'Forwarded WebRTC answer from {answerer_user_id} to {target_user_id}')
+        logger.info(f'Forwarded WebRTC answer from {answerer_user_id} to {target_user_id}')
         
     except Exception as e:
-        print(f'Error handling WebRTC answer: {e}')
+        logger.error(f'Error handling WebRTC answer: {e}')
         emit('error', {'message': str(e)})
 
 @socketio.on('ice_candidate')
@@ -608,10 +699,10 @@ def handle_ice_candidate(data):
             'timestamp': datetime.now().isoformat()
         }, room=target_user['socket_id'])
         
-        print(f'Forwarded ICE candidate from {sender_user_id} to {target_user_id}')
+        logger.info(f'Forwarded ICE candidate from {sender_user_id} to {target_user_id}')
         
     except Exception as e:
-        print(f'Error handling ICE candidate: {e}')
+        logger.error(f'Error handling ICE candidate: {e}')
         emit('error', {'message': str(e)})
 
 @socketio.on('screen_share_status')
@@ -636,10 +727,10 @@ def handle_screen_share_status(data):
                 'timestamp': datetime.now().isoformat()
             }, room=room_name, include_self=False)
             
-            print(f'User {user_id} screen share status: {is_sharing}')
+            logger.info(f'User {user_id} screen share status: {is_sharing}')
             
     except Exception as e:
-        print(f'Error handling screen share status: {e}')
+        logger.error(f'Error handling screen share status: {e}')
         emit('error', {'message': str(e)})
 
 @socketio.on('ping')
@@ -652,6 +743,7 @@ def video_health_check():
         'status': 'ok', 
         'rooms_count': len(video_rooms),
         'total_users': sum(len(users) for users in video_rooms.values()),
+        'connection_stats': connection_stats,
         'timestamp': datetime.now().isoformat()
     })
 
@@ -665,6 +757,32 @@ def video_rooms_status():
             'active_since': min(user.get('joined_at', datetime.now().isoformat()) for user in users.values())
         }
     return jsonify(rooms_info)
+
+@app.route('/api/video/debug')
+def video_debug():
+    rooms_info = {}
+    for room_name, users in video_rooms.items():
+        rooms_info[room_name] = {
+            'user_count': len(users),
+            'users': {
+                uid: {
+                    'user_name': data['user_name'],
+                    'joined_at': data.get('joined_at'),
+                    'last_activity': data.get('last_activity'),
+                    'socket_id': data.get('socket_id')[:10] + '...' if data.get('socket_id') else None
+                }
+                for uid, data in users.items()
+            }
+        }
+    
+    return jsonify({
+        'status': 'ok',
+        'connection_stats': connection_stats,
+        'rooms': rooms_info,
+        'total_rooms': len(video_rooms),
+        'total_users': sum(len(users) for users in video_rooms.values()),
+        'timestamp': datetime.now().isoformat()
+    })
 
 # ===== КОНЕЦ КОДА ВИДЕОКОНФЕРЕНЦИЙ =====
 
@@ -1144,19 +1262,21 @@ def api_contact():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':  
-    print("Starting Zindaki Academy server with optimized polling...")
+    print("Starting Zindaki Academy server with optimized settings...")
     print("Available routes:")
     print("  - Main site: http://localhost:8000")
     print("  - Dashboard: http://localhost:8000/dashboard") 
     print("  - Video Conference: http://localhost:8000/video-conference")
     print("  - API Health: http://localhost:8000/api/video/health")
+    print("  - API Debug: http://localhost:8000/api/video/debug")
     
-    # Запуск с оптимизированными настройками для polling
+    # Запуск с оптимизированными настройками
     socketio.run(
         app,
         host='0.0.0.0',
         port=8000,
         debug=False,
         log_output=True,
-        use_reloader=False
+        use_reloader=False,
+        allow_unsafe_werkzeug=True
     )
