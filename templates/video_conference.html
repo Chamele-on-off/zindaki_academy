@@ -752,6 +752,7 @@
         let mainVideoId = null;
         let participants = new Map();
         let pingInterval = null;
+        let activityInterval = null;
         let lastPingTime = null;
         let connectionStats = {
             ping: 0,
@@ -761,7 +762,7 @@
         
         // Улучшенная конфигурация Socket.IO
         const socket = io({
-            transports: ['websocket', 'polling'], // Разрешите оба
+            transports: ['websocket', 'polling'],
             upgrade: true,
             forceNew: false,
             reconnection: true,
@@ -780,6 +781,7 @@
             
             // При переподключении - rejoiн комнаты
             if (currentRoom && userId) {
+                console.log('🔄 Rejoining room after reconnect...');
                 socket.emit('join_room', {
                     room_name: currentRoom,
                     user_id: userId,
@@ -794,6 +796,7 @@
             
             if (reason === 'io server disconnect') {
                 // Сервер принудительно отключил - нужно переподключиться
+                console.log('🔄 Server disconnected, reconnecting...');
                 socket.connect();
             }
         });
@@ -846,6 +849,9 @@
             }
             
             updateParticipantsList();
+            
+            // Запускаем отправку активности
+            startActivityMonitoring();
         });
 
         socket.on('user_joined', (data) => {
@@ -856,10 +862,18 @@
         });
 
         socket.on('user_left', (data) => {
-            console.log('👤 User left:', data.user_id);
+            console.log('👤 User left:', data.user_id, 'Reason:', data.reason);
             const user = participants.get(data.user_id);
             if (user) {
-                showNotification(`${user.name} покинул конференцию`);
+                let message = `${user.name} покинул конференцию`;
+                if (data.reason === 'disconnected') {
+                    message = `${user.name} отключился`;
+                } else if (data.reason === 'reconnected') {
+                    message = `${user.name} переподключился`;
+                } else if (data.reason === 'inactive') {
+                    message = `${user.name} неактивен`;
+                }
+                showNotification(message);
             }
             removeRemoteVideo(data.user_id);
             updateParticipantsList();
@@ -1037,6 +1051,16 @@
                     </button>
                 `;
             }
+        }
+
+        // Start activity monitoring
+        function startActivityMonitoring() {
+            // Отправляем активность каждые 30 секунд
+            activityInterval = setInterval(() => {
+                if (socket.connected) {
+                    socket.emit('update_activity');
+                }
+            }, 30000);
         }
 
         // WebRTC handlers
@@ -1335,8 +1359,10 @@
         // Start ping monitoring
         function startPingMonitoring() {
             pingInterval = setInterval(() => {
-                lastPingTime = Date.now();
-                socket.emit('ping');
+                if (socket.connected) {
+                    lastPingTime = Date.now();
+                    socket.emit('ping');
+                }
             }, 3000); // Ping every 3 seconds
         }
 
@@ -1553,6 +1579,9 @@
             // Clear intervals
             if (pingInterval) {
                 clearInterval(pingInterval);
+            }
+            if (activityInterval) {
+                clearInterval(activityInterval);
             }
             
             // Close all connections
