@@ -6,11 +6,12 @@ import json
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import logging
-from collections import defaultdict, deque
-import uuid
+from collections import defaultdict
 import time
-from threading import Thread
 import eventlet
+
+# Используем eventlet для асинхронности
+eventlet.monkey_patch()
 
 # Инициализация приложения
 app = Flask(__name__, static_folder='static', template_folder='templates')
@@ -23,7 +24,7 @@ socketio = SocketIO(
     async_mode='eventlet',
     manage_session=True,
     logger=True,
-    engineio_logger=False,  # Отключим для уменьшения логов
+    engineio_logger=True,  # Включим для дебага
     ping_timeout=60,
     ping_interval=25,
     max_http_buffer_size=100000000,
@@ -94,7 +95,7 @@ def cleanup_inactive_rooms():
                             'room_state': list(video_rooms[room_name].keys()),
                             'timestamp': datetime.now().isoformat(),
                             'reason': 'inactive'
-                        }, room=room_name)
+                        }, room=room_name, namespace='/')
                         
                         # Удаляем из комнаты
                         del video_rooms[room_name][user_id]
@@ -642,7 +643,7 @@ def join_room_handler(data):
             'participants': participants,
             'room_state': list(video_rooms[room_name].keys()),
             'server_time': datetime.now().isoformat()
-        }, room=request.sid)
+        })
         
         # Уведомляем других участников о новом пользователе
         emit('user_joined', {
@@ -1390,7 +1391,7 @@ def api_contact():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':  
-    print("Starting Zindaki Academy server with optimized settings...")
+    print("Starting Zindaki Academy server with Socket.IO...")
     print("Available routes:")
     print("  - Main site: http://localhost:8000")
     print("  - Dashboard: http://localhost:8000/dashboard") 
@@ -1398,12 +1399,12 @@ if __name__ == '__main__':
     print("  - API Health: http://localhost:8000/api/video/health")
     print("  - API Debug: http://localhost:8000/api/video/debug")
     
-    # Запуск с оптимизированными настройками
+    # Запуск с Socket.IO
     socketio.run(
         app,
         host='0.0.0.0',
         port=8000,
-        debug=False,
+        debug=True,
         log_output=True,
         use_reloader=False,
         allow_unsafe_werkzeug=True
