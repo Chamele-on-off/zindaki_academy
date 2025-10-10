@@ -4,15 +4,15 @@ services:
   web:
     build: .
     ports:
-      - "80:8000"  # HTTP порт
-      - "443:8443"  # HTTPS порт
+      - "80:80"  # Пробрасываем порт 80 на порт 80 контейнера
+      - "443:8443"
     volumes:
       - .:/app
       - ./uploads:/app/uploads
       - ./data:/app/data
-      - ./certs:/app/certs
     environment:
       - FLASK_APP=app.py
       - FLASK_ENV=production
-    command: python app.py  # Запускаем напрямую, без Gunicorn
+    command: python app.py
     restart: unless-stopped
+    user: root  # Добавляем для работы с портом 80
