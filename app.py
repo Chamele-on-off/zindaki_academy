@@ -17,7 +17,7 @@ eventlet.monkey_patch()
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = os.environ.get('SECRET_KEY', 'your-very-secret-key-12345')
 
-# Настройки для production
+# Настройки для production с nginx
 app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
@@ -25,14 +25,12 @@ app.config.update(
     PREFERRED_URL_SCHEME='https'
 )
 
-# НАСТРОЙКИ ДЛЯ PRODUCTION
+# НАСТРОЙКИ ДЛЯ PRODUCTION С NGINX
 socketio = SocketIO(
     app,
     cors_allowed_origins=[
         "https://zindaki-edu.ru",
-        "https://www.zindaki-edu.ru",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000"
+        "https://www.zindaki-edu.ru"
     ],
     async_mode='eventlet',
     manage_session=False,
@@ -46,6 +44,7 @@ socketio = SocketIO(
     http_compression=True,
     compression_threshold=1024
 )
+
 
 # Конфигурация приложения
 UPLOAD_FOLDER = 'uploads'
