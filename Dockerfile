@@ -7,15 +7,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt gunicorn
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN mkdir -p /app/uploads /app/data /app/certs
+RUN mkdir -p /app/uploads /app/data
 
-EXPOSE 8000 8443
+EXPOSE 8000
 
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:8000 --bind 0.0.0.0:8443 \
-     --certfile /app/certs/fullchain.pem \
-     --keyfile /app/certs/privkey.pem \
-     --workers 4 app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--worker-class", "eventlet", "app:app"]
