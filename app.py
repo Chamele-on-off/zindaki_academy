@@ -17,18 +17,31 @@ eventlet.monkey_patch()
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = os.environ.get('SECRET_KEY', 'your-very-secret-key-12345')
 
+# Настройки для production
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    PREFERRED_URL_SCHEME='https'
+)
+
 # НАСТРОЙКИ ДЛЯ PRODUCTION
 socketio = SocketIO(
     app,
-    cors_allowed_origins="*",
+    cors_allowed_origins=[
+        "https://zindaki-edu.ru",
+        "https://www.zindaki-edu.ru",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000"
+    ],
     async_mode='eventlet',
-    manage_session=True,
-    logger=True,
-    engineio_logger=True,  # Включим для дебага
+    manage_session=False,
+    logger=False,
+    engineio_logger=False,
     ping_timeout=60,
     ping_interval=25,
-    max_http_buffer_size=100000000,
-    transports=['websocket', 'polling'],
+    max_http_buffer_size=50 * 1024 * 1024,
+    transports=['websocket', 'polling', 'xhr-polling'],
     allow_upgrades=True,
     http_compression=True,
     compression_threshold=1024
@@ -488,6 +501,58 @@ if not os.path.exists(f'{DB_FOLDER}/users.json'):
     DB._save_db('conferences', initial_conferences)
     DB._save_db('testimonials', initial_testimonials)
 
+# Middleware для обработки безопасности
+@app.after_request
+def add_security_headers(response):
+    # Заголовки безопасности
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    
+    # Заголовки CORS
+    origin = request.headers.get('Origin')
+    allowed_origins = ['https://zindaki-edu.ru', 'https://www.zindaki-edu.ru']
+    
+    if origin in allowed_origins:
+        response.headers['Access-Control-Allow-Origin'] = origin
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+    
+    # Заголовки кэширования
+    if request.path.startswith('/static/'):
+        response.headers['Cache-Control'] = 'public, max-age=3600'
+    else:
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    
+    return response
+
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        response = jsonify({"status": "success"})
+        origin = request.headers.get('Origin')
+        allowed_origins = ['https://zindaki-edu.ru', 'https://www.zindaki-edu.ru']
+        
+        if origin in allowed_origins:
+            response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Headers'] = "*"
+        response.headers['Access-Control-Allow-Methods'] = "*"
+        response.headers['Access-Control-Allow-Credentials'] = "true"
+        return response
+
+# Перенаправление на HTTPS в production
+@app.before_request
+def redirect_to_https():
+    # Только для production домена
+    if request.host in ['zindaki-edu.ru', 'www.zindaki-edu.ru']:
+        if not request.is_secure and request.headers.get('X-Forwarded-Proto', 'http') != 'https':
+            url = request.url.replace('http://', 'https://', 1)
+            return redirect(url, code=301)
+
 # ===== КОД ВИДЕОКОНФЕРЕНЦИЙ =====
 
 @app.route('/video-conference')
@@ -922,6 +987,7 @@ def video_debug():
 @app.route('/programs')
 @app.route('/testimonials')
 @app.route('/contact')
+@app.route('/success')
 def home():
     scroll_to = request.path[1:] if request.path != '/' else None
     return render_template('index.html', 
@@ -929,6 +995,21 @@ def home():
                          teachers=DB.get_users(role='teacher')[:3],
                          testimonials=DB.get_testimonials(),
                          scroll_to=scroll_to)
+
+# Health check endpoint
+@app.route('/health')
+def health_check():
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'ssl_enabled': request.is_secure,
+        'user_authenticated': 'user' in session
+    })
+
+# Robots.txt
+@app.route('/robots.txt')
+def robots():
+    return send_from_directory(app.static_folder, 'robots.txt')
 
 # API Endpoints
 @app.route('/api/register', methods=['POST'])
@@ -1390,13 +1471,31 @@ def api_contact():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# Обработчики ошибок
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({'error': 'Not found'}), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({'error': 'Internal server error'}), 500
+
+@app.errorhandler(400)
+def bad_request(error):
+    return jsonify({'error': 'Bad request'}), 400
+
+@app.errorhandler(403)
+def forbidden(error):
+    return jsonify({'error': 'Forbidden'}), 403
+
 if __name__ == '__main__':  
-    print("Starting Zindaki Academy server with Socket.IO...")
+    print("Starting Zindaki Academy server with enhanced SSL support...")
     print("Available routes:")
     print("  - Main site: http://localhost:8000")
     print("  - Dashboard: http://localhost:8000/dashboard") 
     print("  - Video Conference: http://localhost:8000/video-conference")
     print("  - API Health: http://localhost:8000/api/video/health")
+    print("  - Health Check: http://localhost:8000/health")
     print("  - API Debug: http://localhost:8000/api/video/debug")
     
     # Запуск с Socket.IO
@@ -1404,7 +1503,7 @@ if __name__ == '__main__':
         app,
         host='0.0.0.0',
         port=8000,
-        debug=True,
+        debug=False,
         log_output=True,
-        use_reloader=False,
+        use_reloader=False
     )
