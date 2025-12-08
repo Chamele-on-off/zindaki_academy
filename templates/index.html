@@ -15,6 +15,9 @@
             --primary-dark: #2c4761;
             --secondary: #6d4c41;
             --accent: #c5a258;
+            --ai-primary: #7E76F9;
+            --ai-secondary: #6A61E5;
+            --ai-accent: #FF7B9C;
             --light: #f5f3f0;
             --lighter: #ffffff;
             --dark: #1a1a2e;
@@ -23,6 +26,7 @@
             --text-light: #6d6d6d;
             --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             --gradient-accent: linear-gradient(135deg, var(--accent) 0%, #d4b15f 100%);
+            --gradient-ai: linear-gradient(135deg, var(--ai-primary) 0%, var(--ai-secondary) 100%);
             --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
             --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
             --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
@@ -113,6 +117,7 @@
         .nav-links {
             display: flex;
             gap: 1.5rem;
+            align-items: center;
         }
         
         .nav-links a {
@@ -152,6 +157,31 @@
         
         .nav-links a:hover:after {
             width: 100%;
+        }
+        
+        /* Специальная кнопка для AI-учителя в навигации */
+        .nav-ai-button {
+            background: var(--gradient-ai);
+            color: white;
+            padding: 0.5rem 1.2rem;
+            border-radius: var(--rounded-full);
+            font-weight: 600;
+            margin-left: 0.5rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 15px rgba(126, 118, 249, 0.3);
+        }
+        
+        .nav-ai-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(126, 118, 249, 0.4);
+            color: white;
+        }
+        
+        .nav-ai-button i {
+            margin-right: 0.3rem;
         }
         
         .mobile-menu-btn {
@@ -399,6 +429,17 @@
             opacity: 0.9;
         }
         
+        .btn-ai {
+            background: var(--gradient-ai);
+            color: white;
+            box-shadow: 0 4px 15px rgba(126, 118, 249, 0.3);
+        }
+        
+        .btn-ai:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(126, 118, 249, 0.4);
+        }
+        
         /* Features Section */
         .section {
             padding: 8rem 2rem;
@@ -464,6 +505,10 @@
             background: var(--gradient);
         }
         
+        .feature-card.ai-feature::before {
+            background: var(--gradient-ai);
+        }
+        
         .feature-icon {
             font-size: 2.5rem;
             margin-bottom: 1.5rem;
@@ -477,6 +522,11 @@
             border-radius: var(--rounded-lg);
         }
         
+        .ai-feature .feature-icon {
+            color: var(--ai-primary);
+            background: rgba(126, 118, 249, 0.1);
+        }
+        
         .feature-card h3 {
             font-size: 1.5rem;
             margin-bottom: 1.2rem;
@@ -488,6 +538,72 @@
             color: var(--text-light);
             font-size: 1.1rem;
             line-height: 1.7;
+        }
+        
+        /* AI Teacher Demo Section */
+        .ai-demo-section {
+            background: var(--gradient-ai);
+            color: white;
+            padding: 8rem 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .ai-demo-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==');
+            opacity: 0.3;
+        }
+        
+        .ai-demo-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .ai-demo-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+        
+        .ai-demo-feature {
+            text-align: center;
+            padding: 1.5rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: var(--rounded-lg);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .ai-demo-feature:hover {
+            transform: translateY(-5px);
+            background: rgba(255,255,255,0.15);
+        }
+        
+        .ai-demo-feature i {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: white;
+        }
+        
+        .ai-demo-feature h4 {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            color: white;
+        }
+        
+        .ai-demo-feature p {
+            opacity: 0.9;
+            font-size: 0.95rem;
         }
         
         /* About Section */
@@ -740,7 +856,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==');
+            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsMjU1LJI1NSwwLjA1KSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==');
             opacity: 0.3;
         }
         
@@ -1326,6 +1442,12 @@
             .programs-header .section-title {
                 margin-bottom: 30px;
             }
+            
+            .nav-ai-button {
+                margin: 0;
+                width: 100%;
+                text-align: center;
+            }
         }
         
         @media (max-width: 576px) {
@@ -1404,9 +1526,13 @@
             <a href="#about">О нас</a>
             <a href="#teachers">Преподаватели</a>
             <a href="#programs">Программы</a>
+            <a href="#ai-teacher-demo">AI-репетитор</a>
             <a href="#testimonials">Отзывы</a>
             <a href="#success">Успехи</a>
             <a href="#contact">Контакты</a>
+            <button class="nav-ai-button" id="navAiButton">
+                <i class="fas fa-robot"></i> AI-учитель
+            </button>
             {% if not user %}
             <a href="#" class="login-btn">Вход</a>
             {% endif %}
@@ -1434,6 +1560,7 @@
         </div>
         <ul class="user-menu">
             <li><a href="/dashboard"><i class="fas fa-book"></i> Личный кабинет</a></li>
+            <li><a href="#" id="openAiTeacher"><i class="fas fa-robot"></i> AI-репетитор</a></li>
         </ul>
     </div>
     {% endif %}
@@ -1490,6 +1617,9 @@
             <div class="cta-buttons">
                 <a href="#programs" class="btn btn-primary">Выбрать программу</a>
                 <a href="https://t.me/zindakiequipe" class="btn btn-secondary">Telegram-канал <i class="fas fa-arrow-right"></i></a>
+                <button id="heroAiButton" class="btn btn-ai">
+                    <i class="fas fa-robot"></i> Попробовать AI-репетитора
+                </button>
             </div>
         </div>
     </section>
@@ -1506,6 +1636,15 @@
                     <h3>Инновационные методики</h3>
                     <p>Используем современные технологии в обучении, включая разработки Московской Электронной Школы.</p>
                 </div>
+                
+                <div class="feature-card ai-feature">
+                    <div class="feature-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3>AI-репетитор - первый в России</h3>
+                    <p>Инновационная система электронного образования, которая подстраивается под ваши интересы. Все наши ученики получают бесплатный и безлимитный доступ к занятиям с AI-учителем.</p>
+                </div>
+                
                 <div class="feature-card">
                     <div class="feature-icon">
                         <i class="fas fa-heart"></i>
@@ -1513,6 +1652,7 @@
                     <h3>Семейный подход</h3>
                     <p>Программы для всех возрастов - от дошкольников до взрослых. Семейные скидки и групповые занятия.</p>
                 </div>
+                
                 <div class="feature-card">
                     <div class="feature-icon">
                         <i class="fas fa-brain"></i>
@@ -1520,6 +1660,56 @@
                     <h3>Специализированные программы</h3>
                     <p>Особые методики для детей с аутизмом, синдромом Дауна и другими особенностями развития.</p>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- AI Teacher Demo Section -->
+    <section class="section ai-demo-section" id="ai-teacher-demo">
+        <div class="container">
+            <h2 class="section-title" style="color: white;">Попробуйте нашего AI-репетитора</h2>
+            
+            <div style="text-align: center; max-width: 800px; margin: 0 auto 3rem;">
+                <p style="font-size: 1.3rem; opacity: 0.9; line-height: 1.6;">
+                    Инновационный AI-репетитор поможет вашему ребенку освоить любой школьный предмет. 
+                    Просто начните диалог - репетитор подстроится под уровень ученика и объяснит сложные темы простыми словами.
+                    <strong>Все наши ученики получают бесплатный доступ к системе!</strong>
+                </p>
+            </div>
+            
+            <div class="ai-demo-features">
+                <div class="ai-demo-feature">
+                    <i class="fas fa-microphone"></i>
+                    <h4>Говорите свободно</h4>
+                    <p>Общайтесь голосом как с живым учителем</p>
+                </div>
+                
+                <div class="ai-demo-feature">
+                    <i class="fas fa-lightbulb"></i>
+                    <h4>Все школьные предметы</h4>
+                    <p>Математика, физика, языки, история и многое другое</p>
+                </div>
+                
+                <div class="ai-demo-feature">
+                    <i class="fas fa-clock"></i>
+                    <h4>24/7 доступность</h4>
+                    <p>Занимайтесь в любое удобное время</p>
+                </div>
+                
+                <div class="ai-demo-feature">
+                    <i class="fas fa-chart-line"></i>
+                    <h4>Адаптивное обучение</h4>
+                    <p>Система подстраивается под уровень ученика</p>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 3rem;">
+                <button id="openAiDemo" class="btn" style="background: white; color: #7E76F9; padding: 1.2rem 2.5rem; font-size: 1.2rem; border-radius: var(--rounded-full); border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.8rem; font-weight: 600; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+                    <i class="fas fa-robot"></i> Запустить демо AI-репетитора
+                </button>
+                <p style="margin-top: 1rem; opacity: 0.8; font-size: 0.9rem;">
+                    <i class="fas fa-info-circle"></i> Для голосового общения разрешите доступ к микрофону
+                </p>
             </div>
         </div>
     </section>
@@ -1536,7 +1726,12 @@
                     <p>Zindaki Academy - это уникальное сочетание семейного подхода и современных образовательных технологий. Наши преподаватели - выпускники и сотрудники ведущих вузов, включая МГУ им. М.В. Ломоносова.</p>
                     <p>Мы разрабатываем инновационные методики обучения, которые делают процесс образования эффективным и увлекательным для студентов любого возраста.</p>
                     <p>Наши выпускники поступают в лучшие вузы страны, а взрослые студенты достигают своих образовательных целей в комфортном темпе.</p>
-                    <a href="#teachers" class="btn btn-primary" style="margin-top: 1rem;">Наши преподаватели</a>
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <a href="#teachers" class="btn btn-primary">Наши преподаватели</a>
+                        <button id="aboutAiButton" class="btn btn-ai">
+                            <i class="fas fa-robot"></i> AI-репетитор
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1751,6 +1946,9 @@
                 <div class="cta-buttons">
                     <a href="#contact" class="btn btn-accent">Записаться на урок</a>
                     <a href="https://t.me/zindakiequipe" class="btn btn-secondary">Telegram-канал <i class="fas fa-arrow-right"></i></a>
+                    <button id="ctaAiButton" class="btn btn-ai">
+                        <i class="fas fa-robot"></i> Попробовать AI-репетитора
+                    </button>
                 </div>
             </div>
         </div>
@@ -1776,6 +1974,10 @@
                         <div class="contact-item">
                             <i class="fas fa-envelope"></i>
                             <span>info@zindakiacademy.ru</span>
+                        </div>
+                        <div class="contact-item">
+                            <i class="fas fa-robot"></i>
+                            <span>AI-репетитор: <a href="https://ai.zindaki-edu.ru" style="color: var(--ai-primary); text-decoration: underline;">ai.zindaki-edu.ru</a></span>
                         </div>
                     </div>
                     <h3 style="margin-top: 2rem;">Мы в соцсетях</h3>
@@ -1813,7 +2015,7 @@
             <div class="footer-content">
                 <div class="footer-column">
                     <h3>Zindaki Academy</h3>
-                    <p>Инновационная семейная онлайн школа иностранных языков и гуманитарных предметов.</p>
+                    <p>Инновационная семейная онлайн школа иностранных языков и гуманитарных предметов с AI-репетитором.</p>
                     <div class="footer-social-links">
                         <a href="https://t.me/zindakiequipe" target="_blank"><i class="fab fa-telegram"></i></a>
                         <a href="https://instagram.com/zindakiequipe" target="_blank"><i class="fab fa-instagram"></i></a>
@@ -1827,6 +2029,7 @@
                         <li><a href="#programs">Подготовка к школе</a></li>
                         <li><a href="#programs">Подготовка к ЕГЭ/ОГЭ</a></li>
                         <li><a href="#programs">Логопедические занятия</a></li>
+                        <li><a href="#ai-teacher-demo">AI-репетитор</a></li>
                     </ul>
                 </div>
                 <div class="footer-column">
@@ -1842,6 +2045,7 @@
                     <ul>
                         <li><a href="tel:+79165202916">+7 (916) 520-29-16</a></li>
                         <li><a href="mailto:info@zindakiacademy.ru">info@zindakiacademy.ru</a></li>
+                        <li><a href="https://ai.zindaki-edu.ru" target="_blank">AI-репетитор</a></li>
                         <li><a href="https://t.me/zindakiequipe">Telegram-канал</a></li>
                         <li><a href="#contact">Форма обратной связи</a></li>
                     </ul>
@@ -1855,6 +2059,29 @@
 
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     <script>
+        // Генерация уникального ID для демо-комнаты (как в landing.html)
+        function generateDemoRoomId() {
+            const timestamp = Date.now();
+            const random = Math.floor(Math.random() * 10000);
+            return `demo_${timestamp}_${random}`;
+        }
+
+        // Функция для открытия демо-конференции
+        function openAiDemoConference() {
+            const roomId = generateDemoRoomId();
+            // Используем домен AI-учителя
+            const url = `https://ai.zindaki-edu.ru/conference?room=${roomId}&demo=true&guest=true`;
+            
+            // Попробуем открыть в новом окне
+            const newWindow = window.open(url, 'AI_Teacher_Demo', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no');
+            
+            if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+                // Если всплывающее окно заблокировано, показываем инструкции
+                alert('Разрешите всплывающие окна для этого сайта или нажмите Ctrl+Click по ссылке');
+                window.open(url, '_blank');
+            }
+        }
+
         // Инициализация частиц
         particlesJS("particles-js", {
             "particles": {
@@ -2009,7 +2236,7 @@
         
         // Анимация появления элементов при скролле
         const animateOnScroll = function() {
-            const elements = document.querySelectorAll('.feature-card, .teacher-card, .section-title, .program-card, .testimonial, .success-card');
+            const elements = document.querySelectorAll('.feature-card, .teacher-card, .section-title, .program-card, .testimonial, .success-card, .ai-demo-feature');
             
             elements.forEach(element => {
                 const elementPosition = element.getBoundingClientRect().top;
@@ -2024,7 +2251,7 @@
 
         // Инициализация анимации
         window.addEventListener('load', function() {
-            document.querySelectorAll('.feature-card, .teacher-card, .section-title, .program-card, .testimonial, .success-card').forEach(el => {
+            document.querySelectorAll('.feature-card, .teacher-card, .section-title, .program-card, .testimonial, .success-card, .ai-demo-feature').forEach(el => {
                 el.style.opacity = '0';
                 el.style.transform = 'translateY(20px)';
                 el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
@@ -2165,6 +2392,22 @@
                     alert('Ошибка регистрации: ' + (data.error || 'Попробуйте другой логин'));
                 }
             });
+        });
+
+        // Обработчики для кнопок AI-учителя
+        const aiButtons = [
+            document.getElementById('navAiButton'),
+            document.getElementById('heroAiButton'),
+            document.getElementById('openAiDemo'),
+            document.getElementById('aboutAiButton'),
+            document.getElementById('ctaAiButton'),
+            document.getElementById('openAiTeacher')
+        ];
+
+        aiButtons.forEach(btn => {
+            if (btn) {
+                btn.addEventListener('click', openAiDemoConference);
+            }
         });
     </script>
 </body>
