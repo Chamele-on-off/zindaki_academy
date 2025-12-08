@@ -45,7 +45,6 @@ socketio = SocketIO(
     compression_threshold=1024
 )
 
-
 # Конфигурация приложения
 UPLOAD_FOLDER = 'uploads'
 DB_FOLDER = 'data'
@@ -305,7 +304,8 @@ class DB:
             files = []
         homeworks = DB.get_homeworks()
         for hw in homeworks:
-            if hw['id'] == homework_id and student_username in hw['students']:
+            if hw['id'] == homework_id:
+                # Разрешаем отправку всем ученикам (не проверяем принадлежность)
                 hw['submissions'][student_username] = {
                     'comment': comment,
                     'files': files,
@@ -421,6 +421,82 @@ class DB:
                    if c['is_active'] 
                    and c['updated_at'] > (datetime.now() - timedelta(hours=1)).isoformat()]
 
+    # Обратная связь (комментарии учителя)
+    @staticmethod
+    def get_feedbacks(lesson_id=None, student_username=None, teacher_username=None):
+        feedbacks = DB._get_db('feedbacks')
+        result = feedbacks
+        
+        if lesson_id:
+            result = [f for f in result if f['lesson_id'] == lesson_id]
+        if student_username:
+            result = [f for f in result if f['student_username'] == student_username]
+        if teacher_username:
+            result = [f for f in result if f['teacher_username'] == teacher_username]
+            
+        return result
+
+    @staticmethod
+    def save_feedback(lesson_id, student_username, teacher_username, comment, rating=None):
+        feedbacks = DB._get_db('feedbacks')
+        feedback_id = max([f['id'] for f in feedbacks], default=0) + 1
+        
+        feedback = {
+            'id': feedback_id,
+            'lesson_id': lesson_id,
+            'student_username': student_username,
+            'teacher_username': teacher_username,
+            'comment': comment,
+            'rating': rating,
+            'created_at': datetime.now().isoformat()
+        }
+        
+        feedbacks.append(feedback)
+        DB._save_db('feedbacks', feedbacks)
+        return feedback
+
+    @staticmethod
+    def delete_feedback(feedback_id):
+        feedbacks = DB._get_db('feedbacks')
+        feedbacks = [f for f in feedbacks if f['id'] != feedback_id]
+        DB._save_db('feedbacks', feedbacks)
+        return True
+
+    # Альтернативные конференции
+    @staticmethod
+    def get_conference_links():
+        return DB._get_db('conference_links')
+
+    @staticmethod
+    def get_conference_link(link_id):
+        links = DB.get_conference_links()
+        return next((l for l in links if l['id'] == link_id), None)
+
+    @staticmethod
+    def save_conference_link(teacher_username, platform, link, is_active=True):
+        links = DB.get_conference_links()
+        link_id = max([l['id'] for l in links], default=0) + 1
+        
+        conference_link = {
+            'id': link_id,
+            'teacher_username': teacher_username,
+            'platform': platform,
+            'link': link,
+            'is_active': is_active,
+            'created_at': datetime.now().isoformat()
+        }
+        
+        links.append(conference_link)
+        DB._save_db('conference_links', links)
+        return conference_link
+
+    @staticmethod
+    def delete_conference_link(link_id):
+        links = DB.get_conference_links()
+        links = [l for l in links if l['id'] != link_id]
+        DB._save_db('conference_links', links)
+        return True
+
 # Инициализация базы данных
 if not os.path.exists(f'{DB_FOLDER}/users.json'):
     initial_users = [
@@ -499,6 +575,39 @@ if not os.path.exists(f'{DB_FOLDER}/users.json'):
     DB._save_db('homeworks', initial_homeworks)
     DB._save_db('conferences', initial_conferences)
     DB._save_db('testimonials', initial_testimonials)
+
+# Инициализация новых таблиц
+if not os.path.exists(f'{DB_FOLDER}/feedbacks.json'):
+    DB._save_db('feedbacks', [])
+    
+if not os.path.exists(f'{DB_FOLDER}/conference_links.json'):
+    initial_links = [
+        {
+            'id': 1,
+            'teacher_username': 'admin',
+            'platform': 'Яндекс Телемост',
+            'link': 'https://telemost.yandex.ru/j/42203171450444',
+            'is_active': True,
+            'created_at': datetime.now().isoformat()
+        },
+        {
+            'id': 2,
+            'teacher_username': 'admin',
+            'platform': 'Microsoft Teams',
+            'link': 'https://teams.live.com/meet/9480976290023?p=wqOkR5Ye8VJMKmpq',
+            'is_active': True,
+            'created_at': datetime.now().isoformat()
+        },
+        {
+            'id': 3,
+            'teacher_username': 'admin',
+            'platform': 'Google Meet',
+            'link': 'https://meet.google.com/eec-earm-gyd',
+            'is_active': True,
+            'created_at': datetime.now().isoformat()
+        }
+    ]
+    DB._save_db('conference_links', initial_links)
 
 # Middleware для обработки безопасности
 @app.after_request
@@ -1331,6 +1440,36 @@ def api_submit_homework(homework_id):
         return redirect(url_for('dashboard'))
     return jsonify({'error': 'Homework not found or access denied'}), 404
 
+# Новый эндпоинт для загрузки домашнего задания
+@app.route('/api/homework/upload', methods=['POST'])
+def api_upload_homework():
+    if 'user' not in session or session['user']['role'] != 'student':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    student_username = session['user']['username']
+    homework_id = request.form.get('homework_id')
+    comment = request.form.get('comment', '')
+    
+    if not homework_id:
+        return jsonify({'error': 'Homework ID is required'}), 400
+    
+    files = []
+    if 'files' in request.files:
+        for file in request.files.getlist('files'):
+            if file.filename != '':
+                filename = secure_filename(f"{student_username}_{homework_id}_{file.filename}")
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                files.append({
+                    'name': filename,
+                    'path': filepath,
+                    'size': os.path.getsize(filepath)
+                })
+    
+    if DB.submit_homework(int(homework_id), student_username, comment, files):
+        return jsonify({'success': True})
+    return jsonify({'error': 'Failed to submit homework'}), 500
+
 # Загрузка файлов
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
@@ -1351,11 +1490,17 @@ def dashboard():
         homeworks = DB.get_student_homeworks(session['user']['username'])
         students = []
     
+    # Загружаем ссылки на конференции
+    conference_links = DB.get_conference_links()
+    teacher_links = [l for l in conference_links if l['teacher_username'] == session['user']['username'] and l['is_active']]
+    default_links = [l for l in conference_links if l['teacher_username'] == 'admin' and l['is_active']]
+    
     return render_template('dashboard.html', 
                          user=session['user'],
                          lessons=lessons,
                          homeworks=homeworks,
                          students=students,
+                         conference_links=teacher_links if teacher_links else default_links,
                          timedelta=timedelta,
                          is_teacher=session['user']['role'] == 'teacher')
 
@@ -1460,6 +1605,113 @@ def api_end_conference(room_name):
     if DB.end_conference(room_name):
         return jsonify({'success': True})
     return jsonify({'error': 'Failed to end conference'}), 500
+
+# Обратная связь API
+@app.route('/api/feedbacks', methods=['GET', 'POST'])
+def api_feedbacks():
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if request.method == 'POST':
+        if session['user']['role'] != 'teacher':
+            return jsonify({'error': 'Only teachers can leave feedback'}), 403
+        
+        data = request.json
+        required_fields = ['lesson_id', 'student_username', 'comment']
+        if not all(field in data for field in required_fields):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        feedback = DB.save_feedback(
+            data['lesson_id'],
+            data['student_username'],
+            session['user']['username'],
+            data['comment'],
+            data.get('rating')
+        )
+        
+        return jsonify({'success': True, 'feedback': feedback})
+    
+    # GET запрос
+    lesson_id = request.args.get('lesson_id', type=int)
+    if session['user']['role'] == 'teacher':
+        feedbacks = DB.get_feedbacks(teacher_username=session['user']['username'])
+    else:
+        feedbacks = DB.get_feedbacks(student_username=session['user']['username'])
+    
+    if lesson_id:
+        feedbacks = [f for f in feedbacks if f['lesson_id'] == lesson_id]
+    
+    return jsonify({'feedbacks': feedbacks})
+
+@app.route('/api/feedbacks/<int:feedback_id>', methods=['DELETE'])
+def api_delete_feedback(feedback_id):
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    feedbacks = DB.get_feedbacks()
+    feedback = next((f for f in feedbacks if f['id'] == feedback_id), None)
+    
+    if not feedback:
+        return jsonify({'error': 'Feedback not found'}), 404
+    
+    if session['user']['role'] != 'teacher' or feedback['teacher_username'] != session['user']['username']:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    if DB.delete_feedback(feedback_id):
+        return jsonify({'success': True})
+    return jsonify({'error': 'Failed to delete feedback'}), 500
+
+# Управление ссылками на конференции
+@app.route('/api/conference-links', methods=['GET', 'POST'])
+def api_conference_links():
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if request.method == 'POST':
+        if session['user']['role'] != 'teacher':
+            return jsonify({'error': 'Only teachers can manage conference links'}), 403
+        
+        data = request.json
+        required_fields = ['platform', 'link']
+        if not all(field in data for field in required_fields):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        link = DB.save_conference_link(
+            session['user']['username'],
+            data['platform'],
+            data['link'],
+            data.get('is_active', True)
+        )
+        
+        return jsonify({'success': True, 'link': link})
+    
+    # GET запрос
+    teacher_username = request.args.get('teacher_username')
+    if teacher_username:
+        links = [l for l in DB.get_conference_links() if l['teacher_username'] == teacher_username and l['is_active']]
+    else:
+        # По умолчанию показываем ссылки для admin
+        links = [l for l in DB.get_conference_links() if l['teacher_username'] == 'admin' and l['is_active']]
+    
+    return jsonify({'links': links})
+
+@app.route('/api/conference-links/<int:link_id>', methods=['DELETE'])
+def api_delete_conference_link(link_id):
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    links = DB.get_conference_links()
+    link = next((l for l in links if l['id'] == link_id), None)
+    
+    if not link:
+        return jsonify({'error': 'Link not found'}), 404
+    
+    if link['teacher_username'] != session['user']['username'] and session['user']['username'] != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    if DB.delete_conference_link(link_id):
+        return jsonify({'success': True})
+    return jsonify({'error': 'Failed to delete link'}), 500
 
 # Обработка контактной формы 
 @app.route('/api/contact', methods=['POST'])
