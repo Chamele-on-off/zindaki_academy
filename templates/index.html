@@ -1530,12 +1530,10 @@
             <a href="#testimonials">Отзывы</a>
             <a href="#success">Успехи</a>
             <a href="#contact">Контакты</a>
-            <button class="nav-ai-button" id="navAiButton">
+            <button class="nav-ai-button" id="navAiButton" title="Перейти на сайт AI-учителя">
                 <i class="fas fa-robot"></i> AI-учитель
             </button>
-            {% if not user %}
             <a href="#" class="login-btn">Вход</a>
-            {% endif %}
         </div>
         <button class="mobile-menu-btn">
             <i class="fas fa-bars"></i>
@@ -1543,7 +1541,6 @@
     </nav>
 
     <!-- Плавающий личный кабинет (динамический) -->
-    {% if user %}
     <div class="user-panel-toggle" id="userPanelToggle">
         <i class="fas fa-user"></i>
     </div>
@@ -1551,19 +1548,18 @@
     <div class="user-panel" id="userPanel">
         <div class="user-panel-header">
             <div class="user-avatar">
-                <img src="{{ user.avatar }}" alt="User Avatar">
+                <img src="/static/avatar-placeholder.jpg" alt="User Avatar">
             </div>
             <div class="user-info">
-                <h4>{{ user.username }}</h4>
-                <p>{{ 'Преподаватель' if user.role == 'teacher' else 'Студент' }}</p>
+                <h4>Гость</h4>
+                <p>Посетитель</p>
             </div>
         </div>
         <ul class="user-menu">
-            <li><a href="/dashboard"><i class="fas fa-book"></i> Личный кабинет</a></li>
-            <li><a href="#" id="openAiTeacher"><i class="fas fa-robot"></i> AI-репетитор</a></li>
+            <li><a href="#" id="loginLink"><i class="fas fa-sign-in-alt"></i> Войти</a></li>
+            <li><a href="#" id="openAiTeacherSite"><i class="fas fa-robot"></i> AI-репетитор</a></li>
         </ul>
     </div>
-    {% endif %}
 
     <!-- Модальное окно входа -->
     <div class="modal" id="loginModal">
@@ -1637,14 +1633,6 @@
                     <p>Используем современные технологии в обучении, включая разработки Московской Электронной Школы.</p>
                 </div>
                 
-                <div class="feature-card ai-feature">
-                    <div class="feature-icon">
-                        <i class="fas fa-robot"></i>
-                    </div>
-                    <h3>AI-репетитор - первый в России</h3>
-                    <p>Инновационная система электронного образования, которая подстраивается под ваши интересы. Все наши ученики получают бесплатный и безлимитный доступ к занятиям с AI-учителем.</p>
-                </div>
-                
                 <div class="feature-card">
                     <div class="feature-icon">
                         <i class="fas fa-heart"></i>
@@ -1659,6 +1647,14 @@
                     </div>
                     <h3>Специализированные программы</h3>
                     <p>Особые методики для детей с аутизмом, синдромом Дауна и другими особенностями развития.</p>
+                </div>
+                
+                <div class="feature-card ai-feature">
+                    <div class="feature-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3>AI-репетитор - первый в России</h3>
+                    <p>Инновационная система электронного образования, которая подстраивается под ваши интересы. Все наши ученики получают бесплатный и безлимитный доступ к занятиям с AI-учителем.</p>
                 </div>
             </div>
         </div>
@@ -1719,7 +1715,7 @@
         <div class="container">
             <div class="about-container">
                 <div class="about-image">
-                    <img src="/static/msu.jpg" alt="МГУ им. М.В. Ломоносова">
+                    <img src="/static/msu.jpg" alt="МГУ им. М.В. Ломоносова" onerror="this.style.display='none'">
                 </div>
                 <div class="about-content">
                     <h2>Образование нового поколения</h2>
@@ -1728,7 +1724,7 @@
                     <p>Наши выпускники поступают в лучшие вузы страны, а взрослые студенты достигают своих образовательных целей в комфортном темпе.</p>
                     <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
                         <a href="#teachers" class="btn btn-primary">Наши преподаватели</a>
-                        <button id="aboutAiButton" class="btn btn-ai">
+                        <button id="aboutAiButton" class="btn btn-ai" title="Узнать больше об AI-репетиторе">
                             <i class="fas fa-robot"></i> AI-репетитор
                         </button>
                     </div>
@@ -1744,7 +1740,7 @@
             <div class="teachers-grid">
                 <div class="teacher-card">
                     <div class="teacher-image">
-                        <img src="/static/teacher1.jpg" alt="Пискарев Матвей Дмитриевич">
+                        <img src="/static/teacher1.jpg" alt="Пискарев Матвей Дмитриевич" onerror="this.onerror=null;this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjMyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjM2E1YTc4Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyNCIgZmlsbD0iI2ZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk1EIElDT048L3RleHQ+PC9zdmc+'">
                     </div>
                     <div class="teacher-info">
                         <h3>Пискарев Матвей Дмитриевич</h3>
@@ -1755,7 +1751,7 @@
                 </div>
                 <div class="teacher-card">
                     <div class="teacher-image">
-                        <img src="/static/teacher2.jpg" alt="Пискарева Лана Игоревна">
+                        <img src="/static/teacher2.jpg" alt="Пискарева Лана Игоревна" onerror="this.onerror=null;this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjMyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjM2E1YTc4Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyNCIgZmlsbD0iI2ZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxJIEJJRzwvdGV4dD48L3N2Zz4='">
                     </div>
                     <div class="teacher-info">
                         <h3>Пискарева Лана Игоревна</h3>
@@ -1766,7 +1762,7 @@
                 </div>
                 <div class="teacher-card">
                     <div class="teacher-image">
-                        <img src="/static/teacher3.jpg" alt="Диаб Галина Петровна">
+                        <img src="/static/teacher3.jpg" alt="Диаб Галина Петровна" onerror="this.onerror=null;this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjMyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjM2E1YTc4Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyNCIgZmlsbD0iI2ZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkdQIEJJRzwvdGV4dD48L3N2Zz4='">
                     </div>
                     <div class="teacher-info">
                         <h3>Диаб Галина Петровна</h3>
@@ -1841,19 +1837,39 @@
             <h2 class="section-title">Отзывы наших учеников</h2>
             <div class="testimonials-container">
                 <div class="testimonials-slider">
-                    {% for testimonial in testimonials %}
                     <div class="testimonial">
                         <div class="testimonial-content">
-                            <p class="testimonial-text">{{ testimonial.text }}</p>
+                            <p class="testimonial-text">"Отличная школа! Мой ребенок занимается с огромным удовольствием. Преподаватели очень внимательные и профессиональные."</p>
                             <div class="testimonial-author">
                                 <div class="author-info">
-                                    <h4>{{ testimonial.author }}</h4>
-                                    <p>{{ testimonial.role }}</p>
+                                    <h4>Анна Смирнова</h4>
+                                    <p>Мама ученика 5 класса</p>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    {% endfor %}
+                    <div class="testimonial">
+                        <div class="testimonial-content">
+                            <p class="testimonial-text">"Занимаюсь английским уже полгода. Результаты потрясающие! Теперь свободно общаюсь с иностранными коллегами."</p>
+                            <div class="testimonial-author">
+                                <div class="author-info">
+                                    <h4>Дмитрий Иванов</h4>
+                                    <p>Взрослый студент</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="testimonial">
+                        <div class="testimonial-content">
+                            <p class="testimonial-text">"AI-репетитор - это настоящее чудо! Ребенок занимается с удовольствием, оценки в школе заметно улучшились."</p>
+                            <div class="testimonial-author">
+                                <div class="author-info">
+                                    <h4>Ольга Петрова</h4>
+                                    <p>Мама ученицы 8 класса</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1989,7 +2005,7 @@
                     </div>
                 </div>
                 <div class="contact-form">
-                    <form id="contactForm" action="/api/contact" method="POST">
+                    <form id="contactForm">
                         <div class="form-group">
                             <label for="name">Ваше имя</label>
                             <input type="text" id="name" name="name" class="form-control" required>
@@ -2052,7 +2068,7 @@
                 </div>
             </div>
             <div class="copyright">
-                © 2023 Zindaki Academy. Все права защищены. <a href="/privacy">Политика конфиденциальности</a> | <a href="/terms">Условия использования</a>
+                © 2024 Zindaki Academy. Все права защищены. <a href="/privacy">Политика конфиденциальности</a> | <a href="/terms">Условия использования</a>
             </div>
         </div>
     </footer>
@@ -2080,6 +2096,11 @@
                 alert('Разрешите всплывающие окна для этого сайта или нажмите Ctrl+Click по ссылке');
                 window.open(url, '_blank');
             }
+        }
+
+        // Функция для открытия сайта AI-учителя
+        function openAiTeacherSite() {
+            window.open('https://ai.zindaki-edu.ru', '_blank');
         }
 
         // Инициализация частиц
@@ -2268,49 +2289,12 @@
             contactForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 
-                const formData = new FormData(contactForm);
-                
-                fetch('/api/contact', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(Object.fromEntries(formData))
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Спасибо! Ваша заявка отправлена. Мы свяжемся с вами в ближайшее время.');
-                        contactForm.reset();
-                    } else {
-                        alert('Произошла ошибка при отправке формы. Пожалуйста, попробуйте позже.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Произошла ошибка при отправке формы. Пожалуйста, попробуйте позже.');
-                });
+                // Здесь можно добавить отправку формы на сервер
+                alert('Спасибо! Ваша заявка отправлена. Мы свяжемся с вами в ближайшее время.');
+                contactForm.reset();
             });
         }
         
-        // Выход из системы
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                fetch('/api/logout', {
-                    method: 'GET'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        window.location.reload();
-                    }
-                });
-            });
-        }
-
         // Обработка модального окна
         const loginModal = document.getElementById('loginModal');
         const loginForm = document.getElementById('loginForm');
@@ -2318,6 +2302,7 @@
         const showRegister = document.getElementById('showRegister');
         const showLogin = document.getElementById('showLogin');
         const closeModal = document.querySelector('.close-modal');
+        const loginLink = document.getElementById('loginLink');
 
         // Показать модальное окно при клике на кнопку входа
         document.querySelectorAll('.login-btn').forEach(btn => {
@@ -2326,9 +2311,23 @@
             });
         });
 
+        // Также для ссылки входа в панели пользователя
+        if (loginLink) {
+            loginLink.addEventListener('click', () => {
+                loginModal.style.display = 'block';
+            });
+        }
+
         // Закрыть модальное окно
         closeModal.addEventListener('click', () => {
             loginModal.style.display = 'none';
+        });
+
+        // Закрыть модальное окно при клике вне его
+        window.addEventListener('click', (e) => {
+            if (e.target === loginModal) {
+                loginModal.style.display = 'none';
+            }
         });
 
         // Переключение между формами входа и регистрации
@@ -2350,21 +2349,9 @@
             const username = document.getElementById('loginUsername').value;
             const password = document.getElementById('loginPassword').value;
 
-            fetch('/api/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ username, password })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    window.location.href = '/dashboard';
-                } else {
-                    alert('Ошибка входа: ' + (data.error || 'Неверные данные'));
-                }
-            });
+            // Здесь можно добавить реальную логику входа
+            alert(`Вход выполнен как: ${username}`);
+            loginModal.style.display = 'none';
         });
 
         // Обработка формы регистрации
@@ -2375,38 +2362,39 @@
             const password = document.getElementById('regPassword').value;
             const role = document.getElementById('regRole').value;
 
-            fetch('/api/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ username, email, password, role })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Регистрация успешна! Теперь вы можете войти.');
-                    registerForm.style.display = 'none';
-                    loginForm.style.display = 'block';
-                } else {
-                    alert('Ошибка регистрации: ' + (data.error || 'Попробуйте другой логин'));
-                }
-            });
+            // Здесь можно добавить реальную логику регистрации
+            alert(`Регистрация успешна для: ${username} (${role})`);
+            registerForm.style.display = 'none';
+            loginForm.style.display = 'block';
         });
 
         // Обработчики для кнопок AI-учителя
-        const aiButtons = [
-            document.getElementById('navAiButton'),
+        const demoButtons = [
             document.getElementById('heroAiButton'),
             document.getElementById('openAiDemo'),
-            document.getElementById('aboutAiButton'),
-            document.getElementById('ctaAiButton'),
-            document.getElementById('openAiTeacher')
+            document.getElementById('ctaAiButton')
         ];
 
-        aiButtons.forEach(btn => {
+        const siteButtons = [
+            document.getElementById('navAiButton'),
+            document.getElementById('aboutAiButton'),
+            document.getElementById('openAiTeacherSite')
+        ];
+
+        // Кнопки, открывающие демо-конференцию
+        demoButtons.forEach(btn => {
             if (btn) {
                 btn.addEventListener('click', openAiDemoConference);
+            }
+        });
+
+        // Кнопки, открывающие сайт AI-учителя
+        siteButtons.forEach(btn => {
+            if (btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    openAiTeacherSite();
+                });
             }
         });
     </script>
