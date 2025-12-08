@@ -744,6 +744,143 @@
             color: var(--primary-dark);
         }
         
+        /* Новые стили для обратной связи */
+        .feedback-item {
+            background: #f8f9fa;
+            border-radius: var(--rounded-md);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--accent);
+        }
+        
+        .feedback-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        
+        .feedback-teacher {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .feedback-date {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .feedback-comment {
+            color: var(--text);
+            line-height: 1.6;
+        }
+        
+        .feedback-rating {
+            margin-top: 0.5rem;
+            color: #ffc107;
+        }
+        
+        .upload-files-area {
+            border: 2px dashed #ccc;
+            border-radius: var(--rounded-md);
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-files-area:hover {
+            border-color: var(--primary);
+            background: rgba(58, 90, 120, 0.05);
+        }
+        
+        .upload-files-area i {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+        
+        .file-preview {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            background: white;
+            border-radius: var(--rounded-sm);
+            margin-bottom: 0.5rem;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .file-preview-remove {
+            margin-left: auto;
+            color: #dc3545;
+            cursor: pointer;
+        }
+        
+        /* Стили для управления ссылками */
+        .link-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: var(--light);
+            border-radius: var(--rounded-md);
+            margin-bottom: 0.5rem;
+        }
+        
+        .link-platform {
+            font-weight: 600;
+            min-width: 200px;
+            color: var(--primary);
+        }
+        
+        .link-url {
+            flex-grow: 1;
+            font-family: monospace;
+            color: var(--text-light);
+            word-break: break-all;
+        }
+        
+        .link-actions {
+            margin-left: 1rem;
+        }
+        
+        .no-items {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-light);
+            font-style: italic;
+        }
+        
+        .stars {
+            color: #ffc107;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            line-height: 1;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: var(--rounded-full);
+        }
+        
+        .badge-success {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .badge-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        
+        .badge-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        
         @media (max-width: 1200px) {
             .dashboard-container {
                 grid-template-columns: 250px 1fr;
@@ -828,6 +965,21 @@
                 width: 100%;
                 justify-content: flex-start;
             }
+            
+            .link-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+            
+            .link-platform {
+                min-width: auto;
+            }
+            
+            .link-actions {
+                margin-left: 0;
+                align-self: flex-end;
+            }
         }
     </style>
 </head>
@@ -866,16 +1018,25 @@
             
             <ul class="sidebar-menu">
                 <li><a href="#" class="active" data-section="conference"><i class="fas fa-video"></i> Видеоурок</a></li>
-                <li><a href="#" data-section="homework"><i class="fas fa-book"></i> Домашние задания</a></li>
+                {% if user.role == 'student' %}
+                <li><a href="#" data-section="my-homework"><i class="fas fa-book"></i> Мои задания</a></li>
+                <li><a href="#" data-section="upload-homework"><i class="fas fa-upload"></i> Загрузить работу</a></li>
+                {% else %}
+                <li><a href="#" data-section="assign-homework"><i class="fas fa-tasks"></i> Добавить задание</a></li>
+                <li><a href="#" data-section="view-homework"><i class="fas fa-list-check"></i> Задания учеников</a></li>
+                {% endif %}
+                <li><a href="#" data-section="feedback"><i class="fas fa-comments"></i> Обратная связь</a></li>
                 <li><a href="#" data-section="profile"><i class="fas fa-user"></i> Профиль</a></li>
                 {% if user.role == 'teacher' %}
-                <li><a href="#" data-section="users"><i class="fas fa-users"></i> Управление пользователями</a></li>
+                <li><a href="#" data-section="users"><i class="fas fa-users"></i> Ученики</a></li>
+                <li><a href="#" data-section="conference-links"><i class="fas fa-link"></i> Ссылки на конференции</a></li>
                 {% endif %}
-                <li><a href="#" data-section="resources"><i class="fas fa-link"></i> Ресурсы</a></li>
+                <li><a href="#" data-section="resources"><i class="fas fa-book-open"></i> Ресурсы</a></li>
             </ul>
         </aside>
         
         <main class="main-content">
+            <!-- Видеоконференции -->
             <section class="widget conference-widget" id="conference-section">
                 <div class="widget-header">
                     <h3 class="widget-title">Онлайн урок</h3>
@@ -911,26 +1072,121 @@
                             <span>Безопасно</span>
                         </div>
                     </div>
+                    
+                    <h4 style="margin: 2rem 0 1rem;">Альтернативные конференции</h4>
+                    <div id="conferenceLinksList" class="alternative-conferences">
+                        {% for link in conference_links %}
+                        <a href="{{ link.link }}" target="_blank" class="conference-link">
+                            <div class="conference-icon" style="
+                                {% if 'Яндекс' in link.platform %}background: #FF0000;
+                                {% elif 'Teams' in link.platform %}background: #6264A7;
+                                {% elif 'Google' in link.platform %}background: #4285F4;
+                                {% else %}background: var(--primary);{% endif %}">
+                                <i class="
+                                    {% if 'Яндекс' in link.platform %}fab fa-yandex
+                                    {% elif 'Teams' in link.platform %}fab fa-microsoft
+                                    {% elif 'Google' in link.platform %}fab fa-google
+                                    {% else %}fas fa-video{% endif %}"></i>
+                            </div>
+                            <div class="conference-info">
+                                <h4>{{ link.platform }}</h4>
+                                <p>Резервная конференция</p>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
                 </div>
             </section>
             
-            <section class="widget homework-widget" id="homework-section" style="display: none;">
+            <!-- Для ученика: Список домашних заданий -->
+            <section class="widget" id="my-homework-section" style="display: none;">
                 <div class="widget-header">
-                    <h3 class="widget-title">Домашние задания</h3>
-                    {% if user.role == 'teacher' %}
+                    <h3 class="widget-title">Мои домашние задания</h3>
+                </div>
+                <div class="homework-list" id="myHomeworkList">
+                    <!-- Динамически загружаемые задания -->
+                </div>
+            </section>
+            
+            <!-- Для ученика: Загрузка работы -->
+            <section class="widget" id="upload-homework-section" style="display: none;">
+                <div class="widget-header">
+                    <h3 class="widget-title">Загрузить выполненное задание</h3>
+                </div>
+                <form id="uploadHomeworkForm" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="selectHomework">Выберите задание</label>
+                        <select id="selectHomework" class="form-control" required>
+                            <option value="">-- Выберите задание --</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="uploadComment">Комментарий к работе</label>
+                        <textarea id="uploadComment" class="form-control" placeholder="Опишите вашу работу или задайте вопросы"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Файлы работы</label>
+                        <div class="upload-files-area" id="uploadArea">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Перетащите файлы сюда или кликните для выбора</p>
+                            <input type="file" id="uploadFiles" multiple style="display: none;">
+                        </div>
+                        <div id="filesPreview"></div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload"></i> Отправить работу
+                    </button>
+                </form>
+            </section>
+            
+            <!-- Для учителя: Добавление задания -->
+            <section class="widget" id="assign-homework-section" style="display: none;">
+                <div class="widget-header">
+                    <h3 class="widget-title">Добавить домашнее задание</h3>
                     <div class="widget-actions">
                         <button class="btn btn-primary" id="addHomework">
+                            <i class="fas fa-plus"></i> Добавить
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="homework-list" id="assignedHomeworkList">
+                    <!-- Динамически загружаемые задания -->
+                </div>
+            </section>
+            
+            <!-- Для учителя: Просмотр работ учеников -->
+            <section class="widget" id="view-homework-section" style="display: none;">
+                <div class="widget-header">
+                    <h3 class="widget-title">Работы учеников</h3>
+                </div>
+                <div id="studentsHomeworkList">
+                    <!-- Динамически загружаемые работы -->
+                </div>
+            </section>
+            
+            <!-- Обратная связь -->
+            <section class="widget" id="feedback-section" style="display: none;">
+                <div class="widget-header">
+                    <h3 class="widget-title">Обратная связь</h3>
+                    {% if user.role == 'teacher' %}
+                    <div class="widget-actions">
+                        <button class="btn btn-primary" id="addFeedback">
                             <i class="fas fa-plus"></i> Добавить
                         </button>
                     </div>
                     {% endif %}
                 </div>
                 
-                <div class="homework-list" id="homeworkList">
-                    <!-- Динамически загружаемые домашние задания -->
+                <div id="feedbackList">
+                    <!-- Динамически загружаемые отзывы -->
                 </div>
             </section>
             
+            <!-- Профиль пользователя -->
             <section class="widget profile-widget" id="profile-section" style="display: none;">
                 <div class="widget-header">
                     <h3 class="widget-title">Мой профиль</h3>
@@ -974,10 +1230,11 @@
                 </form>
             </section>
             
+            <!-- Для учителя: Управление учениками -->
             {% if user.role == 'teacher' %}
             <section class="widget users-widget" id="users-section" style="display: none;">
                 <div class="widget-header">
-                    <h3 class="widget-title">Управление пользователями</h3>
+                    <h3 class="widget-title">Управление учениками</h3>
                     <div class="widget-actions">
                         <button class="btn btn-primary" id="addUser">
                             <i class="fas fa-plus"></i> Добавить
@@ -991,6 +1248,23 @@
             </section>
             {% endif %}
             
+            <!-- Для учителя: Управление ссылками на конференции -->
+            <section class="widget" id="conference-links-section" style="display: none;">
+                <div class="widget-header">
+                    <h3 class="widget-title">Ссылки на конференции</h3>
+                    <div class="widget-actions">
+                        <button class="btn btn-primary" id="addConferenceLink">
+                            <i class="fas fa-plus"></i> Добавить
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="conferenceLinksManager">
+                    <!-- Динамически загружаемые ссылки -->
+                </div>
+            </section>
+            
+            <!-- Ресурсы -->
             <section class="widget resources-widget" id="resources-section" style="display: none;">
                 <div class="widget-header">
                     <h3 class="widget-title">Полезные ресурсы</h3>
@@ -1052,25 +1326,25 @@
                     </a>
                 </div>
                 
-                <h4 style="margin: 2rem 0 1rem;">Альтернативные конференции</h4>
+                <h4 style="margin: 2rem 0 1rem;">Дополнительные ресурсы</h4>
                 <div class="alternative-conferences">
-                    <a href="https://teams.live.com/meet/9480976290023?p=wqOkR5Ze8VJMKmpq" target="_blank" class="conference-link">
-                        <div class="conference-icon" style="background: #6264A7;">
-                            <i class="fab fa-microsoft"></i>
+                    <a href="https://www.busuu.com/" target="_blank" class="conference-link">
+                        <div class="conference-icon" style="background: #3ecf8e;">
+                            <i class="fas fa-globe"></i>
                         </div>
                         <div class="conference-info">
-                            <h4>Microsoft Teams</h4>
-                            <p>Резервная конференция</p>
+                            <h4>Busuu</h4>
+                            <p>Изучение языков онлайн</p>
                         </div>
                     </a>
                     
-                    <a href="https://meet.google.com/eec-earm-gyd" target="_blank" class="conference-link">
-                        <div class="conference-icon" style="background: #4285F4;">
-                            <i class="fab fa-google"></i>
+                    <a href="https://www.duolingo.com/" target="_blank" class="conference-link">
+                        <div class="conference-icon" style="background: #58cc02;">
+                            <i class="fas fa-graduation-cap"></i>
                         </div>
                         <div class="conference-info">
-                            <h4>Google Meet</h4>
-                            <p>Резервная конференция</p>
+                            <h4>Duolingo</h4>
+                            <p>Бесплатное изучение языков</p>
                         </div>
                     </a>
                 </div>
@@ -1078,6 +1352,7 @@
         </main>
     </div>
     
+    <!-- Модальное окно для добавления домашнего задания -->
     <div class="modal" id="homeworkModal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -1146,10 +1421,11 @@
         </div>
     </div>
     
+    <!-- Модальное окно для добавления пользователя -->
     <div class="modal" id="userModal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
-            <h3 class="modal-title">Добавить пользователя</h3>
+            <h3 class="modal-title">Добавить ученика</h3>
             
             <form id="addUserForm">
                 <div class="form-group">
@@ -1172,25 +1448,18 @@
                     <input type="password" id="userPassword" class="form-control" required>
                 </div>
                 
-                <div class="form-group">
-                    <label for="userRole">Роль</label>
-                    <select id="userRole" class="form-control" required>
-                        <option value="student">Студент</option>
-                        <option value="teacher">Преподаватель</option>
-                    </select>
-                </div>
-                
                 <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save"></i> Сохранить пользователя
+                    <i class="fas fa-save"></i> Сохранить ученика
                 </button>
             </form>
         </div>
     </div>
     
+    <!-- Модальное окно для редактирования пользователя -->
     <div class="modal" id="editUserModal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
-            <h3 class="modal-title" id="editUserTitle">Редактирование пользователя</h3>
+            <h3 class="modal-title" id="editUserTitle">Редактирование ученика</h3>
             
             <form id="editUserForm">
                 <input type="hidden" id="editUsername">
@@ -1210,14 +1479,6 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="editRole">Роль</label>
-                    <select id="editRole" class="form-control" required>
-                        <option value="student">Студент</option>
-                        <option value="teacher">Преподаватель</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
                     <label for="editIsActive">Активен</label>
                     <select id="editIsActive" class="form-control" required>
                         <option value="true">Да</option>
@@ -1232,6 +1493,7 @@
         </div>
     </div>
     
+    <!-- Модальное окно для отправки домашнего задания -->
     <div class="modal" id="submitHomeworkModal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -1257,6 +1519,7 @@
         </div>
     </div>
     
+    <!-- Модальное окно для изменения аватара -->
     <div class="modal" id="avatarModal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -1279,8 +1542,82 @@
         </div>
     </div>
     
+    <!-- Модальное окно для обратной связи -->
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3 class="modal-title">Добавить обратную связь</h3>
+            
+            <form id="addFeedbackForm">
+                <div class="form-group">
+                    <label for="fbLesson">Урок</label>
+                    <select id="fbLesson" class="form-control" required>
+                        <option value="">-- Выберите урок --</option>
+                        {% for lesson in lessons %}
+                        <option value="{{ lesson.id }}">{{ lesson.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="fbStudent">Ученик</label>
+                    <select id="fbStudent" class="form-control" required>
+                        <option value="">-- Выберите ученика --</option>
+                        {% for student in students %}
+                        <option value="{{ student.username }}">{{ student.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="fbComment">Комментарий</label>
+                    <textarea id="fbComment" class="form-control" rows="5" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="fbRating">Оценка (опционально)</label>
+                    <select id="fbRating" class="form-control">
+                        <option value="">Без оценки</option>
+                        <option value="5">⭐️⭐️⭐️⭐️⭐️ (Отлично)</option>
+                        <option value="4">⭐️⭐️⭐️⭐️ (Хорошо)</option>
+                        <option value="3">⭐️⭐️⭐️ (Удовлетворительно)</option>
+                        <option value="2">⭐️⭐️ (Плохо)</option>
+                        <option value="1">⭐️ (Очень плохо)</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Сохранить
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Модальное окно для добавления ссылки на конференцию -->
+    <div class="modal" id="conferenceLinkModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3 class="modal-title">Добавить ссылку на конференцию</h3>
+            
+            <form id="addConferenceLinkForm">
+                <div class="form-group">
+                    <label for="clPlatform">Платформа</label>
+                    <input type="text" id="clPlatform" class="form-control" placeholder="Например: Яндекс Телемост" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="clLink">Ссылка на конференцию</label>
+                    <input type="url" id="clLink" class="form-control" placeholder="https://..." required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Сохранить
+                </button>
+            </form>
+        </div>
+    </div>
+    
     <script>
-        // Дожидаемся полной загрузки DOM
         document.addEventListener('DOMContentLoaded', function () {
             console.log("DOM fully loaded and parsed");
 
@@ -1308,10 +1645,21 @@
                     const sectionId = this.getAttribute('data-section') + '-section';
                     document.getElementById(sectionId).style.display = 'block';
                     
-                    if (sectionId === 'homework-section') {
-                        loadHomeworks();
+                    // Загружаем данные для активной секции
+                    if (sectionId === 'my-homework-section') {
+                        loadStudentHomeworks();
+                    } else if (sectionId === 'assign-homework-section') {
+                        loadAssignedHomeworks();
+                    } else if (sectionId === 'view-homework-section') {
+                        loadStudentsHomework();
+                    } else if (sectionId === 'feedback-section') {
+                        loadFeedback();
                     } else if (sectionId === 'users-section') {
                         loadUsers();
+                    } else if (sectionId === 'conference-links-section') {
+                        loadConferenceLinksManager();
+                    } else if (sectionId === 'upload-homework-section') {
+                        loadHomeworkForUpload();
                     }
                 });
             });
@@ -1341,8 +1689,14 @@
             const editUserModal = document.getElementById('editUserModal');
             const submitHomeworkModal = document.getElementById('submitHomeworkModal');
             const avatarModal = document.getElementById('avatarModal');
+            const feedbackModal = document.getElementById('feedbackModal');
+            const conferenceLinkModal = document.getElementById('conferenceLinkModal');
+            
             const addHomeworkBtn = document.getElementById('addHomework');
             const addUserBtn = document.getElementById('addUser');
+            const addFeedbackBtn = document.getElementById('addFeedback');
+            const addConferenceLinkBtn = document.getElementById('addConferenceLink');
+            
             const closeModalBtns = document.querySelectorAll('.close-modal');
             const avatarContainer = document.getElementById('avatarContainer');
             
@@ -1355,6 +1709,18 @@
             if (addUserBtn) {
                 addUserBtn.addEventListener('click', () => {
                     userModal.style.display = 'flex';
+                });
+            }
+            
+            if (addFeedbackBtn) {
+                addFeedbackBtn.addEventListener('click', () => {
+                    feedbackModal.style.display = 'flex';
+                });
+            }
+            
+            if (addConferenceLinkBtn) {
+                addConferenceLinkBtn.addEventListener('click', () => {
+                    conferenceLinkModal.style.display = 'flex';
                 });
             }
             
@@ -1414,7 +1780,6 @@
                         deleteBtn.style.color = '#dc3545';
                         deleteBtn.style.marginLeft = '10px';
                         deleteBtn.addEventListener('click', () => {
-                            // Создаем новый DataTransfer и добавляем все файлы кроме удаленного
                             const newFiles = new DataTransfer();
                             Array.from(hwFilesInput.files).forEach((f, i) => {
                                 if (i !== index) {
@@ -1422,10 +1787,7 @@
                                 }
                             });
                             
-                            // Обновляем input files
                             hwFilesInput.files = newFiles.files;
-                            
-                            // Перерисовываем список файлов
                             hwFilesInput.dispatchEvent(new Event('change'));
                         });
                         
@@ -1438,139 +1800,98 @@
                 }
             });
 
-            // --- Просмотр файлов для отправки домашнего задания ---
-            const shFilesInput = document.getElementById('shFiles');
-            const submittedFilesDiv = document.getElementById('submittedFiles');
+            // --- Инициализация загрузки файлов для отправки домашнего задания ---
+            const uploadArea = document.getElementById('uploadArea');
+            const uploadFiles = document.getElementById('uploadFiles');
+            const filesPreview = document.getElementById('filesPreview');
             
-            shFilesInput.addEventListener('change', function() {
-                submittedFilesDiv.innerHTML = '';
-                if (this.files.length > 0) {
-                    const filesList = document.createElement('div');
-                    filesList.style.marginTop = '10px';
+            if (uploadArea && uploadFiles) {
+                uploadArea.addEventListener('click', () => uploadFiles.click());
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadArea.style.borderColor = 'var(--primary)';
+                    uploadArea.style.backgroundColor = 'rgba(58, 90, 120, 0.1)';
+                });
+                uploadArea.addEventListener('dragleave', () => {
+                    uploadArea.style.borderColor = '#ccc';
+                    uploadArea.style.backgroundColor = 'transparent';
+                });
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.style.borderColor = '#ccc';
+                    uploadArea.style.backgroundColor = 'transparent';
                     
-                    Array.from(this.files).forEach((file, index) => {
-                        const fileItem = document.createElement('div');
-                        fileItem.style.display = 'flex';
-                        fileItem.style.alignItems = 'center';
-                        fileItem.style.marginBottom = '5px';
-                        
-                        const fileName = document.createElement('span');
-                        fileName.textContent = file.name;
-                        fileName.style.flexGrow = '1';
-                        
-                        const deleteBtn = document.createElement('span');
-                        deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
-                        deleteBtn.style.cursor = 'pointer';
-                        deleteBtn.style.color = '#dc3545';
-                        deleteBtn.style.marginLeft = '10px';
-                        deleteBtn.addEventListener('click', () => {
-                            // Создаем новый DataTransfer и добавляем все файлы кроме удаленного
-                            const newFiles = new DataTransfer();
-                            Array.from(shFilesInput.files).forEach((f, i) => {
-                                if (i !== index) {
-                                    newFiles.items.add(f);
-                                }
-                            });
-                            
-                            // Обновляем input files
-                            shFilesInput.files = newFiles.files;
-                            
-                            // Перерисовываем список файлов
-                            shFilesInput.dispatchEvent(new Event('change'));
-                        });
-                        
-                        fileItem.appendChild(fileName);
-                        fileItem.appendChild(deleteBtn);
-                        filesList.appendChild(fileItem);
+                    if (e.dataTransfer.files.length) {
+                        uploadFiles.files = e.dataTransfer.files;
+                        updateFilesPreview();
+                    }
+                });
+                
+                uploadFiles.addEventListener('change', updateFilesPreview);
+            }
+            
+            function updateFilesPreview() {
+                filesPreview.innerHTML = '';
+                if (uploadFiles.files.length > 0) {
+                    Array.from(uploadFiles.files).forEach((file, index) => {
+                        const filePreview = document.createElement('div');
+                        filePreview.className = 'file-preview';
+                        filePreview.innerHTML = `
+                            <i class="fas fa-file"></i>
+                            <span style="margin-left: 10px; flex-grow: 1;">${file.name} (${(file.size / 1024).toFixed(1)} KB)</span>
+                            <span class="file-preview-remove" data-index="${index}">
+                                <i class="fas fa-times"></i>
+                            </span>
+                        `;
+                        filesPreview.appendChild(filePreview);
                     });
                     
-                    submittedFilesDiv.appendChild(filesList);
+                    document.querySelectorAll('.file-preview-remove').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const index = parseInt(this.getAttribute('data-index'));
+                            const newFiles = new DataTransfer();
+                            Array.from(uploadFiles.files).forEach((file, i) => {
+                                if (i !== index) {
+                                    newFiles.items.add(file);
+                                }
+                            });
+                            uploadFiles.files = newFiles.files;
+                            updateFilesPreview();
+                        });
+                    });
                 }
-            });
+            }
 
-            // --- Загрузка домашних заданий ---
-            function loadHomeworks() {
+            // --- Загрузка домашних заданий для ученика ---
+            function loadStudentHomeworks() {
                 fetch('/api/homework')
                     .then(response => response.json())
                     .then(data => {
-                        const homeworkList = document.getElementById('homeworkList');
-                        homeworkList.innerHTML = '';
+                        const container = document.getElementById('myHomeworkList');
+                        container.innerHTML = '';
                         
                         if (data.homeworks && data.homeworks.length > 0) {
                             data.homeworks.forEach(hw => {
                                 const deadline = new Date(hw.deadline);
-                                const now = new Date();
-                                const diffDays = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
-                                
                                 const homeworkItem = document.createElement('div');
                                 homeworkItem.className = 'homework-item';
                                 
-                                let submissionContent = '';
-                                if (hw.submissions && hw.submissions['{{ user.username }}']) {
-                                    const submission = hw.submissions['{{ user.username }}'];
-                                    submissionContent = `
-                                        <div class="submission-files">
-                                            <div class="submission-header">Ваша отправка:</div>
-                                            ${submission.comment ? `<div class="submission-comment">${submission.comment}</div>` : ''}
-                                            ${submission.files && submission.files.length > 0 ? `
-                                            <div class="homework-files">
-                                                ${submission.files.map(file => `
-                                                <a href="/uploads/${file.name}" target="_blank" class="file-item">
-                                                    <i class="fas fa-file"></i> ${file.name}
-                                                </a>
-                                                `).join('')}
-                                            </div>
-                                            ` : ''}
-                                        </div>
-                                    `;
-                                }
+                                const deadlineStr = deadline.toLocaleDateString('ru-RU');
                                 
-                                // Добавляем блок с работами учеников для учителя
-                                let studentSubmissions = '';
-                                if ('{{ user.role }}' === 'teacher' && Object.keys(hw.submissions || {}).length > 0) {
-                                    studentSubmissions = `
-                                        <div class="student-submissions">
-                                            <div class="submission-header">Работы учеников:</div>
-                                            ${Object.entries(hw.submissions).map(([student, submission]) => `
-                                                <div class="student-submission">
-                                                    <div class="student-name">${student}</div>
-                                                    ${submission.comment ? `<div class="submission-comment">${submission.comment}</div>` : ''}
-                                                    ${submission.files && submission.files.length > 0 ? `
-                                                    <div class="homework-files">
-                                                        ${submission.files.map(file => `
-                                                        <a href="/uploads/${file.name}" target="_blank" class="file-item">
-                                                            <i class="fas fa-file"></i> ${file.name}
-                                                        </a>
-                                                        `).join('')}
-                                                    </div>
-                                                    ` : ''}
-                                                </div>
-                                            `).join('')}
-                                        </div>
-                                    `;
-                                }
-                                
-                                let teacherActions = '';
-                                if ('{{ user.role }}' === 'teacher') {
-                                    teacherActions = `
-                                        <div class="homework-actions">
-                                            <button class="btn btn-danger" onclick="deleteHomework(${hw.id})">
-                                                <i class="fas fa-trash"></i> Удалить
-                                            </button>
-                                        </div>
-                                    `;
-                                }
+                                // Проверяем, отправлено ли задание
+                                const isSubmitted = hw.submissions && hw.submissions['{{ user.username }}'];
+                                const statusBadge = isSubmitted ? 
+                                    '<span class="badge badge-success" style="margin-left: 10px;">Отправлено</span>' : 
+                                    '<span class="badge badge-warning" style="margin-left: 10px;">Не отправлено</span>';
                                 
                                 homeworkItem.innerHTML = `
                                     <div class="homework-header">
-                                        <h4 class="homework-title">${hw.title}</h4>
+                                        <h4 class="homework-title">${hw.title} ${statusBadge}</h4>
                                         <div class="homework-deadline">
-                                            <i class="fas fa-clock"></i> Срок сдачи: ${diffDays > 0 ? diffDays + ' дней' : 'просрочено'}
+                                            <i class="fas fa-calendar"></i> Срок: ${deadlineStr}
                                         </div>
                                     </div>
-                                    <div class="homework-description">
-                                        ${hw.description}
-                                    </div>
+                                    <div class="homework-description">${hw.description}</div>
                                     ${hw.subject ? `<div><strong>Предмет:</strong> ${hw.subject}</div>` : ''}
                                     ${hw.files && hw.files.length > 0 ? `
                                     <div class="homework-files">
@@ -1581,26 +1902,209 @@
                                         `).join('')}
                                     </div>
                                     ` : ''}
-                                    ${submissionContent}
-                                    ${studentSubmissions}
-                                    ${'{{ user.role }}' === 'student' ? `
-                                    <div class="homework-actions">
-                                        <button class="btn btn-primary" onclick="showSubmitHomeworkModal(${hw.id})">
-                                            <i class="fas fa-upload"></i> Загрузить работу
-                                        </button>
+                                    ${isSubmitted ? `
+                                    <div class="submission-files">
+                                        <div class="submission-header">Ваша отправка:</div>
+                                        ${hw.submissions['{{ user.username }}'].comment ? 
+                                            `<div class="submission-comment">${hw.submissions['{{ user.username }}'].comment}</div>` : ''}
+                                        ${hw.submissions['{{ user.username }}'].files && hw.submissions['{{ user.username }}'].files.length > 0 ? `
+                                        <div class="homework-files">
+                                            ${hw.submissions['{{ user.username }}'].files.map(file => `
+                                            <a href="/uploads/${file.name}" target="_blank" class="file-item">
+                                                <i class="fas fa-file"></i> ${file.name}
+                                            </a>
+                                            `).join('')}
+                                        </div>
+                                        ` : ''}
                                     </div>
                                     ` : ''}
-                                    ${teacherActions}
                                 `;
-                                homeworkList.appendChild(homeworkItem);
+                                container.appendChild(homeworkItem);
                             });
                         } else {
-                            homeworkList.innerHTML = '<p>Нет домашних заданий</p>';
+                            container.innerHTML = '<div class="no-items">Нет домашних заданий</div>';
                         }
                     })
                     .catch(error => {
                         console.error('Error loading homeworks:', error);
-                        document.getElementById('homeworkList').innerHTML = '<p>Ошибка загрузки заданий</p>';
+                        document.getElementById('myHomeworkList').innerHTML = '<div class="no-items">Ошибка загрузки заданий</div>';
+                    });
+            }
+            
+            // Загрузка заданий для выпадающего списка загрузки
+            function loadHomeworkForUpload() {
+                fetch('/api/homework')
+                    .then(response => response.json())
+                    .then(data => {
+                        const select = document.getElementById('selectHomework');
+                        if (select) {
+                            select.innerHTML = '<option value="">-- Выберите задание --</option>';
+                            if (data.homeworks && data.homeworks.length > 0) {
+                                data.homeworks.forEach(hw => {
+                                    // Показываем только задания, которые еще не отправлены
+                                    const isSubmitted = hw.submissions && hw.submissions['{{ user.username }}'];
+                                    if (!isSubmitted) {
+                                        const deadline = new Date(hw.deadline);
+                                        const option = document.createElement('option');
+                                        option.value = hw.id;
+                                        option.textContent = `${hw.title} (до ${deadline.toLocaleDateString('ru-RU')})`;
+                                        select.appendChild(option);
+                                    }
+                                });
+                            }
+                        }
+                    });
+            }
+
+            // --- Загрузка заданий для учителя ---
+            function loadAssignedHomeworks() {
+                fetch('/api/homework')
+                    .then(response => response.json())
+                    .then(data => {
+                        const container = document.getElementById('assignedHomeworkList');
+                        container.innerHTML = '';
+                        
+                        if (data.homeworks && data.homeworks.length > 0) {
+                            data.homeworks.forEach(hw => {
+                                const deadline = new Date(hw.deadline);
+                                const homeworkItem = document.createElement('div');
+                                homeworkItem.className = 'homework-item';
+                                
+                                // Подсчитываем отправленные работы
+                                const submittedCount = hw.submissions ? Object.keys(hw.submissions).length : 0;
+                                const totalStudents = hw.students ? hw.students.length : 0;
+                                
+                                homeworkItem.innerHTML = `
+                                    <div class="homework-header">
+                                        <h4 class="homework-title">${hw.title}</h4>
+                                        <div class="homework-deadline">
+                                            <i class="fas fa-calendar"></i> Срок: ${deadline.toLocaleDateString('ru-RU')}
+                                            <span class="badge ${submittedCount === totalStudents ? 'badge-success' : 'badge-warning'}" style="margin-left: 10px;">
+                                                ${submittedCount}/${totalStudents} отправлено
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="homework-description">${hw.description}</div>
+                                    ${hw.subject ? `<div><strong>Предмет:</strong> ${hw.subject}</div>` : ''}
+                                    <div class="homework-actions">
+                                        <button class="btn btn-danger" onclick="deleteHomework(${hw.id})">
+                                            <i class="fas fa-trash"></i> Удалить
+                                        </button>
+                                    </div>
+                                `;
+                                container.appendChild(homeworkItem);
+                            });
+                        } else {
+                            container.innerHTML = '<div class="no-items">Нет назначенных заданий</div>';
+                        }
+                    });
+            }
+
+            // --- Загрузка работ учеников для учителя ---
+            function loadStudentsHomework() {
+                fetch('/api/homework')
+                    .then(response => response.json())
+                    .then(data => {
+                        const container = document.getElementById('studentsHomeworkList');
+                        container.innerHTML = '';
+                        
+                        if (data.homeworks && data.homeworks.length > 0) {
+                            data.homeworks.forEach(hw => {
+                                const homeworkCard = document.createElement('div');
+                                homeworkCard.className = 'homework-item';
+                                
+                                let submissionsHtml = '';
+                                if (hw.submissions && Object.keys(hw.submissions).length > 0) {
+                                    submissionsHtml = '<div class="student-submissions">';
+                                    submissionsHtml += `<div class="submission-header">${hw.title}</div>`;
+                                    Object.entries(hw.submissions).forEach(([student, submission]) => {
+                                        const submittedDate = new Date(submission.submitted_at);
+                                        submissionsHtml += `
+                                            <div class="student-submission">
+                                                <div class="student-name">${student}</div>
+                                                ${submission.comment ? `<div class="submission-comment">${submission.comment}</div>` : ''}
+                                                ${submission.files && submission.files.length > 0 ? `
+                                                <div class="homework-files">
+                                                    ${submission.files.map(file => `
+                                                    <a href="/uploads/${file.name}" target="_blank" class="file-item">
+                                                        <i class="fas fa-file"></i> ${file.name}
+                                                    </a>
+                                                    `).join('')}
+                                                </div>
+                                                ` : ''}
+                                                <div class="submission-date">
+                                                    <small>Отправлено: ${submittedDate.toLocaleString('ru-RU')}</small>
+                                                </div>
+                                            </div>
+                                        `;
+                                    });
+                                    submissionsHtml += '</div>';
+                                } else {
+                                    submissionsHtml = '<div class="no-items">Работы еще не отправлены</div>';
+                                }
+                                
+                                homeworkCard.innerHTML = `
+                                    <div class="homework-header">
+                                        <h4 class="homework-title">${hw.title}</h4>
+                                    </div>
+                                    ${submissionsHtml}
+                                `;
+                                container.appendChild(homeworkCard);
+                            });
+                        } else {
+                            container.innerHTML = '<div class="no-items">Нет назначенных заданий</div>';
+                        }
+                    });
+            }
+
+            // --- Загрузка обратной связи ---
+            function loadFeedback() {
+                fetch('/api/feedbacks')
+                    .then(response => response.json())
+                    .then(data => {
+                        const container = document.getElementById('feedbackList');
+                        container.innerHTML = '';
+                        
+                        if (data.feedbacks && data.feedbacks.length > 0) {
+                            data.feedbacks.forEach(fb => {
+                                const date = new Date(fb.created_at);
+                                const feedbackItem = document.createElement('div');
+                                feedbackItem.className = 'feedback-item';
+                                
+                                let ratingStars = '';
+                                if (fb.rating) {
+                                    ratingStars = '<div class="feedback-rating">';
+                                    for (let i = 0; i < fb.rating; i++) {
+                                        ratingStars += '⭐';
+                                    }
+                                    ratingStars += '</div>';
+                                }
+                                
+                                // Для учителя показываем ученика, для ученика - учителя
+                                const personName = '{{ user.role }}' === 'teacher' ? 
+                                    `Ученик: ${fb.student_username}` : 
+                                    `Учитель: ${fb.teacher_username}`;
+                                
+                                feedbackItem.innerHTML = `
+                                    <div class="feedback-header">
+                                        <span class="feedback-teacher">${personName}</span>
+                                        <span class="feedback-date">${date.toLocaleDateString('ru-RU')}</span>
+                                    </div>
+                                    <div class="feedback-comment">${fb.comment}</div>
+                                    ${ratingStars}
+                                    {% if user.role == 'teacher' %}
+                                    <div class="homework-actions" style="margin-top: 1rem;">
+                                        <button class="btn btn-danger btn-sm" onclick="deleteFeedback(${fb.id})">
+                                            <i class="fas fa-trash"></i> Удалить
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                `;
+                                container.appendChild(feedbackItem);
+                            });
+                        } else {
+                            container.innerHTML = '<div class="no-items">Обратная связь отсутствует</div>';
+                        }
                     });
             }
 
@@ -1609,42 +2113,70 @@
                 fetch('/api/users')
                     .then(response => response.json())
                     .then(data => {
-                        const usersList = document.getElementById('usersList');
-                        usersList.innerHTML = '';
+                        const container = document.getElementById('usersList');
+                        container.innerHTML = '';
                         
                         if (data.users && data.users.length > 0) {
                             data.users.forEach(user => {
-                                const userCard = document.createElement('div');
-                                userCard.className = 'user-card';
-                                userCard.innerHTML = `
-                                    <div class="user-avatar-sm">
-                                        <img src="${user.avatar || 'https://i.pravatar.cc/150?u=' + user.username}" alt="Аватар">
-                                    </div>
-                                    <div class="user-details">
-                                        <div class="user-name-sm">${user.username}</div>
-                                        <span class="user-role-sm">${user.role === 'teacher' ? 'Преподаватель' : 'Студент'}</span>
-                                        <div style="font-size: 0.8rem; color: ${user.is_active ? 'green' : 'red'}">
-                                            ${user.is_active ? 'Активен' : 'Неактивен'}
+                                // Показываем только учеников
+                                if (user.role === 'student') {
+                                    const userCard = document.createElement('div');
+                                    userCard.className = 'user-card';
+                                    userCard.innerHTML = `
+                                        <div class="user-avatar-sm">
+                                            <img src="${user.avatar || 'https://i.pravatar.cc/150?u=' + user.username}" alt="Аватар">
                                         </div>
-                                    </div>
-                                    <div class="user-actions">
-                                        <button class="btn btn-secondary btn-sm" onclick="editUser('${user.username}')">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn btn-danger btn-sm" onclick="deleteUser('${user.username}')">
+                                        <div class="user-details">
+                                            <div class="user-name-sm">${user.username}</div>
+                                            <span class="user-role-sm">Студент</span>
+                                            <div style="font-size: 0.8rem; color: ${user.is_active ? 'green' : 'red'}">
+                                                ${user.is_active ? 'Активен' : 'Неактивен'}
+                                            </div>
+                                        </div>
+                                        <div class="user-actions">
+                                            <button class="btn btn-secondary btn-sm" onclick="editUser('${user.username}')">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-danger btn-sm" onclick="deleteUser('${user.username}')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    `;
+                                    container.appendChild(userCard);
+                                }
+                            });
+                        } else {
+                            container.innerHTML = '<div class="no-items">Нет учеников</div>';
+                        }
+                    });
+            }
+
+            // --- Управление ссылками на конференции ---
+            function loadConferenceLinksManager() {
+                fetch('/api/conference-links?teacher_username={{ user.username }}')
+                    .then(response => response.json())
+                    .then(data => {
+                        const container = document.getElementById('conferenceLinksManager');
+                        container.innerHTML = '';
+                        
+                        if (data.links && data.links.length > 0) {
+                            data.links.forEach(link => {
+                                const linkItem = document.createElement('div');
+                                linkItem.className = 'link-item';
+                                linkItem.innerHTML = `
+                                    <div class="link-platform">${link.platform}</div>
+                                    <div class="link-url">${link.link}</div>
+                                    <div class="link-actions">
+                                        <button class="btn btn-danger btn-sm" onclick="deleteConferenceLink(${link.id})">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
                                 `;
-                                usersList.appendChild(userCard);
+                                container.appendChild(linkItem);
                             });
                         } else {
-                            usersList.innerHTML = '<p>Нет пользователей</p>';
+                            container.innerHTML = '<div class="no-items">Ссылки не настроены</div>';
                         }
-                    })
-                    .catch(error => {
-                        console.error('Error loading users:', error);
-                        document.getElementById('usersList').innerHTML = '<p>Ошибка загрузки пользователей</p>';
                     });
             }
 
@@ -1733,7 +2265,8 @@
                         if (data.success) {
                             alert('Домашнее задание успешно добавлено!');
                             homeworkModal.style.display = 'none';
-                            loadHomeworks();
+                            addHomeworkForm.reset();
+                            loadAssignedHomeworks();
                         } else {
                             alert('Ошибка при добавлении задания: ' + (data.error || ''));
                         }
@@ -1756,7 +2289,7 @@
                         email: document.getElementById('userEmail').value,
                         phone: document.getElementById('userPhone').value,
                         password: document.getElementById('userPassword').value,
-                        role: document.getElementById('userRole').value
+                        role: 'student'
                     };
                     
                     fetch('/api/register', {
@@ -1769,16 +2302,17 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            alert('Пользователь успешно добавлен!');
+                            alert('Ученик успешно добавлен!');
                             userModal.style.display = 'none';
+                            addUserForm.reset();
                             loadUsers();
                         } else {
-                            alert('Ошибка при добавлении пользователя: ' + (data.error || ''));
+                            alert('Ошибка при добавлении ученика: ' + (data.error || ''));
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('Произошла ошибка при добавлении пользователя');
+                        alert('Произошла ошибка при добавлении ученика');
                     });
                 });
             }
@@ -1793,7 +2327,6 @@
                     const formData = {
                         email: document.getElementById('editEmail').value,
                         phone: document.getElementById('editPhone').value,
-                        role: document.getElementById('editRole').value,
                         is_active: document.getElementById('editIsActive').value === 'true'
                     };
                     
@@ -1812,56 +2345,139 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            alert('Пользователь успешно обновлен!');
+                            alert('Ученик успешно обновлен!');
                             editUserModal.style.display = 'none';
                             loadUsers();
                         } else {
-                            alert('Ошибка при обновлении пользователя: ' + (data.error || ''));
+                            alert('Ошибка при обновлении ученика: ' + (data.error || ''));
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('Произошла ошибка при обновлении пользователя');
+                        alert('Произошла ошибка при обновлении ученика');
                     });
                 });
             }
 
-            // --- Форма отправки домашнего задания ---
-            const submitHomeworkForm = document.getElementById('submitHomeworkForm');
-            if (submitHomeworkForm) {
-                submitHomeworkForm.addEventListener('submit', function(e) {
+            // --- Форма загрузки домашнего задания ---
+            const uploadHomeworkForm = document.getElementById('uploadHomeworkForm');
+            if (uploadHomeworkForm) {
+                uploadHomeworkForm.addEventListener('submit', function(e) {
                     e.preventDefault();
                     
-                    const homeworkId = document.getElementById('shHomeworkId').value;
-                    const comment = document.getElementById('shComment').value;
-                    const filesInput = document.getElementById('shFiles');
+                    const homeworkId = document.getElementById('selectHomework').value;
+                    const comment = document.getElementById('uploadComment').value;
                     
-                    const formData = new FormData();
-                    formData.append('comment', comment);
-                    
-                    for (let i = 0; i < filesInput.files.length; i++) {
-                        formData.append('files', filesInput.files[i]);
+                    if (!homeworkId) {
+                        alert('Пожалуйста, выберите задание');
+                        return;
                     }
                     
-                    fetch(`/api/homework/${homeworkId}/submit`, {
+                    const formData = new FormData();
+                    formData.append('homework_id', homeworkId);
+                    formData.append('comment', comment);
+                    
+                    if (uploadFiles.files.length > 0) {
+                        Array.from(uploadFiles.files).forEach(file => {
+                            formData.append('files', file);
+                        });
+                    }
+                    
+                    fetch('/api/homework/upload', {
                         method: 'POST',
                         body: formData
                     })
-                    .then(response => {
-                        if (response.redirected) {
-                            window.location.href = response.url;
-                        } else {
-                            return response.json();
-                        }
-                    })
+                    .then(response => response.json())
                     .then(data => {
-                        if (data && !data.success) {
-                            alert('Ошибка при отправке задания: ' + (data.error || ''));
+                        if (data.success) {
+                            alert('Работа успешно отправлена!');
+                            uploadHomeworkForm.reset();
+                            filesPreview.innerHTML = '';
+                            uploadFiles.value = '';
+                            loadStudentHomeworks();
+                            loadHomeworkForUpload();
+                        } else {
+                            alert('Ошибка: ' + (data.error || 'Не удалось отправить работу'));
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('Произошла ошибка при отправке задания');
+                        alert('Произошла ошибка при отправке работы');
+                    });
+                });
+            }
+
+            // --- Форма добавления обратной связи ---
+            const addFeedbackForm = document.getElementById('addFeedbackForm');
+            if (addFeedbackForm) {
+                addFeedbackForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const formData = {
+                        lesson_id: parseInt(document.getElementById('fbLesson').value),
+                        student_username: document.getElementById('fbStudent').value,
+                        comment: document.getElementById('fbComment').value,
+                        rating: document.getElementById('fbRating').value || null
+                    };
+                    
+                    fetch('/api/feedbacks', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Обратная связь успешно добавлена!');
+                            feedbackModal.style.display = 'none';
+                            addFeedbackForm.reset();
+                            loadFeedback();
+                        } else {
+                            alert('Ошибка: ' + (data.error || 'Не удалось добавить обратную связь'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Произошла ошибка при добавлении обратной связи');
+                    });
+                });
+            }
+
+            // --- Форма добавления ссылки на конференцию ---
+            const addConferenceLinkForm = document.getElementById('addConferenceLinkForm');
+            if (addConferenceLinkForm) {
+                addConferenceLinkForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const formData = {
+                        platform: document.getElementById('clPlatform').value,
+                        link: document.getElementById('clLink').value
+                    };
+                    
+                    fetch('/api/conference-links', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Ссылка успешно добавлена!');
+                            conferenceLinkModal.style.display = 'none';
+                            addConferenceLinkForm.reset();
+                            loadConferenceLinksManager();
+                            location.reload(); // Перезагружаем страницу для обновления ссылок в основной секции
+                        } else {
+                            alert('Ошибка: ' + (data.error || 'Не удалось добавить ссылку'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Произошла ошибка при добавлении ссылки');
                     });
                 });
             }
@@ -1907,7 +2523,6 @@
                             document.getElementById('userAvatarImg').src = data.avatar;
                             avatarModal.style.display = 'none';
                             
-                            // Обновляем аватар в сессии
                             if (sessionStorage.getItem('user')) {
                                 const user = JSON.parse(sessionStorage.getItem('user'));
                                 user.avatar = data.avatar;
@@ -1950,59 +2565,6 @@
         });
 
         // Глобальные функции для работы с домашними заданиями и пользователями
-        function showSubmitHomeworkModal(homeworkId) {
-            document.getElementById('shHomeworkId').value = homeworkId;
-            document.getElementById('submitHomeworkModal').style.display = 'flex';
-            document.getElementById('shFiles').value = '';
-            document.getElementById('submittedFiles').innerHTML = '';
-        }
-        
-        function editUser(username) {
-            fetch(`/api/users/${username}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.user) {
-                        const user = data.user;
-                        document.getElementById('editUserTitle').textContent = `Редактирование пользователя: ${username}`;
-                        document.getElementById('editUsername').value = username;
-                        document.getElementById('editEmail').value = user.email;
-                        document.getElementById('editPhone').value = user.phone || '';
-                        document.getElementById('editRole').value = user.role;
-                        document.getElementById('editIsActive').value = user.is_active ? 'true' : 'false';
-                        document.getElementById('editPassword').value = '';
-                        
-                        document.getElementById('editUserModal').style.display = 'flex';
-                    } else {
-                        alert('Пользователь не найден');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Произошла ошибка при загрузке данных пользователя');
-                });
-        }
-        
-        function deleteUser(username) {
-            if (confirm(`Вы уверены, что хотите удалить пользователя ${username}?`)) {
-                fetch(`/api/users/${username}`, {
-                    method: 'DELETE'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Пользователь успешно удален!');
-                        loadUsers();
-                    } else {
-                        alert('Ошибка при удалении пользователя: ' + (data.error || ''));
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Произошла ошибка при удалении пользователя');
-                });
-            }
-        }
-        
         function deleteHomework(homeworkId) {
             if (confirm('Вы уверены, что хотите удалить это домашнее задание?')) {
                 fetch(`/api/homework/${homeworkId}`, {
@@ -2012,7 +2574,8 @@
                 .then(data => {
                     if (data.success) {
                         alert('Домашнее задание успешно удалено!');
-                        loadHomeworks();
+                        loadAssignedHomeworks();
+                        loadStudentsHomework();
                     } else {
                         alert('Ошибка при удалении задания: ' + (data.error || ''));
                     }
@@ -2024,32 +2587,141 @@
             }
         }
         
-        function loadHomeworks() {
+        function editUser(username) {
+            fetch(`/api/users/${username}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.user) {
+                        const user = data.user;
+                        document.getElementById('editUserTitle').textContent = `Редактирование ученика: ${username}`;
+                        document.getElementById('editUsername').value = username;
+                        document.getElementById('editEmail').value = user.email;
+                        document.getElementById('editPhone').value = user.phone || '';
+                        document.getElementById('editIsActive').value = user.is_active ? 'true' : 'false';
+                        document.getElementById('editPassword').value = '';
+                        
+                        document.getElementById('editUserModal').style.display = 'flex';
+                    } else {
+                        alert('Ученик не найден');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при загрузке данных ученика');
+                });
+        }
+        
+        function deleteUser(username) {
+            if (confirm(`Вы уверены, что хотите удалить ученика ${username}?`)) {
+                fetch(`/api/users/${username}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Ученик успешно удален!');
+                        loadUsers();
+                    } else {
+                        alert('Ошибка при удалении ученика: ' + (data.error || ''));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при удалении ученика');
+                });
+            }
+        }
+        
+        function deleteFeedback(feedbackId) {
+            if (confirm('Вы уверены, что хотите удалить эту обратную связь?')) {
+                fetch(`/api/feedbacks/${feedbackId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Обратная связь успешно удалена!');
+                        loadFeedback();
+                    } else {
+                        alert('Ошибка при удалении обратной связи: ' + (data.error || ''));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при удалении обратной связи');
+                });
+            }
+        }
+        
+        function deleteConferenceLink(linkId) {
+            if (confirm('Вы уверены, что хотите удалить эту ссылку?')) {
+                fetch(`/api/conference-links/${linkId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Ссылка успешно удалена!');
+                        loadConferenceLinksManager();
+                        location.reload(); // Перезагружаем для обновления основной секции
+                    } else {
+                        alert('Ошибка при удалении ссылки: ' + (data.error || ''));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при удалении ссылки');
+                });
+            }
+        }
+        
+        // Функции для загрузки данных (доступны глобально)
+        function loadStudentHomeworks() {
             fetch('/api/homework')
                 .then(response => response.json())
                 .then(data => {
-                    const homeworkList = document.getElementById('homeworkList');
-                    homeworkList.innerHTML = '';
-                    
-                    if (data.homeworks && data.homeworks.length > 0) {
-                        data.homeworks.forEach(hw => {
-                            const deadline = new Date(hw.deadline);
-                            const now = new Date();
-                            const diffDays = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
-                            
-                            const homeworkItem = document.createElement('div');
-                            homeworkItem.className = 'homework-item';
-                            
-                            let submissionContent = '';
-                            if (hw.submissions && hw.submissions['{{ user.username }}']) {
-                                const submission = hw.submissions['{{ user.username }}'];
-                                submissionContent = `
+                    const container = document.getElementById('myHomeworkList');
+                    if (container) {
+                        container.innerHTML = '';
+                        
+                        if (data.homeworks && data.homeworks.length > 0) {
+                            data.homeworks.forEach(hw => {
+                                const deadline = new Date(hw.deadline);
+                                const homeworkItem = document.createElement('div');
+                                homeworkItem.className = 'homework-item';
+                                
+                                const deadlineStr = deadline.toLocaleDateString('ru-RU');
+                                const isSubmitted = hw.submissions && hw.submissions['{{ user.username }}'];
+                                const statusBadge = isSubmitted ? 
+                                    '<span class="badge badge-success" style="margin-left: 10px;">Отправлено</span>' : 
+                                    '<span class="badge badge-warning" style="margin-left: 10px;">Не отправлено</span>';
+                                
+                                homeworkItem.innerHTML = `
+                                    <div class="homework-header">
+                                        <h4 class="homework-title">${hw.title} ${statusBadge}</h4>
+                                        <div class="homework-deadline">
+                                            <i class="fas fa-calendar"></i> Срок: ${deadlineStr}
+                                        </div>
+                                    </div>
+                                    <div class="homework-description">${hw.description}</div>
+                                    ${hw.subject ? `<div><strong>Предмет:</strong> ${hw.subject}</div>` : ''}
+                                    ${hw.files && hw.files.length > 0 ? `
+                                    <div class="homework-files">
+                                        ${hw.files.map(file => `
+                                        <a href="/uploads/${file.name}" target="_blank" class="file-item">
+                                            <i class="fas fa-file"></i> ${file.name}
+                                        </a>
+                                        `).join('')}
+                                    </div>
+                                    ` : ''}
+                                    ${isSubmitted ? `
                                     <div class="submission-files">
                                         <div class="submission-header">Ваша отправка:</div>
-                                        ${submission.comment ? `<div class="submission-comment">${submission.comment}</div>` : ''}
-                                        ${submission.files && submission.files.length > 0 ? `
+                                        ${hw.submissions['{{ user.username }}'].comment ? 
+                                            `<div class="submission-comment">${hw.submissions['{{ user.username }}'].comment}</div>` : ''}
+                                        ${hw.submissions['{{ user.username }}'].files && hw.submissions['{{ user.username }}'].files.length > 0 ? `
                                         <div class="homework-files">
-                                            ${submission.files.map(file => `
+                                            ${hw.submissions['{{ user.username }}'].files.map(file => `
                                             <a href="/uploads/${file.name}" target="_blank" class="file-item">
                                                 <i class="fas fa-file"></i> ${file.name}
                                             </a>
@@ -2057,16 +2729,88 @@
                                         </div>
                                         ` : ''}
                                     </div>
+                                    ` : ''}
                                 `;
-                            }
-                            
-                            // Добавляем блок с работами учеников для учителя
-                            let studentSubmissions = '';
-                            if ('{{ user.role }}' === 'teacher' && Object.keys(hw.submissions || {}).length > 0) {
-                                studentSubmissions = `
-                                    <div class="student-submissions">
-                                        <div class="submission-header">Работы учеников:</div>
-                                        ${Object.entries(hw.submissions).map(([student, submission]) => `
+                                container.appendChild(homeworkItem);
+                            });
+                        } else {
+                            container.innerHTML = '<div class="no-items">Нет домашних заданий</div>';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading homeworks:', error);
+                    const container = document.getElementById('myHomeworkList');
+                    if (container) {
+                        container.innerHTML = '<div class="no-items">Ошибка загрузки заданий</div>';
+                    }
+                });
+        }
+        
+        function loadAssignedHomeworks() {
+            fetch('/api/homework')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('assignedHomeworkList');
+                    if (container) {
+                        container.innerHTML = '';
+                        
+                        if (data.homeworks && data.homeworks.length > 0) {
+                            data.homeworks.forEach(hw => {
+                                const deadline = new Date(hw.deadline);
+                                const homeworkItem = document.createElement('div');
+                                homeworkItem.className = 'homework-item';
+                                
+                                const submittedCount = hw.submissions ? Object.keys(hw.submissions).length : 0;
+                                const totalStudents = hw.students ? hw.students.length : 0;
+                                
+                                homeworkItem.innerHTML = `
+                                    <div class="homework-header">
+                                        <h4 class="homework-title">${hw.title}</h4>
+                                        <div class="homework-deadline">
+                                            <i class="fas fa-calendar"></i> Срок: ${deadline.toLocaleDateString('ru-RU')}
+                                            <span class="badge ${submittedCount === totalStudents ? 'badge-success' : 'badge-warning'}" style="margin-left: 10px;">
+                                                ${submittedCount}/${totalStudents} отправлено
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="homework-description">${hw.description}</div>
+                                    ${hw.subject ? `<div><strong>Предмет:</strong> ${hw.subject}</div>` : ''}
+                                    <div class="homework-actions">
+                                        <button class="btn btn-danger" onclick="deleteHomework(${hw.id})">
+                                            <i class="fas fa-trash"></i> Удалить
+                                        </button>
+                                    </div>
+                                `;
+                                container.appendChild(homeworkItem);
+                            });
+                        } else {
+                            container.innerHTML = '<div class="no-items">Нет назначенных заданий</div>';
+                        }
+                    }
+                });
+        }
+        
+        function loadStudentsHomework() {
+            fetch('/api/homework')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('studentsHomeworkList');
+                    if (container) {
+                        container.innerHTML = '';
+                        
+                        if (data.homeworks && data.homeworks.length > 0) {
+                            data.homeworks.forEach(hw => {
+                                const homeworkCard = document.createElement('div');
+                                homeworkCard.className = 'homework-item';
+                                
+                                let submissionsHtml = '';
+                                if (hw.submissions && Object.keys(hw.submissions).length > 0) {
+                                    submissionsHtml = '<div class="student-submissions">';
+                                    submissionsHtml += `<div class="submission-header">${hw.title}</div>`;
+                                    Object.entries(hw.submissions).forEach(([student, submission]) => {
+                                        const submittedDate = new Date(submission.submitted_at);
+                                        submissionsHtml += `
                                             <div class="student-submission">
                                                 <div class="student-name">${student}</div>
                                                 ${submission.comment ? `<div class="submission-comment">${submission.comment}</div>` : ''}
@@ -2079,63 +2823,80 @@
                                                     `).join('')}
                                                 </div>
                                                 ` : ''}
+                                                <div class="submission-date">
+                                                    <small>Отправлено: ${submittedDate.toLocaleString('ru-RU')}</small>
+                                                </div>
                                             </div>
-                                        `).join('')}
+                                        `;
+                                    });
+                                    submissionsHtml += '</div>';
+                                } else {
+                                    submissionsHtml = '<div class="no-items">Работы еще не отправлены</div>';
+                                }
+                                
+                                homeworkCard.innerHTML = `
+                                    <div class="homework-header">
+                                        <h4 class="homework-title">${hw.title}</h4>
                                     </div>
+                                    ${submissionsHtml}
                                 `;
-                            }
-                            
-                            let teacherActions = '';
-                            if ('{{ user.role }}' === 'teacher') {
-                                teacherActions = `
-                                    <div class="homework-actions">
-                                        <button class="btn btn-danger" onclick="deleteHomework(${hw.id})">
+                                container.appendChild(homeworkCard);
+                            });
+                        } else {
+                            container.innerHTML = '<div class="no-items">Нет назначенных заданий</div>';
+                        }
+                    }
+                });
+        }
+        
+        function loadFeedback() {
+            fetch('/api/feedbacks')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('feedbackList');
+                    if (container) {
+                        container.innerHTML = '';
+                        
+                        if (data.feedbacks && data.feedbacks.length > 0) {
+                            data.feedbacks.forEach(fb => {
+                                const date = new Date(fb.created_at);
+                                const feedbackItem = document.createElement('div');
+                                feedbackItem.className = 'feedback-item';
+                                
+                                let ratingStars = '';
+                                if (fb.rating) {
+                                    ratingStars = '<div class="feedback-rating">';
+                                    for (let i = 0; i < fb.rating; i++) {
+                                        ratingStars += '⭐';
+                                    }
+                                    ratingStars += '</div>';
+                                }
+                                
+                                const personName = '{{ user.role }}' === 'teacher' ? 
+                                    `Ученик: ${fb.student_username}` : 
+                                    `Учитель: ${fb.teacher_username}`;
+                                
+                                feedbackItem.innerHTML = `
+                                    <div class="feedback-header">
+                                        <span class="feedback-teacher">${personName}</span>
+                                        <span class="feedback-date">${date.toLocaleDateString('ru-RU')}</span>
+                                    </div>
+                                    <div class="feedback-comment">${fb.comment}</div>
+                                    ${ratingStars}
+                                    {% if user.role == 'teacher' %}
+                                    <div class="homework-actions" style="margin-top: 1rem;">
+                                        <button class="btn btn-danger btn-sm" onclick="deleteFeedback(${fb.id})">
                                             <i class="fas fa-trash"></i> Удалить
                                         </button>
                                     </div>
+                                    {% endif %}
                                 `;
-                            }
-                            
-                            homeworkItem.innerHTML = `
-                                <div class="homework-header">
-                                    <h4 class="homework-title">${hw.title}</h4>
-                                    <div class="homework-deadline">
-                                        <i class="fas fa-clock"></i> Срок сдачи: ${diffDays > 0 ? diffDays + ' дней' : 'просрочено'}
-                                    </div>
-                                </div>
-                                <div class="homework-description">
-                                    ${hw.description}
-                                </div>
-                                ${hw.subject ? `<div><strong>Предмет:</strong> ${hw.subject}</div>` : ''}
-                                ${hw.files && hw.files.length > 0 ? `
-                                <div class="homework-files">
-                                    ${hw.files.map(file => `
-                                    <a href="/uploads/${file.name}" target="_blank" class="file-item">
-                                        <i class="fas fa-file"></i> ${file.name}
-                                    </a>
-                                    `).join('')}
-                                </div>
-                                ` : ''}
-                                ${submissionContent}
-                                ${studentSubmissions}
-                                ${'{{ user.role }}' === 'student' ? `
-                                <div class="homework-actions">
-                                    <button class="btn btn-primary" onclick="showSubmitHomeworkModal(${hw.id})">
-                                        <i class="fas fa-upload"></i> Загрузить работу
-                                    </button>
-                                </div>
-                                ` : ''}
-                                ${teacherActions}
-                            `;
-                            homeworkList.appendChild(homeworkItem);
-                        });
-                    } else {
-                        homeworkList.innerHTML = '<p>Нет домашних заданий</p>';
+                                container.appendChild(feedbackItem);
+                            });
+                        } else {
+                            container.innerHTML = '<div class="no-items">Обратная связь отсутствует</div>';
+                        }
                     }
-                })
-                .catch(error => {
-                    console.error('Error loading homeworks:', error);
-                    document.getElementById('homeworkList').innerHTML = '<p>Ошибка загрузки заданий</p>';
                 });
         }
         
@@ -2143,42 +2904,95 @@
             fetch('/api/users')
                 .then(response => response.json())
                 .then(data => {
-                    const usersList = document.getElementById('usersList');
-                    usersList.innerHTML = '';
-                    
-                    if (data.users && data.users.length > 0) {
-                        data.users.forEach(user => {
-                            const userCard = document.createElement('div');
-                            userCard.className = 'user-card';
-                            userCard.innerHTML = `
-                                <div class="user-avatar-sm">
-                                    <img src="${user.avatar || 'https://i.pravatar.cc/150?u=' + user.username}" alt="Аватар">
-                                </div>
-                                <div class="user-details">
-                                    <div class="user-name-sm">${user.username}</div>
-                                    <span class="user-role-sm">${user.role === 'teacher' ? 'Преподаватель' : 'Студент'}</span>
-                                    <div style="font-size: 0.8rem; color: ${user.is_active ? 'green' : 'red'}">
-                                        ${user.is_active ? 'Активен' : 'Неактивен'}
-                                    </div>
-                                </div>
-                                <div class="user-actions">
-                                    <button class="btn btn-secondary btn-sm" onclick="editUser('${user.username}')">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-danger btn-sm" onclick="deleteUser('${user.username}')">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            `;
-                            usersList.appendChild(userCard);
-                        });
-                    } else {
-                        usersList.innerHTML = '<p>Нет пользователей</p>';
+                    const container = document.getElementById('usersList');
+                    if (container) {
+                        container.innerHTML = '';
+                        
+                        if (data.users && data.users.length > 0) {
+                            data.users.forEach(user => {
+                                if (user.role === 'student') {
+                                    const userCard = document.createElement('div');
+                                    userCard.className = 'user-card';
+                                    userCard.innerHTML = `
+                                        <div class="user-avatar-sm">
+                                            <img src="${user.avatar || 'https://i.pravatar.cc/150?u=' + user.username}" alt="Аватар">
+                                        </div>
+                                        <div class="user-details">
+                                            <div class="user-name-sm">${user.username}</div>
+                                            <span class="user-role-sm">Студент</span>
+                                            <div style="font-size: 0.8rem; color: ${user.is_active ? 'green' : 'red'}">
+                                                ${user.is_active ? 'Активен' : 'Неактивен'}
+                                            </div>
+                                        </div>
+                                        <div class="user-actions">
+                                            <button class="btn btn-secondary btn-sm" onclick="editUser('${user.username}')">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-danger btn-sm" onclick="deleteUser('${user.username}')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    `;
+                                    container.appendChild(userCard);
+                                }
+                            });
+                        } else {
+                            container.innerHTML = '<div class="no-items">Нет учеников</div>';
+                        }
                     }
-                })
-                .catch(error => {
-                    console.error('Error loading users:', error);
-                    document.getElementById('usersList').innerHTML = '<p>Ошибка загрузки пользователей</p>';
+                });
+        }
+        
+        function loadConferenceLinksManager() {
+            fetch('/api/conference-links?teacher_username={{ user.username }}')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('conferenceLinksManager');
+                    if (container) {
+                        container.innerHTML = '';
+                        
+                        if (data.links && data.links.length > 0) {
+                            data.links.forEach(link => {
+                                const linkItem = document.createElement('div');
+                                linkItem.className = 'link-item';
+                                linkItem.innerHTML = `
+                                    <div class="link-platform">${link.platform}</div>
+                                    <div class="link-url">${link.link}</div>
+                                    <div class="link-actions">
+                                        <button class="btn btn-danger btn-sm" onclick="deleteConferenceLink(${link.id})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                `;
+                                container.appendChild(linkItem);
+                            });
+                        } else {
+                            container.innerHTML = '<div class="no-items">Ссылки не настроены</div>';
+                        }
+                    }
+                });
+        }
+        
+        function loadHomeworkForUpload() {
+            fetch('/api/homework')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('selectHomework');
+                    if (select) {
+                        select.innerHTML = '<option value="">-- Выберите задание --</option>';
+                        if (data.homeworks && data.homeworks.length > 0) {
+                            data.homeworks.forEach(hw => {
+                                const isSubmitted = hw.submissions && hw.submissions['{{ user.username }}'];
+                                if (!isSubmitted) {
+                                    const deadline = new Date(hw.deadline);
+                                    const option = document.createElement('option');
+                                    option.value = hw.id;
+                                    option.textContent = `${hw.title} (до ${deadline.toLocaleDateString('ru-RU')})`;
+                                    select.appendChild(option);
+                                }
+                            });
+                        }
+                    }
                 });
         }
     </script>
