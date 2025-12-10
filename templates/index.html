@@ -1548,15 +1548,17 @@
     <div class="user-panel" id="userPanel">
         <div class="user-panel-header">
             <div class="user-avatar">
-                <img src="/static/avatar-placeholder.jpg" alt="User Avatar">
+                <img src="/static/avatar-placeholder.jpg" alt="User Avatar" id="userAvatarImg">
             </div>
             <div class="user-info">
-                <h4>Гость</h4>
-                <p>Посетитель</p>
+                <h4 id="userPanelName">Гость</h4>
+                <p id="userPanelRole">Посетитель</p>
             </div>
         </div>
         <ul class="user-menu">
             <li><a href="#" id="loginLink"><i class="fas fa-sign-in-alt"></i> Войти</a></li>
+            <li><a href="/dashboard" id="dashboardLink" style="display: none;"><i class="fas fa-user"></i> Личный кабинет</a></li>
+            <li><a href="#" id="logoutLink" style="display: none;"><i class="fas fa-sign-out-alt"></i> Выйти</a></li>
             <li><a href="#" id="openAiTeacherSite"><i class="fas fa-robot"></i> AI-репетитор</a></li>
         </ul>
     </div>
@@ -1569,11 +1571,11 @@
             <form id="loginForm">
                 <div class="form-group">
                     <label for="loginUsername">Логин</label>
-                    <input type="text" id="loginUsername" required>
+                    <input type="text" id="loginUsername" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="loginPassword">Пароль</label>
-                    <input type="password" id="loginPassword" required>
+                    <input type="password" id="loginPassword" class="form-control" required>
                 </div>
                 <button type="submit" class="btn btn-primary">Войти</button>
                 <p class="register-link">Нет аккаунта? <a href="#" id="showRegister">Зарегистрироваться</a></p>
@@ -1581,19 +1583,19 @@
             <form id="registerForm" style="display: none;">
                 <div class="form-group">
                     <label for="regUsername">Логин</label>
-                    <input type="text" id="regUsername" required>
+                    <input type="text" id="regUsername" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="regEmail">Email</label>
-                    <input type="email" id="regEmail" required>
+                    <input type="email" id="regEmail" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="regPassword">Пароль</label>
-                    <input type="password" id="regPassword" required>
+                    <input type="password" id="regPassword" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="regRole">Я</label>
-                    <select id="regRole" required>
+                    <select id="regRole" class="form-control" required>
                         <option value="student">Ученик</option>
                         <option value="teacher">Преподаватель</option>
                     </select>
@@ -2103,6 +2105,169 @@
             window.open('https://ai.zindaki-edu.ru', '_blank');
         }
 
+        // --- Функция для проверки авторизации ---
+        function checkAuthStatus() {
+            // Проверяем, есть ли пользователь в sessionStorage или localStorage
+            const userData = sessionStorage.getItem('user') || localStorage.getItem('user');
+            if (userData) {
+                try {
+                    const user = JSON.parse(userData);
+                    updateUserPanel(user);
+                    return user;
+                } catch (e) {
+                    console.error('Error parsing user data:', e);
+                }
+            }
+            return null;
+        }
+
+        // --- Обновление панели пользователя ---
+        function updateUserPanel(user) {
+            const userPanel = document.getElementById('userPanel');
+            const userAvatarImg = document.getElementById('userAvatarImg');
+            const userInfo = document.getElementById('userPanelName');
+            const userRole = document.getElementById('userPanelRole');
+            const loginLink = document.getElementById('loginLink');
+            const dashboardLink = document.getElementById('dashboardLink');
+            const logoutLink = document.getElementById('logoutLink');
+            
+            if (user && user.username) {
+                // Обновляем информацию в панели
+                userInfo.textContent = user.username;
+                userRole.textContent = user.role === 'teacher' ? 'Преподаватель' : 'Ученик';
+                
+                if (user.avatar) {
+                    if (userAvatarImg) {
+                        userAvatarImg.src = user.avatar;
+                    }
+                }
+                
+                // Меняем ссылку "Войти" на "Личный кабинет"
+                if (loginLink) {
+                    loginLink.style.display = 'none';
+                }
+                if (dashboardLink) {
+                    dashboardLink.style.display = 'block';
+                }
+                if (logoutLink) {
+                    logoutLink.style.display = 'block';
+                }
+                
+                // Обновляем кнопки входа в навигации
+                document.querySelectorAll('.login-btn').forEach(btn => {
+                    btn.textContent = 'Личный кабинет';
+                    btn.href = '/dashboard';
+                    btn.onclick = null;
+                });
+            } else {
+                // Сбрасываем на гостя
+                if (loginLink) {
+                    loginLink.style.display = 'block';
+                }
+                if (dashboardLink) {
+                    dashboardLink.style.display = 'none';
+                }
+                if (logoutLink) {
+                    logoutLink.style.display = 'none';
+                }
+                
+                document.querySelectorAll('.login-btn').forEach(btn => {
+                    btn.textContent = 'Вход';
+                    btn.href = '#';
+                    btn.onclick = () => {
+                        loginModal.style.display = 'block';
+                    };
+                });
+            }
+        }
+
+        // --- Обработка реального входа ---
+        async function handleLogin(username, password) {
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Сохраняем данные пользователя
+                    sessionStorage.setItem('user', JSON.stringify(data.user));
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    // Обновляем UI
+                    updateUserPanel(data.user);
+                    loginModal.style.display = 'none';
+                    document.getElementById('loginForm').reset();
+                    
+                    // Показываем сообщение об успехе
+                    alert(`Вход выполнен успешно! Добро пожаловать, ${data.user.username}`);
+                    
+                    // Перенаправляем на dashboard
+                    window.location.href = '/dashboard';
+                } else {
+                    alert(data.error || 'Ошибка входа');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                alert('Ошибка соединения с сервером');
+            }
+        }
+
+        // --- Обработка реальной регистрации ---
+        async function handleRegister(username, email, password, role) {
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, email, password, role })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Регистрация успешна! Теперь войдите в систему.');
+                    document.getElementById('registerForm').style.display = 'none';
+                    document.getElementById('loginForm').style.display = 'block';
+                    document.getElementById('registerForm').reset();
+                } else {
+                    alert(data.error || 'Ошибка регистрации');
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                alert('Ошибка соединения с сервером');
+            }
+        }
+
+        // --- Обработка выхода ---
+        async function handleLogout() {
+            try {
+                const response = await fetch('/api/logout');
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Очищаем данные пользователя
+                    sessionStorage.removeItem('user');
+                    localStorage.removeItem('user');
+                    
+                    // Обновляем UI
+                    updateUserPanel(null);
+                    
+                    // Показываем сообщение
+                    alert('Вы успешно вышли из системы');
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        }
+
         // Инициализация частиц
         particlesJS("particles-js", {
             "particles": {
@@ -2279,6 +2444,7 @@
             });
             
             animateOnScroll();
+            checkAuthStatus(); // Проверяем авторизацию при загрузке
         });
         
         window.addEventListener('scroll', animateOnScroll);
@@ -2303,18 +2469,29 @@
         const showLogin = document.getElementById('showLogin');
         const closeModal = document.querySelector('.close-modal');
         const loginLink = document.getElementById('loginLink');
+        const logoutLink = document.getElementById('logoutLink');
 
         // Показать модальное окно при клике на кнопку входа
         document.querySelectorAll('.login-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
                 loginModal.style.display = 'block';
             });
         });
 
         // Также для ссылки входа в панели пользователя
         if (loginLink) {
-            loginLink.addEventListener('click', () => {
+            loginLink.addEventListener('click', (e) => {
+                e.preventDefault();
                 loginModal.style.display = 'block';
+            });
+        }
+
+        // Обработка выхода
+        if (logoutLink) {
+            logoutLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                handleLogout();
             });
         }
 
@@ -2349,9 +2526,7 @@
             const username = document.getElementById('loginUsername').value;
             const password = document.getElementById('loginPassword').value;
 
-            // Здесь можно добавить реальную логику входа
-            alert(`Вход выполнен как: ${username}`);
-            loginModal.style.display = 'none';
+            handleLogin(username, password);
         });
 
         // Обработка формы регистрации
@@ -2362,10 +2537,7 @@
             const password = document.getElementById('regPassword').value;
             const role = document.getElementById('regRole').value;
 
-            // Здесь можно добавить реальную логику регистрации
-            alert(`Регистрация успешна для: ${username} (${role})`);
-            registerForm.style.display = 'none';
-            loginForm.style.display = 'block';
+            handleRegister(username, email, password, role);
         });
 
         // Обработчики для кнопок AI-учителя
@@ -2395,6 +2567,19 @@
                     e.preventDefault();
                     openAiTeacherSite();
                 });
+            }
+        });
+
+        // Проверка авторизации при клике на dashboard
+        document.addEventListener('click', function(e) {
+            if (e.target.matches('.login-btn') && e.target.textContent === 'Личный кабинет') {
+                e.preventDefault();
+                const user = checkAuthStatus();
+                if (user) {
+                    window.location.href = '/dashboard';
+                } else {
+                    loginModal.style.display = 'block';
+                }
             }
         });
     </script>
