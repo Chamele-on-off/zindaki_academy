@@ -780,7 +780,7 @@
             connectionType.textContent = socket.io.engine.transport.name;
             
             // При переподключении - rejoiн комнаты
-            if (currentRoom && userId) {
+            if (currentRoom && userId && peer && peer.open) {
                 console.log('🔄 Rejoining room after reconnect...');
                 socket.emit('join_room', {
                     room_name: currentRoom,
@@ -879,17 +879,18 @@
             updateParticipantsList();
         });
 
-        socket.on('webrtc_offer', handleWebRTCOffer);
-        socket.on('webrtc_answer', handleWebRTCAnswer);
-        socket.on('ice_candidate', handleICECandidate);
+        // УДАЛИЛИ: кастомные WebRTC-обработчики, так как PeerJS обрабатывает это сам
+        // socket.on('webrtc_offer', handleWebRTCOffer);
+        // socket.on('webrtc_answer', handleWebRTCAnswer);
+        // socket.on('ice_candidate', handleICECandidate);
 
         socket.on('screen_share_status', (data) => {
             console.log('Screen share status:', data);
             if (data.user_id !== userId) {
                 if (data.is_sharing) {
-                    showNotification(`${data.user_id} начал демонстрацию экрана`);
+                    showNotification(`${data.user_name || data.user_id} начал демонстрацию экрана`);
                 } else {
-                    showNotification(`${data.user_id} остановил демонстрацию экрана`);
+                    showNotification(`${data.user_name || data.user_id} остановил демонстрацию экрана`);
                 }
             }
         });
@@ -929,13 +930,13 @@
         const participantsValue = document.getElementById('participantsValue');
         const connectionType = document.getElementById('connectionType');
 
-        // Initialize conference
+        // Initialize conference - ОСНОВНОЙ ИСПРАВЛЕННЫЙ КОД
         async function initializeConference() {
             try {
                 showNotification('Инициализация медиаустройств...', 'info');
 
                 // Get user media
-                localStream = await navigator.mediaDevices.getUserMedia({
+                localStream = await navigatorator.mediaDevices.getUserMedia({
                     video: {
                         width: { ideal: 1280 },
                         height: { ideal: 720 },
@@ -950,37 +951,24 @@
                     }
                 });
                 
-                // Initialize PeerJS
+                // Initialize PeerJS - ВАЖНО: делаем это ДО join_room
                 peerId = `peer-${userId}-${Date.now()}`;
+                console.log('Initializing PeerJS with ID:', peerId);
+                
                 peer = new Peer(peerId, {
                     config: {
                         iceServers: [
                             { urls: 'stun:stun.l.google.com:19302' },
-                            { urls: 'stun:stun1.l.google.com:19302' }
+                            { urls: 'stun:stun1.l.google.com:19302' },
+                            { urls: 'stun:stun2.l.google.com:19302' },
+                            { urls: 'stun:stun3.l.google.com:19302' },
+                            { urls: 'stun:stun4.l.google.com:19302' }
                         ]
                     },
-                    debug: 0
+                    debug: 2
                 });
                 
-                peer.on('open', async (id) => {
-                    console.log('✅ PeerJS connected with ID:', id);
-                    
-                    // Add local video
-                    addLocalVideo(localStream);
-                    
-                    updateConnectionStatus('Подключение к комнате...', 'connecting');
-                    
-                    // Join room on server
-                    socket.emit('join_room', {
-                        room_name: currentRoom,
-                        user_id: userId,
-                        user_name: currentUser
-                    });
-
-                    // Start ping monitoring
-                    startPingMonitoring();
-                });
-                
+                // Устанавливаем обработчики ДО открытия peer
                 peer.on('error', (err) => {
                     console.error('❌ PeerJS error:', err);
                     updateConnectionStatus('Ошибка PeerJS', 'error');
@@ -993,6 +981,16 @@
                     conn.on('open', () => {
                         console.log('✅ Connection established with:', conn.peer);
                         connections[conn.peer] = conn;
+                        
+                        // Добавляем в участники
+                        const remoteUser = participants.get(conn.peer) || { 
+                            id: conn.peer, 
+                            name: conn.peer 
+                        };
+                        participants.set(conn.peer, {
+                            ...remoteUser,
+                            connected: true
+                        });
                         updateParticipantsList();
                     });
                     
@@ -1000,20 +998,49 @@
                         console.log('🔗 Connection closed with:', conn.peer);
                         removeRemoteVideo(conn.peer);
                         delete connections[conn.peer];
+                        
+                        // Обновляем статус участника
+                        if (participants.has(conn.peer)) {
+                            participants.get(conn.peer).connected = false;
+                        }
                         updateParticipantsList();
+                    });
+                    
+                    conn.on('data', (data) => {
+                        console.log('📦 Data from', conn.peer, ':', data);
                     });
                 });
                 
+                // ВАЖНО: устанавливаем обработчик ВХОДЯЩИХ ВЫЗОВОВ ДО открытия peer
                 peer.on('call', (call) => {
                     console.log('📞 Incoming call from:', call.peer);
                     
                     // Answer with current stream
                     const streamToAnswerWith = isScreenSharing && screenStream ? screenStream : localStream;
-                    call.answer(streamToAnswerWith);
+                    console.log('📞 Answering call with stream:', streamToAnswerWith);
+                    
+                    try {
+                        call.answer(streamToAnswerWith);
+                    } catch (error) {
+                        console.error('❌ Error answering call:', error);
+                        return;
+                    }
                     
                     call.on('stream', (remoteStream) => {
                         console.log('✅ Received remote stream from:', call.peer);
                         addRemoteVideo(call.peer, remoteStream);
+                        
+                        // Обновляем статус участника
+                        const remoteUser = participants.get(call.peer) || { 
+                            id: call.peer, 
+                            name: call.peer 
+                        };
+                        participants.set(call.peer, {
+                            ...remoteUser,
+                            connected: true,
+                            video: true,
+                            audio: true
+                        });
                         updateParticipantsList();
                     });
                     
@@ -1023,10 +1050,39 @@
                         if (calls[call.peer]) {
                             delete calls[call.peer];
                         }
+                        
+                        // Обновляем статус участника
+                        if (participants.has(call.peer)) {
+                            participants.get(call.peer).connected = false;
+                        }
                         updateParticipantsList();
                     });
                     
+                    call.on('error', (error) => {
+                        console.error('❌ Call error with', call.peer, ':', error);
+                    });
+                    
                     calls[call.peer] = call;
+                });
+                
+                // Ждем, пока peer откроется, и ТОЛЬКО ПОТОМ присоединяемся к комнате
+                peer.on('open', async (id) => {
+                    console.log('✅ PeerJS opened with ID:', id);
+                    
+                    // Add local video
+                    addLocalVideo(localStream);
+                    
+                    updateConnectionStatus('Подключение к комнате...', 'connecting');
+                    
+                    // ТЕПЕРЬ присоединяемся к комнате на сервере
+                    socket.emit('join_room', {
+                        room_name: currentRoom,
+                        user_id: userId,
+                        user_name: currentUser
+                    });
+
+                    // Start ping monitoring
+                    startPingMonitoring();
                 });
                 
             } catch (error) {
@@ -1063,94 +1119,119 @@
             }, 30000);
         }
 
-        // WebRTC handlers
-        function handleWebRTCOffer(data) {
-            console.log('📞 Received WebRTC offer from:', data.caller_user_id);
-            
-            if (!peer) {
-                console.error('Peer not initialized');
-                return;
-            }
-
-            const call = peer.call(data.caller_user_id, localStream);
-            call.on('stream', (remoteStream) => {
-                addRemoteVideo(data.caller_user_id, remoteStream);
-                updateParticipantsList();
-            });
-            
-            calls[data.caller_user_id] = call;
-        }
-
-        function handleWebRTCAnswer(data) {
-            console.log('📞 Received WebRTC answer from:', data.answerer_user_id);
-            // Answer is handled automatically by PeerJS
-        }
-
-        function handleICECandidate(data) {
-            console.log('📞 Received ICE candidate from:', data.sender_user_id);
-            // ICE candidates are handled automatically by PeerJS
-        }
-
         // Connect to specific peer
         function connectToPeer(remotePeerId, remoteUserName) {
-            if (connections[remotePeerId] || remotePeerId === peerId) return;
+            // Проверяем, что это не мы сами
+            if (remotePeerId === peerId || remotePeerId === userId) {
+                console.log('Skipping connection to self:', remotePeerId);
+                return;
+            }
             
-            console.log('🔗 Connecting to peer:', remotePeerId);
+            // Проверяем, что уже не подключены
+            if (connections[remotePeerId] || calls[remotePeerId]) {
+                console.log('Already connected to:', remotePeerId);
+                return;
+            }
+            
+            console.log('🔗 Connecting to peer:', remotePeerId, 'name:', remoteUserName);
+            
+            // Добавляем в участники сразу
+            participants.set(remotePeerId, {
+                id: remotePeerId,
+                name: remoteUserName,
+                connected: false
+            });
+            updateParticipantsList();
             
             try {
+                // Создаем data connection (для обмена сообщениями)
                 const conn = peer.connect(remotePeerId, {
-                    reliable: true
+                    reliable: true,
+                    serialization: 'json'
                 });
                 
                 conn.on('open', () => {
-                    console.log('✅ Connected to:', remotePeerId);
+                    console.log('✅ Data connection established with:', remotePeerId);
                     connections[remotePeerId] = conn;
                     
-                    // Add to participants list
-                    participants.set(remotePeerId, {
-                        id: remotePeerId,
-                        name: remoteUserName,
-                        connected: true
-                    });
-                    
-                    initiateVideoCall(remotePeerId);
+                    // Обновляем статус
+                    participants.get(remotePeerId).connected = true;
                     updateParticipantsList();
+                    
+                    // Теперь инициируем видеозвонок
+                    initiateVideoCall(remotePeerId, remoteUserName);
                 });
                 
                 conn.on('close', () => {
-                    console.log('🔗 Connection closed with:', remotePeerId);
-                    removeRemoteVideo(remotePeerId);
+                    console.log('🔗 Data connection closed with:', remotePeerId);
+                    participants.get(remotePeerId).connected = false;
                     delete connections[remotePeerId];
-                    participants.delete(remotePeerId);
                     updateParticipantsList();
+                });
+                
+                conn.on('error', (error) => {
+                    console.error('❌ Connection error with', remotePeerId, ':', error);
+                });
+                
+                conn.on('data', (data) => {
+                    console.log('📦 Data from', remotePeerId, ':', data);
                 });
                 
             } catch (error) {
                 console.error('❌ Error connecting to peer:', error);
+                showNotification('Ошибка подключения к ' + remoteUserName, 'error');
             }
         }
 
         // Initiate video call
-        function initiateVideoCall(remotePeerId) {
-            if (calls[remotePeerId]) return;
+        function initiateVideoCall(remotePeerId, remoteUserName) {
+            if (calls[remotePeerId]) {
+                console.log('Call already exists with:', remotePeerId);
+                return;
+            }
             
             console.log('📞 Initiating video call to:', remotePeerId);
             
             try {
                 const streamToSend = isScreenSharing && screenStream ? screenStream : localStream;
+                if (!streamToSend) {
+                    console.error('No stream to send');
+                    return;
+                }
+                
                 const call = peer.call(remotePeerId, streamToSend);
+                if (!call) {
+                    console.error('Failed to create call');
+                    return;
+                }
                 
                 call.on('stream', (remoteStream) => {
                     console.log('✅ Received stream from:', remotePeerId);
                     addRemoteVideo(remotePeerId, remoteStream);
+                    
+                    // Обновляем статус участника
+                    participants.get(remotePeerId).connected = true;
+                    participants.get(remotePeerId).video = true;
+                    participants.get(remotePeerId).audio = true;
                     updateParticipantsList();
                 });
                 
                 call.on('close', () => {
                     console.log('📞 Call ended with:', remotePeerId);
                     removeRemoteVideo(remotePeerId);
-                    delete calls[remotePeerId];
+                    if (calls[remotePeerId]) {
+                        delete calls[remotePeerId];
+                    }
+                    
+                    // Обновляем статус участника
+                    if (participants.has(remotePeerId)) {
+                        participants.get(remotePeerId).connected = false;
+                    }
                     updateParticipantsList();
+                });
+                
+                call.on('error', (error) => {
+                    console.error('❌ Call error with', remotePeerId, ':', error);
                 });
                 
                 calls[remotePeerId] = call;
@@ -1161,6 +1242,11 @@
 
         // Add local video
         function addLocalVideo(stream) {
+            // Проверяем, не добавлено ли уже локальное видео
+            if (document.getElementById('localVideoItem')) {
+                return;
+            }
+            
             const videoItem = document.createElement('div');
             videoItem.className = 'video-item local-video';
             videoItem.id = 'localVideoItem';
@@ -1185,8 +1271,15 @@
             videoContainer.appendChild(videoItem);
             
             // Store tracks for later use
-            videoTrack = stream.getVideoTracks()[0];
-            audioTrack = stream.getAudioTracks()[0];
+            const videoTracks = stream.getVideoTracks();
+            const audioTracks = stream.getAudioTracks();
+            
+            if (videoTracks.length > 0) {
+                videoTrack = videoTracks[0];
+            }
+            if (audioTracks.length > 0) {
+                audioTrack = audioTracks[0];
+            }
             
             // Add to participants list
             participants.set(userId, {
@@ -1202,7 +1295,16 @@
 
         // Add remote video
         function addRemoteVideo(peerId, stream) {
-            if (document.getElementById(`videoItem-${peerId}`)) return;
+            // Проверяем, не добавлено ли уже это видео
+            const existingVideo = document.getElementById(`videoItem-${peerId}`);
+            if (existingVideo) {
+                console.log('Video already exists for:', peerId);
+                const video = existingVideo.querySelector('video');
+                if (video) {
+                    video.srcObject = stream;
+                }
+                return;
+            }
             
             const user = participants.get(peerId) || { name: peerId };
             
@@ -1228,7 +1330,12 @@
             videoItem.appendChild(participantInfo);
             videoContainer.appendChild(videoItem);
             
-            // Update participants list
+            // Добавляем обработчик клика для переключения главного видео
+            videoItem.addEventListener('click', () => {
+                setMainVideo(videoItem.id);
+            });
+            
+            // Обновляем статус участника
             participants.set(peerId, {
                 ...user,
                 connected: true,
@@ -1238,9 +1345,10 @@
             
             updateParticipantsList();
             
-            // If this is the first participant, make it the main video
-            if (!mainVideoId && peerId !== userId) {
-                setMainVideo(`videoItem-${peerId}`);
+            // Если это первый участник (кроме нас), делаем его главным видео
+            const allVideos = document.querySelectorAll('.video-item:not(#localVideoItem)');
+            if (allVideos.length === 1 && !mainVideoId) {
+                setMainVideo(videoItem.id);
             }
         }
 
@@ -1248,7 +1356,7 @@
         function removeRemoteVideo(peerId) {
             const videoItem = document.getElementById(`videoItem-${peerId}`);
             if (videoItem) {
-                // If removing main video, select new main video
+                // Если удаляем главное видео, выбираем новое
                 if (videoItem.id === mainVideoId) {
                     const remainingVideos = document.querySelectorAll('.video-item:not(.main-video)');
                     if (remainingVideos.length > 0) {
@@ -1257,23 +1365,33 @@
                         exitFullscreenMode();
                     }
                 }
+                
+                // Останавливаем поток
+                const video = videoItem.querySelector('video');
+                if (video && video.srcObject) {
+                    const tracks = video.srcObject.getTracks();
+                    tracks.forEach(track => track.stop());
+                }
+                
                 videoItem.remove();
             }
             
-            // Remove from participants list
-            participants.delete(peerId);
+            // Обновляем статус участника
+            if (participants.has(peerId)) {
+                participants.get(peerId).connected = false;
+            }
             updateParticipantsList();
         }
 
         // Set main video
         function setMainVideo(videoItemId) {
-            // If already selected this video, exit fullscreen mode
+            // Если уже выбрано это видео, выходим из полноэкранного режима
             if (mainVideoId === videoItemId) {
                 exitFullscreenMode();
                 return;
             }
             
-            // Remove previous main video
+            // Убираем предыдущее главное видео
             if (mainVideoId) {
                 const prevMainVideo = document.getElementById(mainVideoId);
                 if (prevMainVideo) {
@@ -1281,7 +1399,7 @@
                 }
             }
             
-            // Set new main video
+            // Устанавливаем новое главное видео
             const newMainVideo = document.getElementById(videoItemId);
             if (newMainVideo) {
                 newMainVideo.classList.add('main-video');
@@ -1302,7 +1420,7 @@
             mainVideoId = null;
             isFullscreen = false;
             
-            // Remove main-video class from all elements
+            // Убираем класс main-video со всех элементов
             document.querySelectorAll('.video-item').forEach(item => {
                 item.classList.remove('main-video');
             });
@@ -1329,8 +1447,13 @@
                 
                 const status = document.createElement('div');
                 status.className = 'participant-status';
+                status.style.width = '8px';
+                status.style.height = '8px';
+                status.style.borderRadius = '50%';
+                status.style.backgroundColor = participant.connected ? '#00ff88' : '#ff3b30';
                 status.style.marginLeft = 'auto';
                 status.style.marginRight = '0';
+                status.title = participant.connected ? 'Подключен' : 'Отключен';
                 
                 participantItem.appendChild(avatar);
                 participantItem.appendChild(name);
@@ -1344,15 +1467,17 @@
             const statusElement = connectionStatus.querySelector('span');
             const indicator = connectionStatus.querySelector('.status-indicator');
             
-            statusElement.textContent = message;
-            indicator.className = 'status-indicator';
-            
-            if (status === 'connected') {
-                indicator.classList.add('connected');
-            } else if (status === 'connecting') {
-                indicator.classList.add('connecting');
-            } else if (status === 'error') {
-                indicator.classList.add('error');
+            if (statusElement) statusElement.textContent = message;
+            if (indicator) {
+                indicator.className = 'status-indicator';
+                
+                if (status === 'connected') {
+                    indicator.style.background = '#00ff88';
+                } else if (status === 'connecting') {
+                    indicator.style.background = '#ff9500';
+                } else if (status === 'error') {
+                    indicator.style.background = '#ff3b30';
+                }
             }
         }
 
@@ -1368,6 +1493,12 @@
 
         // Show notification
         function showNotification(message, type = 'info') {
+            // Удаляем старые уведомления
+            const oldNotifications = document.querySelectorAll('.notification');
+            oldNotifications.forEach(notif => {
+                if (notif.parentNode) notif.parentNode.removeChild(notif);
+            });
+            
             const notification = document.createElement('div');
             notification.className = 'notification';
             
@@ -1377,15 +1508,21 @@
                 notification.classList.add('warning');
             }
             
+            let icon = 'info';
+            if (type === 'error') icon = 'error';
+            if (type === 'warning') icon = 'warning';
+            
             notification.innerHTML = `
-                <i class="material-icons">${type === 'error' ? 'error' : 'info'}</i>
+                <i class="material-icons">${icon}</i>
                 <span>${message}</span>
             `;
             
             document.body.appendChild(notification);
             
             setTimeout(() => {
-                notification.remove();
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
             }, 3000);
         }
 
@@ -1483,6 +1620,7 @@
                 socket.emit('screen_share_status', {
                     room_name: currentRoom,
                     user_id: userId,
+                    user_name: currentUser,
                     is_sharing: true
                 });
                 
@@ -1536,6 +1674,7 @@
             socket.emit('screen_share_status', {
                 room_name: currentRoom,
                 user_id: userId,
+                user_name: currentUser,
                 is_sharing: false
             });
             
@@ -1586,13 +1725,13 @@
             
             // Close all connections
             for (const conn of Object.values(connections)) {
-                conn.close();
+                if (conn.close) conn.close();
             }
             connections = {};
             
             // Close all calls
             for (const call of Object.values(calls)) {
-                call.close();
+                if (call.close) call.close();
             }
             calls = {};
             
@@ -1633,10 +1772,12 @@
 
         // Close panels when clicking outside
         document.addEventListener('click', (e) => {
-            if (!participantsPanel.contains(e.target) && !participantsBtn.contains(e.target)) {
+            if (participantsPanel && participantsBtn && 
+                !participantsPanel.contains(e.target) && !participantsBtn.contains(e.target)) {
                 participantsPanel.classList.remove('active');
             }
-            if (!statsPanel.contains(e.target) && !statsBtn.contains(e.target)) {
+            if (statsPanel && statsBtn && 
+                !statsPanel.contains(e.target) && !statsBtn.contains(e.target)) {
                 statsPanel.classList.remove('active');
             }
         });
@@ -1654,6 +1795,24 @@
                 if (isFullscreen) {
                     exitFullscreenMode();
                 }
+            }
+            
+            // Ctrl+D for screen share
+            if (e.ctrlKey && e.code === 'KeyD') {
+                e.preventDefault();
+                screenShareBtn.click();
+            }
+            
+            // Ctrl+M to toggle mute
+            if (e.ctrlKey && e.code === 'KeyM') {
+                e.preventDefault();
+                toggleAudioBtn.click();
+            }
+            
+            // Ctrl+V to toggle video
+            if (e.ctrlKey && e.code === 'KeyV') {
+                e.preventDefault();
+                toggleVideoBtn.click();
             }
         });
     </script>
