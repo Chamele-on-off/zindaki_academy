@@ -743,6 +743,7 @@ def join_room_handler(data):
         room_name = data.get('room_name')
         user_id = data.get('user_id')
         user_name = data.get('user_name')
+        peer_id = data.get('peer_id')  # Новое поле: PeerJS ID
         
         if not all([room_name, user_id, user_name]):
             emit('error', {'message': 'Missing required fields'})
@@ -792,18 +793,20 @@ def join_room_handler(data):
             'socket_id': request.sid,
             'user_name': user_name,
             'user_id': user_id,
+            'peer_id': peer_id,  # Сохраняем PeerJS ID
             'joined_at': datetime.now().isoformat(),
             'last_activity': datetime.now().isoformat()
         }
         
         join_room(room_name)
-        logger.info(f'User {user_name} ({user_id}) joined room {room_name}')
+        logger.info(f'User {user_name} ({user_id}) joined room {room_name} with peer_id {peer_id}')
         
         # Отправляем текущему пользователю список всех участников комнаты
         participants = {
             uid: {
                 'user_name': data['user_name'], 
                 'user_id': uid,
+                'peer_id': data.get('peer_id'),  # Отправляем PeerJS ID другим участникам
                 'socket_id': data.get('socket_id')
             }
             for uid, data in video_rooms[room_name].items()
@@ -822,6 +825,7 @@ def join_room_handler(data):
         emit('user_joined', {
             'user_id': user_id,
             'user_name': user_name,
+            'peer_id': peer_id,  # Отправляем PeerJS ID
             'socket_id': request.sid,
             'room_state': list(video_rooms[room_name].keys()),
             'timestamp': datetime.now().isoformat()
@@ -867,9 +871,6 @@ def leave_room_handler(data):
             
     except Exception as e:
         logger.error(f'Error in leave_room: {e}')
-
-# УДАЛЕНО: Кастомные WebRTC-обработчики (webrtc_offer, webrtc_answer, ice_candidate)
-# Они не нужны, так как PeerJS обрабатывает сигналинг самостоятельно
 
 @socketio.on('screen_share_status')
 def handle_screen_share_status(data):
@@ -944,6 +945,7 @@ def video_rooms_status():
             'users': {
                 uid: {
                     'user_name': data['user_name'],
+                    'peer_id': data.get('peer_id'),
                     'joined_at': data.get('joined_at'),
                     'last_activity': data.get('last_activity'),
                     'socket_id': data.get('socket_id')[:10] + '...' if data.get('socket_id') else None
@@ -962,6 +964,7 @@ def video_debug():
             'users': {
                 uid: {
                     'user_name': data['user_name'],
+                    'peer_id': data.get('peer_id'),
                     'joined_at': data.get('joined_at'),
                     'last_activity': data.get('last_activity'),
                     'socket_id': data.get('socket_id')[:10] + '...' if data.get('socket_id') else None
