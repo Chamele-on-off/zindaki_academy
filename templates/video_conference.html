@@ -935,8 +935,8 @@
             try {
                 showNotification('Инициализация медиаустройств...', 'info');
 
-                // Get user media
-                localStream = await navigatorator.mediaDevices.getUserMedia({
+                // Get user media - ИСПРАВЛЕНА ОШИБКА: navigatorator -> navigator
+                localStream = await navigator.mediaDevices.getUserMedia({
                     video: {
                         width: { ideal: 1280 },
                         height: { ideal: 720 },
