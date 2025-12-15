@@ -750,7 +750,9 @@
         let connections = {};
         let calls = {};
         let mainVideoId = null;
-        let participants = new Map();
+        let participants = new Map(); // peerId -> {id, name, originalUserId, connected, video, audio}
+        let pendingConnections = []; // Очередь соединений, пока peer не готов
+        let isPeerReady = false; // Флаг готовности PeerJS
         let pingInterval = null;
         let activityInterval = null;
         let lastPingTime = null;
@@ -780,12 +782,12 @@
             connectionType.textContent = socket.io.engine.transport.name;
             
             // При переподключении - rejoiн комнаты
-            if (currentRoom && userId && peer && peer.open) {
+            if (currentRoom && userId && peer && peer.open && isPeerReady) {
                 console.log('🔄 Rejoining room after reconnect...');
                 socket.emit('join_room', {
                     room_name: currentRoom,
                     user_id: userId,
-                    peer_id: peerId, // Добавляем peer_id при переподключении
+                    peer_id: peerId,
                     user_name: currentUser
                 });
             }
@@ -848,7 +850,7 @@
             for (const [participantId, participant] of Object.entries(data.participants)) {
                 console.log('Found participant:', participant.user_name, 'peer_id:', participant.peer_id);
                 if (participant.peer_id) {
-                    connectToPeer(participant.peer_id, participant.user_name);
+                    connectToPeer(participant.peer_id, participant.user_name, participant.user_id);
                 } else {
                     console.warn('No peer_id for participant:', participant.user_name);
                 }
@@ -861,12 +863,12 @@
         });
 
         socket.on('user_joined', (data) => {
-            console.log('👤 User joined:', data.user_name, 'peer_id:', data.peer_id);
+            console.log('👤 User joined:', data.user_name, 'peer_id:', data.peer_id, 'user_id:', data.user_id);
             showNotification(`${data.user_name} присоединился к конференции`);
             
             // ВАЖНО: используем peer_id для подключения!
             if (data.peer_id) {
-                connectToPeer(data.peer_id, data.user_name);
+                connectToPeer(data.peer_id, data.user_name, data.user_id);
             } else {
                 console.warn('No peer_id for new user:', data.user_name);
             }
@@ -876,7 +878,15 @@
 
         socket.on('user_left', (data) => {
             console.log('👤 User left:', data.user_id, 'Reason:', data.reason);
-            const user = participants.get(data.user_id);
+            
+            // Ищем и удаляем участника по user_id
+            removeRemoteVideoByUserId(data.user_id);
+            
+            // Обновляем список участников
+            updateParticipantsList();
+            
+            // Показываем уведомление
+            const user = findParticipantByUserId(data.user_id);
             if (user) {
                 let message = `${user.name} покинул конференцию`;
                 if (data.reason === 'disconnected') {
@@ -888,21 +898,6 @@
                 }
                 showNotification(message);
             }
-            
-            // Находим и удаляем видео по peer_id
-            let foundPeerId = null;
-            for (const [pid, participant] of participants.entries()) {
-                if (participant.originalId === data.user_id) {
-                    foundPeerId = pid;
-                    break;
-                }
-            }
-            
-            if (foundPeerId) {
-                removeRemoteVideo(foundPeerId);
-            }
-            
-            updateParticipantsList();
         });
 
         socket.on('screen_share_status', (data) => {
@@ -973,7 +968,9 @@
                 });
                 
                 // Initialize PeerJS - ВАЖНО: делаем это ДО join_room
-                peerId = `peer-${userId}-${Date.now()}`;
+                const timestamp = Date.now();
+                const random = Math.random().toString(36).substring(7);
+                peerId = `peer-${userId}-${timestamp}-${random}`;
                 console.log('Initializing PeerJS with ID:', peerId);
                 
                 peer = new Peer(peerId, {
@@ -1003,15 +1000,20 @@
                         console.log('✅ Data connection established with:', conn.peer);
                         connections[conn.peer] = conn;
                         
-                        // Добавляем в участники
-                        const remoteUser = participants.get(conn.peer) || { 
-                            id: conn.peer, 
-                            name: conn.peer 
-                        };
-                        participants.set(conn.peer, {
-                            ...remoteUser,
-                            connected: true
-                        });
+                        // Находим участника по peer_id
+                        if (participants.has(conn.peer)) {
+                            participants.get(conn.peer).connected = true;
+                        } else {
+                            // Если участник еще не добавлен, добавляем
+                            participants.set(conn.peer, {
+                                id: conn.peer,
+                                name: 'Участник',
+                                originalUserId: conn.peer,
+                                connected: true,
+                                video: false,
+                                audio: false
+                            });
+                        }
                         updateParticipantsList();
                     });
                     
@@ -1029,6 +1031,19 @@
                     
                     conn.on('data', (data) => {
                         console.log('📦 Data from', conn.peer, ':', data);
+                        try {
+                            const parsedData = JSON.parse(data);
+                            if (parsedData.type === 'user_info') {
+                                // Обновляем имя участника
+                                if (participants.has(conn.peer)) {
+                                    participants.get(conn.peer).name = parsedData.user_name;
+                                    participants.get(conn.peer).originalUserId = parsedData.user_id;
+                                    updateParticipantsList();
+                                }
+                            }
+                        } catch (e) {
+                            console.log('Raw data:', data);
+                        }
                     });
                 });
                 
@@ -1052,16 +1067,21 @@
                         addRemoteVideo(call.peer, remoteStream);
                         
                         // Обновляем статус участника
-                        const remoteUser = participants.get(call.peer) || { 
-                            id: call.peer, 
-                            name: call.peer 
-                        };
-                        participants.set(call.peer, {
-                            ...remoteUser,
-                            connected: true,
-                            video: true,
-                            audio: true
-                        });
+                        if (participants.has(call.peer)) {
+                            participants.get(call.peer).connected = true;
+                            participants.get(call.peer).video = true;
+                            participants.get(call.peer).audio = true;
+                        } else {
+                            // Если участник еще не добавлен, добавляем
+                            participants.set(call.peer, {
+                                id: call.peer,
+                                name: 'Участник',
+                                originalUserId: call.peer,
+                                connected: true,
+                                video: true,
+                                audio: true
+                            });
+                        }
                         updateParticipantsList();
                     });
                     
@@ -1090,6 +1110,7 @@
                 peer.on('open', async (id) => {
                     console.log('✅ PeerJS opened with ID:', id);
                     peerId = id; // Сохраняем реальный PeerJS ID
+                    isPeerReady = true;
                     
                     // Add local video
                     addLocalVideo(localStream);
@@ -1101,9 +1122,17 @@
                     socket.emit('join_room', {
                         room_name: currentRoom,
                         user_id: userId,
-                        peer_id: peerId, // Отправляем PeerJS ID на сервер
+                        peer_id: peerId,
                         user_name: currentUser
                     });
+                    
+                    // Обрабатываем отложенные соединения
+                    console.log('🔄 Processing pending connections:', pendingConnections.length);
+                    for (const pending of pendingConnections) {
+                        console.log('Processing pending connection to:', pending.remotePeerId);
+                        connectToPeer(pending.remotePeerId, pending.remoteUserName, pending.originalUserId);
+                    }
+                    pendingConnections = [];
 
                     // Start ping monitoring
                     startPingMonitoring();
@@ -1144,10 +1173,10 @@
         }
 
         // Connect to specific peer - ИСПРАВЛЕННАЯ ВЕРСИЯ
-        function connectToPeer(remotePeerId, remoteUserName) {
+        function connectToPeer(remotePeerId, remoteUserName, originalUserId = remoteUserName) {
             // Проверяем, что это не мы сами
-            if (remotePeerId === peerId) {
-                console.log('Skipping connection to self:', remotePeerId);
+            if (!remotePeerId || remotePeerId === peerId) {
+                console.log('Skipping connection to self or invalid:', remotePeerId);
                 return;
             }
             
@@ -1157,14 +1186,38 @@
                 return;
             }
             
-            console.log('🔗 Connecting to peer:', remotePeerId, 'name:', remoteUserName);
+            console.log('🔗 Connecting to peer:', remotePeerId, 'name:', remoteUserName, 'originalUserId:', originalUserId);
+            
+            // Если PeerJS еще не готов - ставим в очередь
+            if (!isPeerReady) {
+                console.log('⏳ Peer not ready, queuing connection to:', remotePeerId);
+                pendingConnections.push({
+                    remotePeerId,
+                    remoteUserName,
+                    originalUserId
+                });
+                
+                // Добавляем в участники сразу (как ожидающих)
+                participants.set(remotePeerId, {
+                    id: remotePeerId,
+                    name: remoteUserName,
+                    originalUserId: originalUserId,
+                    connected: false,
+                    video: false,
+                    audio: false
+                });
+                updateParticipantsList();
+                return;
+            }
             
             // Добавляем в участники сразу
             participants.set(remotePeerId, {
                 id: remotePeerId,
                 name: remoteUserName,
-                originalId: remoteUserName, // Сохраняем оригинальный user_id для идентификации
-                connected: false
+                originalUserId: originalUserId,
+                connected: false,
+                video: false,
+                audio: false
             });
             updateParticipantsList();
             
@@ -1179,12 +1232,19 @@
                     console.log('✅ Data connection established with:', remotePeerId);
                     connections[remotePeerId] = conn;
                     
+                    // Отправляем информацию о себе
+                    conn.send(JSON.stringify({
+                        type: 'user_info',
+                        user_id: userId,
+                        user_name: currentUser
+                    }));
+                    
                     // Обновляем статус
                     participants.get(remotePeerId).connected = true;
                     updateParticipantsList();
                     
                     // Теперь инициируем видеозвонок
-                    initiateVideoCall(remotePeerId, remoteUserName);
+                    initiateVideoCall(remotePeerId, remoteUserName, originalUserId);
                 });
                 
                 conn.on('close', () => {
@@ -1209,7 +1269,7 @@
         }
 
         // Initiate video call
-        function initiateVideoCall(remotePeerId, remoteUserName) {
+        function initiateVideoCall(remotePeerId, remoteUserName, originalUserId = remoteUserName) {
             if (calls[remotePeerId]) {
                 console.log('Call already exists with:', remotePeerId);
                 return;
@@ -1235,9 +1295,11 @@
                     addRemoteVideo(remotePeerId, remoteStream);
                     
                     // Обновляем статус участника
-                    participants.get(remotePeerId).connected = true;
-                    participants.get(remotePeerId).video = true;
-                    participants.get(remotePeerId).audio = true;
+                    if (participants.has(remotePeerId)) {
+                        participants.get(remotePeerId).connected = true;
+                        participants.get(remotePeerId).video = true;
+                        participants.get(remotePeerId).audio = true;
+                    }
                     updateParticipantsList();
                 });
                 
@@ -1307,9 +1369,10 @@
             }
             
             // Add to participants list
-            participants.set(userId, {
-                id: userId,
+            participants.set(peerId, {
+                id: peerId,
                 name: currentUser + ' (Вы)',
+                originalUserId: userId,
                 connected: true,
                 video: isVideoEnabled,
                 audio: isAudioEnabled,
@@ -1332,7 +1395,10 @@
                 return;
             }
             
-            const user = participants.get(peerId) || { name: peerId };
+            const user = participants.get(peerId) || { 
+                name: 'Участник',
+                originalUserId: peerId 
+            };
             
             const videoItem = document.createElement('div');
             videoItem.className = 'video-item';
@@ -1402,11 +1468,52 @@
                 videoItem.remove();
             }
             
-            // Обновляем статус участника
-            if (participants.has(peerId)) {
-                participants.get(peerId).connected = false;
+            // Закрываем соединения
+            if (connections[peerId]) {
+                connections[peerId].close();
+                delete connections[peerId];
             }
+            
+            if (calls[peerId]) {
+                calls[peerId].close();
+                delete calls[peerId];
+            }
+            
+            // Удаляем из участников
+            participants.delete(peerId);
             updateParticipantsList();
+        }
+
+        // Remove remote video by user_id
+        function removeRemoteVideoByUserId(userId) {
+            console.log('🔍 Searching for participant with user_id:', userId);
+            
+            // Ищем участника по originalUserId
+            let foundPeerId = null;
+            for (const [peerId, participant] of participants.entries()) {
+                console.log('Checking participant:', participant.originalUserId, 'vs', userId);
+                if (participant.originalUserId === userId) {
+                    foundPeerId = peerId;
+                    console.log('✅ Found participant to remove:', peerId, participant.name);
+                    break;
+                }
+            }
+            
+            if (foundPeerId) {
+                removeRemoteVideo(foundPeerId);
+            } else {
+                console.log('❌ Participant not found for user_id:', userId);
+            }
+        }
+
+        // Find participant by user_id
+        function findParticipantByUserId(userId) {
+            for (const participant of participants.values()) {
+                if (participant.originalUserId === userId) {
+                    return participant;
+                }
+            }
+            return null;
         }
 
         // Set main video
@@ -1563,8 +1670,8 @@
                 toggleVideoBtn.classList.toggle('active', !isVideoEnabled);
                 
                 // Update participants list
-                if (participants.has(userId)) {
-                    participants.get(userId).video = isVideoEnabled;
+                if (participants.has(peerId)) {
+                    participants.get(peerId).video = isVideoEnabled;
                     updateParticipantsList();
                 }
                 
@@ -1582,8 +1689,8 @@
                 toggleAudioBtn.classList.toggle('active', !isAudioEnabled);
                 
                 // Update participants list
-                if (participants.has(userId)) {
-                    participants.get(userId).audio = isAudioEnabled;
+                if (participants.has(peerId)) {
+                    participants.get(peerId).audio = isAudioEnabled;
                     updateParticipantsList();
                 }
                 
