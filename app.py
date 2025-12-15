@@ -868,107 +868,8 @@ def leave_room_handler(data):
     except Exception as e:
         logger.error(f'Error in leave_room: {e}')
 
-@socketio.on('webrtc_offer')
-def handle_webrtc_offer(data):
-    try:
-        offer = data.get('offer')
-        target_user_id = data.get('target_user_id')
-        caller_user_id = data.get('caller_user_id')
-        room_name = data.get('room_name')
-        
-        if not all([offer, target_user_id, caller_user_id, room_name]):
-            emit('error', {'message': 'Missing required fields for offer'})
-            return
-        
-        # Обновляем активность
-        if request.sid in active_sockets:
-            active_sockets[request.sid]['last_activity'] = datetime.now().isoformat()
-        
-        # Находим socket_id целевого пользователя
-        target_user = video_rooms[room_name].get(target_user_id)
-        if not target_user:
-            emit('error', {'message': f'Target user {target_user_id} not found'})
-            return
-        
-        # Пересылаем offer целевому пользователю
-        emit('webrtc_offer', {
-            'offer': offer,
-            'caller_user_id': caller_user_id,
-            'target_user_id': target_user_id,
-            'timestamp': datetime.now().isoformat()
-        }, room=target_user['socket_id'])
-        
-    except Exception as e:
-        logger.error(f'Error handling WebRTC offer: {e}')
-        emit('error', {'message': str(e)})
-
-@socketio.on('webrtc_answer')
-def handle_webrtc_answer(data):
-    try:
-        answer = data.get('answer')
-        target_user_id = data.get('target_user_id')
-        answerer_user_id = data.get('answerer_user_id')
-        room_name = data.get('room_name')
-        
-        if not all([answer, target_user_id, answerer_user_id, room_name]):
-            emit('error', {'message': 'Missing required fields for answer'})
-            return
-        
-        # Обновляем активность
-        if request.sid in active_sockets:
-            active_sockets[request.sid]['last_activity'] = datetime.now().isoformat()
-        
-        # Находим socket_id целевого пользователя
-        target_user = video_rooms[room_name].get(target_user_id)
-        if not target_user:
-            emit('error', {'message': f'Target user {target_user_id} not found'})
-            return
-        
-        # Пересылаем answer целевому пользователю
-        emit('webrtc_answer', {
-            'answer': answer,
-            'answerer_user_id': answerer_user_id,
-            'target_user_id': target_user_id,
-            'timestamp': datetime.now().isoformat()
-        }, room=target_user['socket_id'])
-        
-    except Exception as e:
-        logger.error(f'Error handling WebRTC answer: {e}')
-        emit('error', {'message': str(e)})
-
-@socketio.on('ice_candidate')
-def handle_ice_candidate(data):
-    try:
-        candidate = data.get('candidate')
-        target_user_id = data.get('target_user_id')
-        sender_user_id = data.get('sender_user_id')
-        room_name = data.get('room_name')
-        
-        if not all([candidate, target_user_id, sender_user_id, room_name]):
-            emit('error', {'message': 'Missing required fields for ICE candidate'})
-            return
-        
-        # Обновляем активность
-        if request.sid in active_sockets:
-            active_sockets[request.sid]['last_activity'] = datetime.now().isoformat()
-        
-        # Находим socket_id целевого пользователя
-        target_user = video_rooms[room_name].get(target_user_id)
-        if not target_user:
-            emit('error', {'message': f'Target user {target_user_id} not found'})
-            return
-        
-        # Пересылаем ICE candidate целевому пользователю
-        emit('ice_candidate', {
-            'candidate': candidate,
-            'sender_user_id': sender_user_id,
-            'target_user_id': target_user_id,
-            'timestamp': datetime.now().isoformat()
-        }, room=target_user['socket_id'])
-        
-    except Exception as e:
-        logger.error(f'Error handling ICE candidate: {e}')
-        emit('error', {'message': str(e)})
+# УДАЛЕНО: Кастомные WebRTC-обработчики (webrtc_offer, webrtc_answer, ice_candidate)
+# Они не нужны, так как PeerJS обрабатывает сигналинг самостоятельно
 
 @socketio.on('screen_share_status')
 def handle_screen_share_status(data):
@@ -976,6 +877,7 @@ def handle_screen_share_status(data):
         is_sharing = data.get('is_sharing')
         user_id = data.get('user_id')
         room_name = data.get('room_name')
+        user_name = data.get('user_name', user_id)
         
         if not all([is_sharing is not None, user_id, room_name]):
             emit('error', {'message': 'Missing required fields for screen share status'})
@@ -993,6 +895,7 @@ def handle_screen_share_status(data):
             # Уведомляем других участников
             emit('screen_share_status', {
                 'user_id': user_id,
+                'user_name': user_name,
                 'is_sharing': is_sharing,
                 'timestamp': datetime.now().isoformat()
             }, room=room_name, include_self=False)
