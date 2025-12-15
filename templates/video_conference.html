@@ -785,6 +785,7 @@
                 socket.emit('join_room', {
                     room_name: currentRoom,
                     user_id: userId,
+                    peer_id: peerId, // Добавляем peer_id при переподключении
                     user_name: currentUser
                 });
             }
@@ -843,9 +844,14 @@
             
             showNotification(`Подключено к комнате: ${data.room_name}`);
             
-            // Connect to existing participants
+            // Connect to existing participants - ВАЖНО: используем peer_id!
             for (const [participantId, participant] of Object.entries(data.participants)) {
-                connectToPeer(participantId, participant.user_name);
+                console.log('Found participant:', participant.user_name, 'peer_id:', participant.peer_id);
+                if (participant.peer_id) {
+                    connectToPeer(participant.peer_id, participant.user_name);
+                } else {
+                    console.warn('No peer_id for participant:', participant.user_name);
+                }
             }
             
             updateParticipantsList();
@@ -855,9 +861,16 @@
         });
 
         socket.on('user_joined', (data) => {
-            console.log('👤 User joined:', data.user_name);
+            console.log('👤 User joined:', data.user_name, 'peer_id:', data.peer_id);
             showNotification(`${data.user_name} присоединился к конференции`);
-            connectToPeer(data.user_id, data.user_name);
+            
+            // ВАЖНО: используем peer_id для подключения!
+            if (data.peer_id) {
+                connectToPeer(data.peer_id, data.user_name);
+            } else {
+                console.warn('No peer_id for new user:', data.user_name);
+            }
+            
             updateParticipantsList();
         });
 
@@ -875,14 +888,22 @@
                 }
                 showNotification(message);
             }
-            removeRemoteVideo(data.user_id);
+            
+            // Находим и удаляем видео по peer_id
+            let foundPeerId = null;
+            for (const [pid, participant] of participants.entries()) {
+                if (participant.originalId === data.user_id) {
+                    foundPeerId = pid;
+                    break;
+                }
+            }
+            
+            if (foundPeerId) {
+                removeRemoteVideo(foundPeerId);
+            }
+            
             updateParticipantsList();
         });
-
-        // УДАЛИЛИ: кастомные WebRTC-обработчики, так как PeerJS обрабатывает это сам
-        // socket.on('webrtc_offer', handleWebRTCOffer);
-        // socket.on('webrtc_answer', handleWebRTCAnswer);
-        // socket.on('ice_candidate', handleICECandidate);
 
         socket.on('screen_share_status', (data) => {
             console.log('Screen share status:', data);
@@ -935,7 +956,7 @@
             try {
                 showNotification('Инициализация медиаустройств...', 'info');
 
-                // Get user media - ИСПРАВЛЕНА ОШИБКА: navigatorator -> navigator
+                // Get user media
                 localStream = await navigator.mediaDevices.getUserMedia({
                     video: {
                         width: { ideal: 1280 },
@@ -976,10 +997,10 @@
                 });
                 
                 peer.on('connection', (conn) => {
-                    console.log('🔗 Incoming connection:', conn.peer);
+                    console.log('🔗 Incoming data connection:', conn.peer);
                     
                     conn.on('open', () => {
-                        console.log('✅ Connection established with:', conn.peer);
+                        console.log('✅ Data connection established with:', conn.peer);
                         connections[conn.peer] = conn;
                         
                         // Добавляем в участники
@@ -995,7 +1016,7 @@
                     });
                     
                     conn.on('close', () => {
-                        console.log('🔗 Connection closed with:', conn.peer);
+                        console.log('🔗 Data connection closed with:', conn.peer);
                         removeRemoteVideo(conn.peer);
                         delete connections[conn.peer];
                         
@@ -1068,6 +1089,7 @@
                 // Ждем, пока peer откроется, и ТОЛЬКО ПОТОМ присоединяемся к комнате
                 peer.on('open', async (id) => {
                     console.log('✅ PeerJS opened with ID:', id);
+                    peerId = id; // Сохраняем реальный PeerJS ID
                     
                     // Add local video
                     addLocalVideo(localStream);
@@ -1075,9 +1097,11 @@
                     updateConnectionStatus('Подключение к комнате...', 'connecting');
                     
                     // ТЕПЕРЬ присоединяемся к комнате на сервере
+                    // ВАЖНО: отправляем peer_id вместе с user_id
                     socket.emit('join_room', {
                         room_name: currentRoom,
                         user_id: userId,
+                        peer_id: peerId, // Отправляем PeerJS ID на сервер
                         user_name: currentUser
                     });
 
@@ -1119,10 +1143,10 @@
             }, 30000);
         }
 
-        // Connect to specific peer
+        // Connect to specific peer - ИСПРАВЛЕННАЯ ВЕРСИЯ
         function connectToPeer(remotePeerId, remoteUserName) {
             // Проверяем, что это не мы сами
-            if (remotePeerId === peerId || remotePeerId === userId) {
+            if (remotePeerId === peerId) {
                 console.log('Skipping connection to self:', remotePeerId);
                 return;
             }
@@ -1139,6 +1163,7 @@
             participants.set(remotePeerId, {
                 id: remotePeerId,
                 name: remoteUserName,
+                originalId: remoteUserName, // Сохраняем оригинальный user_id для идентификации
                 connected: false
             });
             updateParticipantsList();
@@ -1287,7 +1312,8 @@
                 name: currentUser + ' (Вы)',
                 connected: true,
                 video: isVideoEnabled,
-                audio: isAudioEnabled
+                audio: isAudioEnabled,
+                isLocal: true
             });
             
             updateParticipantsList();
