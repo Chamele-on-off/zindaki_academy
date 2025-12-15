@@ -3,7 +3,7 @@ version: '3.8'
 
 services:
   coturn:
-    image: instrumentisto/coturn:4.6.2
+    image: instrumentisto/coturn:latest
     cap_add:
       - NET_ADMIN
     ports:
