@@ -3,7 +3,7 @@ version: '3.8'
 
 services:
   coturn:
-    image: instrumentisto/coturn:latest
+    image: instrumentisto/coturn:4.5.2
     ports:
       - "3478:3478/udp"
       - "3478:3478/tcp"
