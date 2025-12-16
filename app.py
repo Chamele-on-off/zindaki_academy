@@ -743,7 +743,7 @@ def join_room_handler(data):
         room_name = data.get('room_name')
         user_id = data.get('user_id')
         user_name = data.get('user_name')
-        peer_id = data.get('peer_id')  # Новое поле: PeerJS ID
+        peer_id = data.get('peer_id')
         
         if not all([room_name, user_id, user_name]):
             emit('error', {'message': 'Missing required fields'})
@@ -789,29 +789,29 @@ def join_room_handler(data):
                 logger.info(f'Old room {existing_user_room} deleted (empty)')
         
         # Добавляем/обновляем пользователя в новой комнате
-        video_rooms[room_name][user_id] = {
+        user_data = {
             'socket_id': request.sid,
             'user_name': user_name,
             'user_id': user_id,
-            'peer_id': peer_id,  # Сохраняем PeerJS ID
+            'peer_id': peer_id,
             'joined_at': datetime.now().isoformat(),
             'last_activity': datetime.now().isoformat()
         }
         
+        video_rooms[room_name][user_id] = user_data
         join_room(room_name)
         logger.info(f'User {user_name} ({user_id}) joined room {room_name} with peer_id {peer_id}')
         
-        # Отправляем текущему пользователю список всех участников комнаты
-        participants = {
-            uid: {
-                'user_name': data['user_name'], 
-                'user_id': uid,
-                'peer_id': data.get('peer_id'),  # Отправляем PeerJS ID другим участникам
-                'socket_id': data.get('socket_id')
-            }
-            for uid, data in video_rooms[room_name].items()
-            if uid != user_id
-        }
+        # Отправляем текущему пользователю список всех участников комнаты с их peer_id
+        participants = {}
+        for uid, data in video_rooms[room_name].items():
+            if uid != user_id:
+                participants[uid] = {
+                    'user_name': data['user_name'], 
+                    'user_id': uid,
+                    'peer_id': data.get('peer_id'),
+                    'socket_id': data.get('socket_id')
+                }
         
         emit('room_joined', {
             'room_name': room_name,
@@ -821,15 +821,28 @@ def join_room_handler(data):
             'server_time': datetime.now().isoformat()
         })
         
-        # Уведомляем других участников о новом пользователе
-        emit('user_joined', {
-            'user_id': user_id,
-            'user_name': user_name,
-            'peer_id': peer_id,  # Отправляем PeerJS ID
-            'socket_id': request.sid,
-            'room_state': list(video_rooms[room_name].keys()),
-            'timestamp': datetime.now().isoformat()
-        }, room=room_name, include_self=False)
+        # Уведомляем других участников о новом пользователе и отправляем им peer_id нового участника
+        for uid, data in video_rooms[room_name].items():
+            if uid != user_id:
+                # Отправляем существующему участнику информацию о новом участнике
+                emit('user_joined', {
+                    'user_id': user_id,
+                    'user_name': user_name,
+                    'peer_id': peer_id,
+                    'socket_id': request.sid,
+                    'room_state': list(video_rooms[room_name].keys()),
+                    'timestamp': datetime.now().isoformat()
+                }, room=data['socket_id'])
+                
+                # Отправляем новому участнику информацию о существующем участнике
+                emit('user_joined', {
+                    'user_id': uid,
+                    'user_name': data['user_name'],
+                    'peer_id': data.get('peer_id'),
+                    'socket_id': data.get('socket_id'),
+                    'room_state': list(video_rooms[room_name].keys()),
+                    'timestamp': datetime.now().isoformat()
+                }, room=request.sid)
         
     except Exception as e:
         logger.error(f'Error in join_room: {e}')
