@@ -837,6 +837,7 @@
 
         socket.on('room_joined', (data) => {
             console.log('✅ Joined room:', data.room_name);
+            console.log('📋 Participants received:', data.participants);
             updateConnectionStatus('В комнате: ' + data.room_name, 'connected');
             
             // Hide loading and show controls
@@ -849,10 +850,10 @@
             // Connect to existing participants - ВАЖНО: используем peer_id!
             for (const [participantId, participant] of Object.entries(data.participants)) {
                 console.log('Found participant:', participant.user_name, 'peer_id:', participant.peer_id);
-                if (participant.peer_id) {
+                if (participant.peer_id && participant.peer_id !== peerId) {
                     connectToPeer(participant.peer_id, participant.user_name, participant.user_id);
                 } else {
-                    console.warn('No peer_id for participant:', participant.user_name);
+                    console.warn('No peer_id or same peer_id for participant:', participant.user_name);
                 }
             }
             
@@ -867,10 +868,10 @@
             showNotification(`${data.user_name} присоединился к конференции`);
             
             // ВАЖНО: используем peer_id для подключения!
-            if (data.peer_id) {
+            if (data.peer_id && data.peer_id !== peerId) {
                 connectToPeer(data.peer_id, data.user_name, data.user_id);
             } else {
-                console.warn('No peer_id for new user:', data.user_name);
+                console.warn('No peer_id or same peer_id for new user:', data.user_name);
             }
             
             updateParticipantsList();
@@ -1950,4 +1951,4 @@
         });
     </script>
 </body>
-</html> 
+</html>
