@@ -977,11 +977,12 @@
                 peer = new Peer(peerId, {
                     config: {
                         iceServers: [
-                            { urls: 'stun:stun.l.google.com:19302' },
-                            { urls: 'stun:stun1.l.google.com:19302' },
-                            { urls: 'stun:stun2.l.google.com:19302' },
-                            { urls: 'stun:stun3.l.google.com:19302' },
-                            { urls: 'stun:stun4.l.google.com:19302' }
+                            { urls: 'stun:109.172.101.94:3478' },
+                            {
+                                urls: 'turn:109.172.101.94:3478',
+                                username: 'zindaki',
+                                credential: 'Z1nd4k1_Turn_2025_Secure!'
+                            }
                         ]
                     },
                     debug: 2
