@@ -696,6 +696,14 @@
             <span>Подключение:</span>
             <span id="connectionType">polling</span>
         </div>
+        <div class="stats-item">
+            <span>ICE State:</span>
+            <span id="iceState">-</span>
+        </div>
+        <div class="stats-item">
+            <span>Signal State:</span>
+            <span id="signalState">-</span>
+        </div>
     </div>
 
     <!-- Control Panel -->
@@ -762,6 +770,73 @@
             participants: 0
         };
         
+        // БЕСПЛАТНЫЕ TURN-серверы для обхода NAT и файрволов
+        const freeTurnServers = [
+            // STUN серверы (для обнаружения адресов)
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' },
+            { urls: 'stun:stun.voip.blackberry.com:3478' },
+            { urls: 'stun:stun.voipgate.com:3478' },
+            
+            // Бесплатные публичные TURN серверы
+            // Следующие серверы работают без аутентификации (некоторые могут быть нестабильны)
+            { 
+                urls: 'turn:numb.viagenie.ca',
+                username: 'webrtc@live.com',
+                credential: 'muazkh'
+            },
+            { 
+                urls: 'turn:192.158.29.39:3478?transport=udp',
+                username: '28224511:1379330808',
+                credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA='
+            },
+            { 
+                urls: 'turn:192.158.29.39:3478?transport=tcp',
+                username: '28224511:1379330808',
+                credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA='
+            },
+            
+            // Ещё бесплатные TURN-серверы
+            { 
+                urls: 'turn:turn.bistri.com:80',
+                username: 'homeo',
+                credential: 'homeo'
+            },
+            { 
+                urls: 'turn:turn.anyfirewall.com:443?transport=tcp',
+                username: 'webrtc',
+                credential: 'webrtc'
+            },
+            
+            // Серверы от Twilio (бесплатные, но требуют регистрации)
+            // { urls: 'turn:global.turn.twilio.com:3478?transport=udp' },
+            // { urls: 'turn:global.turn.twilio.com:3478?transport=tcp' },
+            // { urls: 'turn:global.turn.twilio.com:443?transport=tcp' }
+        ];
+
+        // Альтернативный список TURN серверов (резервный)
+        const backupTurnServers = [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' },
+            {
+                urls: 'turn:turn.webrtc.band:3478',
+                username: 'webrtc',
+                credential: 'webrtc'
+            },
+            {
+                urls: 'turn:turn.webrtc.band:5349',
+                username: 'webrtc',
+                credential: 'webrtc',
+                transport: 'tcp'
+            }
+        ];
+
         // Улучшенная конфигурация Socket.IO
         const socket = io({
             transports: ['websocket', 'polling'],
@@ -945,8 +1020,10 @@
         const pingValue = document.getElementById('pingValue');
         const participantsValue = document.getElementById('participantsValue');
         const connectionType = document.getElementById('connectionType');
+        const iceState = document.getElementById('iceState');
+        const signalState = document.getElementById('signalState');
 
-        // Initialize conference - ОСНОВНОЙ ИСПРАВЛЕННЫЙ КОД
+        // Initialize conference - ОСНОВНОЙ ИСПРАВЛЕННЫЙ КОД С TURN
         async function initializeConference() {
             try {
                 showNotification('Инициализация медиаустройств...', 'info');
@@ -973,17 +1050,22 @@
                 peerId = `peer-${userId}-${timestamp}-${random}`;
                 console.log('Initializing PeerJS with ID:', peerId);
                 
+                // Сначала пробуем основной список TURN-серверов
+                console.log('🔄 Using free TURN servers for NAT traversal...');
+                
                 peer = new Peer(peerId, {
                     config: {
-                        iceServers: [
-                            { urls: 'stun:stun.l.google.com:19302' },
-                            { urls: 'stun:stun1.l.google.com:19302' },
-                            { urls: 'stun:stun2.l.google.com:19302' },
-                            { urls: 'stun:stun3.l.google.com:19302' },
-                            { urls: 'stun:stun4.l.google.com:19302' }
-                        ]
+                        iceServers: freeTurnServers,
+                        iceTransportPolicy: 'all', // Пробуем и UDP и TCP
+                        iceCandidatePoolSize: 10, // Больше кандидатов для надежности
+                        rtcpMuxPolicy: 'require' // Используем мультиплексирование RTCP
                     },
-                    debug: 2
+                    debug: 3, // Больше деталей для отладки
+                    secure: true,
+                    host: '0.peerjs.com', // Используем публичный PeerJS сервер
+                    port: 443,
+                    path: '/',
+                    pingInterval: 5000
                 });
                 
                 // Устанавливаем обработчики ДО открытия peer
@@ -991,6 +1073,13 @@
                     console.error('❌ PeerJS error:', err);
                     updateConnectionStatus('Ошибка PeerJS', 'error');
                     showNotification('Ошибка медиасоединения: ' + err.message, 'error');
+                    
+                    // При ошибке PeerJS, возможно, проблема с TURN-серверами
+                    // Можно попробовать переподключиться с резервными серверами
+                    if (err.type === 'peer-unavailable' || err.type === 'network') {
+                        console.log('🔄 Trying backup TURN servers...');
+                        retryWithBackupServers();
+                    }
                 });
                 
                 peer.on('connection', (conn) => {
@@ -1050,6 +1139,19 @@
                 // ВАЖНО: устанавливаем обработчик ВХОДЯЩИХ ВЫЗОВОВ ДО открытия peer
                 peer.on('call', (call) => {
                     console.log('📞 Incoming call from:', call.peer);
+                    
+                    // Отслеживаем состояние ICE соединения
+                    if (call.peerConnection) {
+                        call.peerConnection.oniceconnectionstatechange = () => {
+                            console.log(`❄️ ICE state for ${call.peer}:`, call.peerConnection.iceConnectionState);
+                            iceState.textContent = call.peerConnection.iceConnectionState;
+                        };
+                        
+                        call.peerConnection.onsignalingstatechange = () => {
+                            console.log(`📡 Signaling state for ${call.peer}:`, call.peerConnection.signalingState);
+                            signalState.textContent = call.peerConnection.signalingState;
+                        };
+                    }
                     
                     // Answer with current stream
                     const streamToAnswerWith = isScreenSharing && screenStream ? screenStream : localStream;
@@ -1160,6 +1262,75 @@
                     </button>
                 `;
             }
+        }
+
+        // Retry with backup TURN servers
+        function retryWithBackupServers() {
+            if (peer) {
+                peer.destroy();
+            }
+            
+            console.log('🔄 Retrying with backup TURN servers...');
+            showNotification('Переподключение с резервными серверами...', 'warning');
+            
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(7);
+            peerId = `peer-${userId}-${timestamp}-${random}-retry`;
+            
+            peer = new Peer(peerId, {
+                config: {
+                    iceServers: backupTurnServers,
+                    iceTransportPolicy: 'relay', // Пробуем только реле (TURN)
+                    iceCandidatePoolSize: 5
+                },
+                debug: 3,
+                secure: true
+            });
+            
+            // Устанавливаем те же обработчики
+            setupPeerHandlers();
+        }
+
+        // Setup peer handlers (для повторного использования)
+        function setupPeerHandlers() {
+            peer.on('error', (err) => {
+                console.error('❌ PeerJS error (retry):', err);
+                showNotification('Не удалось установить соединение. Проверьте сеть.', 'error');
+            });
+            
+            peer.on('open', (id) => {
+                console.log('✅ PeerJS reopened with ID:', id);
+                peerId = id;
+                isPeerReady = true;
+                
+                // Повторно присоединяемся к комнате
+                socket.emit('join_room', {
+                    room_name: currentRoom,
+                    user_id: userId,
+                    peer_id: peerId,
+                    user_name: currentUser
+                });
+                
+                // Повторно подключаемся ко всем участникам
+                for (const [remotePeerId, participant] of participants.entries()) {
+                    if (!participant.isLocal && participant.connected) {
+                        connectToPeer(remotePeerId, participant.name, participant.originalUserId);
+                    }
+                }
+            });
+            
+            peer.on('call', (call) => {
+                console.log('📞 Incoming call on retry:', call.peer);
+                const streamToAnswerWith = isScreenSharing && screenStream ? screenStream : localStream;
+                call.answer(streamToAnswerWith);
+                
+                call.on('stream', (remoteStream) => {
+                    console.log('✅ Received stream on retry from:', call.peer);
+                    addRemoteVideo(call.peer, remoteStream);
+                });
+                
+                calls[call.peer] = call;
+            });
         }
 
         // Start activity monitoring
@@ -1288,6 +1459,33 @@
                 if (!call) {
                     console.error('Failed to create call');
                     return;
+                }
+                
+                // Отслеживаем состояние ICE соединения
+                if (call.peerConnection) {
+                    call.peerConnection.oniceconnectionstatechange = () => {
+                        console.log(`❄️ Outgoing ICE state for ${remotePeerId}:`, call.peerConnection.iceConnectionState);
+                        iceState.textContent = call.peerConnection.iceConnectionState;
+                        
+                        // Если ICE соединение установлено - успех!
+                        if (call.peerConnection.iceConnectionState === 'connected' || 
+                            call.peerConnection.iceConnectionState === 'completed') {
+                            console.log(`🎉 WebRTC connection established with ${remoteUserName}!`);
+                            showNotification(`Соединение с ${remoteUserName} установлено`);
+                        }
+                        
+                        // Если ICE не удалось - пробуем переподключиться
+                        if (call.peerConnection.iceConnectionState === 'failed') {
+                            console.log(`⚠️ ICE failed with ${remotePeerId}, retrying...`);
+                            setTimeout(() => {
+                                if (calls[remotePeerId]) {
+                                    calls[remotePeerId].close();
+                                    delete calls[remotePeerId];
+                                    initiateVideoCall(remotePeerId, remoteUserName, originalUserId);
+                                }
+                            }, 2000);
+                        }
+                    };
                 }
                 
                 call.on('stream', (remoteStream) => {
