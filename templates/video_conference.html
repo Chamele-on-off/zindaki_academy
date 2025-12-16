@@ -2,15 +2,14 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Видеоконференция | Zindaki Academy</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-            -webkit-text-size-adjust: 100%;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
         }
 
         body {
@@ -18,8 +17,6 @@
             color: white;
             height: 100vh;
             overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            touch-action: manipulation;
         }
 
         /* Header */
@@ -28,25 +25,22 @@
             top: 0;
             left: 0;
             width: 100%;
-            background: rgba(26, 26, 46, 0.98);
+            background: rgba(26, 26, 46, 0.95);
             backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            padding: 0.8rem 1rem;
+            padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
             z-index: 101;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            height: 60px;
         }
 
         .header-title {
-            font-size: 1rem;
+            font-size: 1.2rem;
             font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 0.8rem;
-            overflow: hidden;
+            gap: 1rem;
         }
 
         .logo {
@@ -54,51 +48,42 @@
             align-items: center;
             gap: 0.5rem;
             color: #c5a258;
-            flex-shrink: 0;
         }
 
         .back-btn {
             background: rgba(255, 255, 255, 0.1);
             color: white;
             border: none;
-            padding: 0.4rem 0.8rem;
-            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 0.3rem;
+            gap: 0.5rem;
             transition: all 0.3s ease;
             text-decoration: none;
-            font-size: 0.9rem;
-            flex-shrink: 0;
         }
 
-        .back-btn:hover, .back-btn:active {
+        .back-btn:hover {
             background: rgba(255, 255, 255, 0.2);
         }
 
         .room-info {
-            font-size: 0.8rem;
+            font-size: 0.9rem;
             opacity: 0.8;
-            margin-left: 0.5rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            flex: 1;
-            min-width: 0;
+            margin-left: 1rem;
         }
 
         .connection-status {
             display: flex;
             align-items: center;
-            gap: 0.4rem;
-            font-size: 0.8rem;
-            flex-shrink: 0;
+            gap: 0.5rem;
+            font-size: 0.9rem;
         }
 
         .status-indicator {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             background: #00ff88;
             animation: pulse 2s infinite;
@@ -121,20 +106,12 @@
         .video-container {
             position: relative;
             width: 100%;
-            height: calc(100vh - 120px);
+            height: 100vh;
             background: #000;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 5px;
-            padding: 60px 5px 70px 5px;
-            touch-action: pan-y pinch-zoom;
-        }
-
-        @media (orientation: landscape) {
-            .video-container {
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                padding: 60px 5px 60px 5px;
-            }
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 10px;
+            padding: 80px 10px 100px 10px;
         }
 
         .video-container.main-view {
@@ -143,46 +120,42 @@
 
         .video-container.main-view .video-item:not(.main-video) {
             position: absolute;
-            width: 120px;
-            height: 90px;
-            bottom: 70px;
-            right: 10px;
+            width: 200px;
+            height: 150px;
+            bottom: 100px;
+            right: 20px;
             z-index: 10;
             border: 2px solid rgba(255, 255, 255, 0.2);
             cursor: pointer;
             transition: all 0.3s ease;
         }
 
-        .video-container.main-view .video-item:not(.main-video):hover,
-        .video-container.main-view .video-item:not(.main-video):active {
+        .video-container.main-view .video-item:not(.main-video):hover {
             transform: scale(1.05);
             border-color: rgba(0, 150, 255, 0.5);
-            box-shadow: 0 0 15px rgba(0, 150, 255, 0.3);
+            box-shadow: 0 0 20px rgba(0, 150, 255, 0.3);
         }
 
         .video-container.main-view .video-item:not(.main-video):nth-child(2) {
-            right: 130px;
+            right: 240px;
         }
 
         .video-container.main-view .video-item:not(.main-video):nth-child(3) {
-            right: 250px;
+            right: 460px;
         }
 
         .video-container.main-view .video-item:not(.main-video):nth-child(4) {
-            right: 370px;
+            right: 680px;
         }
 
         /* Video Items */
         .video-item {
             position: relative;
             background: #1a1a1f;
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
             transition: all 0.3s ease;
             cursor: pointer;
-            -webkit-transform: translateZ(0);
-            transform: translateZ(0);
-            will-change: transform;
         }
 
         .video-item.main-video {
@@ -195,66 +168,74 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            -webkit-transform: translateZ(0);
-            transform: translateZ(0);
+        }
+
+        .video-item:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(0, 150, 255, 0.3);
         }
 
         /* Participant Info */
         .participant-info {
             position: absolute;
-            bottom: 8px;
-            left: 8px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 12px;
+            bottom: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
-            max-width: 90%;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
         }
 
         .participant-status {
-            width: 6px;
-            height: 6px;
+            width: 10px;
+            height: 10px;
             background: #00ff88;
             border-radius: 50%;
-            flex-shrink: 0;
+        }
+
+        .audio-indicator {
+            width: 10px;
+            height: 10px;
+            background: #ff3b30;
+            border-radius: 50%;
+            margin-left: 5px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .audio-indicator.active {
+            opacity: 1;
+            animation: audioPulse 1s infinite;
+        }
+
+        @keyframes audioPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
         }
 
         /* Control Panel */
         .control-panel {
             position: fixed;
-            bottom: 10px;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 8px;
-            background: rgba(30, 30, 40, 0.95);
+            gap: 15px;
+            background: rgba(30, 30, 40, 0.9);
             backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            padding: 10px 16px;
-            border-radius: 40px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+            padding: 12px 24px;
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             z-index: 100;
-            width: auto;
-            max-width: 95%;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .control-panel::-webkit-scrollbar {
-            display: none;
         }
 
         .control-btn {
-            width: 44px;
-            height: 44px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.1);
             border: none;
@@ -264,22 +245,19 @@
             justify-content: center;
             cursor: pointer;
             transition: all 0.2s ease;
-            font-size: 18px;
-            flex-shrink: 0;
-            -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
+            font-size: 20px;
         }
 
-        .control-btn:active {
-            transform: scale(0.95);
+        .control-btn:hover {
             background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
         }
 
         .control-btn.active {
             background: #0095ff;
         }
 
-        .control-btn.active:active {
+        .control-btn.active:hover {
             background: #007acc;
         }
 
@@ -287,7 +265,7 @@
             background: #ff3b30;
         }
 
-        .control-btn.danger:active {
+        .control-btn.danger:hover {
             background: #ff5a52;
         }
 
@@ -295,39 +273,163 @@
             background: #ff9500;
         }
 
-        .control-btn.warning:active {
+        .control-btn.warning:hover {
             background: #ffaa33;
         }
 
         .control-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            transform: none !important;
+            transform: none;
         }
 
-        /* Mobile-specific control panel for landscape */
-        @media (orientation: landscape) and (max-height: 500px) {
-            .control-panel {
-                bottom: 5px;
-                padding: 8px 12px;
-                gap: 6px;
-            }
-            
-            .control-btn {
-                width: 40px;
-                height: 40px;
-                font-size: 16px;
-            }
-            
-            .header-bar {
-                height: 50px;
-                padding: 0.6rem 0.8rem;
-            }
-            
-            .video-container {
-                height: calc(100vh - 100px);
-                padding: 50px 5px 55px 5px;
-            }
+        .control-btn:disabled:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: none;
+        }
+
+        /* Screen Share */
+        .screen-share-item {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 90;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .screen-share-item.active {
+            display: flex;
+        }
+
+        .screen-share-item video {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .screen-share-controls {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 91;
+            display: flex;
+            gap: 10px;
+        }
+
+        .screen-share-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .screen-share-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Participants Panel */
+        .participants-panel {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: rgba(30, 30, 40, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1rem;
+            min-width: 200px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 99;
+            display: none;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .participants-panel.active {
+            display: block;
+        }
+
+        .participants-title {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            color: #c5a258;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .participant-list {
+            list-style: none;
+        }
+
+        .participant-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .participant-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #3a5a78;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .participant-name {
+            flex: 1;
+            font-size: 0.9rem;
+        }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 149, 255, 0.9);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease-out;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .notification.error {
+            background: rgba(255, 59, 48, 0.9);
+        }
+
+        .notification.warning {
+            background: rgba(255, 149, 0, 0.9);
+        }
+
+        @keyframes slideIn {
+            from { top: -50px; opacity: 0; }
+            to { top: 90px; opacity: 1; }
         }
 
         /* Loading */
@@ -339,8 +441,6 @@
             flex-direction: column;
             gap: 1rem;
             background: #0f0f12;
-            padding: 2rem;
-            text-align: center;
         }
 
         .spinner {
@@ -359,60 +459,51 @@
 
         .loading-text {
             color: rgba(255, 255, 255, 0.7);
-            font-size: 1rem;
+            font-size: 1.1rem;
         }
 
-        /* Mobile network warning */
-        .mobile-warning {
-            position: fixed;
-            top: 70px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 149, 0, 0.9);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 8px;
-            z-index: 102;
-            font-size: 0.8rem;
+        /* Empty State */
+        .empty-state {
             display: flex;
+            justify-content: center;
             align-items: center;
-            gap: 8px;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            max-width: 90%;
+            height: 100%;
+            flex-direction: column;
+            gap: 1rem;
             text-align: center;
+            padding: 2rem;
         }
 
-        /* Connection stats for debugging */
-        .debug-info {
-            position: fixed;
-            top: 70px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            color: #00ff88;
-            padding: 5px 10px;
-            border-radius: 6px;
-            font-size: 10px;
-            font-family: monospace;
-            z-index: 99;
-            max-width: 120px;
-            word-break: break-all;
+        .empty-state i {
+            font-size: 4rem;
+            color: rgba(255, 255, 255, 0.3);
+            margin-bottom: 1rem;
         }
 
-        /* Mobile connection quality indicator */
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .empty-state p {
+            color: rgba(255, 255, 255, 0.6);
+            max-width: 400px;
+        }
+
+        /* Connection Quality */
         .connection-quality {
             position: absolute;
-            top: 5px;
-            right: 5px;
+            top: 10px;
+            left: 10px;
             display: flex;
             gap: 2px;
-            opacity: 0.8;
+            opacity: 0.7;
         }
 
         .quality-bar {
             width: 3px;
-            height: 6px;
+            height: 10px;
             background: rgba(255, 255, 255, 0.3);
             border-radius: 1px;
         }
@@ -421,232 +512,115 @@
             background: #00ff88;
         }
 
-        /* Battery saving mode for mobile */
-        .battery-saving {
+        /* Stats */
+        .stats-panel {
             position: fixed;
-            bottom: 80px;
-            left: 10px;
-            background: rgba(255, 149, 0, 0.8);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 0.8rem;
+            top: 80px;
+            left: 20px;
+            background: rgba(30, 30, 40, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1rem;
+            min-width: 200px;
             z-index: 99;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        /* Network type indicator */
-        .network-type {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            font-size: 0.7rem;
-            opacity: 0.6;
-            z-index: 99;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
-
-        /* Retry button for mobile */
-        .retry-btn {
-            background: #0095ff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            margin-top: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        /* Mobile touch controls */
-        .touch-controls {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 50;
             display: none;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.8rem;
         }
 
-        .touch-controls.active {
+        .stats-panel.active {
             display: block;
         }
 
-        /* High latency warning */
-        .high-latency-warning {
-            position: fixed;
-            top: 70px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 59, 48, 0.9);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 8px;
-            z-index: 102;
-            font-size: 0.8rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            max-width: 90%;
-            text-align: center;
+        .stats-title {
+            color: #c5a258;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
         }
 
-        /* Mobile data saving */
-        .data-saving {
-            position: fixed;
-            bottom: 80px;
-            right: 10px;
-            background: rgba(0, 149, 255, 0.8);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            z-index: 99;
+        .stats-item {
             display: flex;
-            align-items: center;
-            gap: 6px;
+            justify-content: space-between;
+            margin-bottom: 0.3rem;
         }
 
-        /* Для очень маленьких экранов */
-        @media (max-width: 320px) {
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-bar {
+                padding: 1rem;
+            }
+
+            .header-title {
+                font-size: 1rem;
+            }
+
+            .room-info {
+                display: none;
+            }
+
             .control-panel {
-                padding: 8px 12px;
-                gap: 6px;
+                bottom: 15px;
+                padding: 10px 15px;
             }
             
+            .control-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 18px;
+            }
+
+            .video-container.main-view .video-item:not(.main-video) {
+                width: 120px;
+                height: 90px;
+                bottom: 80px;
+                right: 10px;
+            }
+
+            .video-container.main-view .video-item:not(.main-video):nth-child(2) {
+                right: 140px;
+            }
+
+            .video-container.main-view .video-item:not(.main-video):nth-child(3) {
+                right: 270px;
+            }
+
+            .participants-panel, .stats-panel {
+                right: 10px;
+                left: 10px;
+                min-width: auto;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .video-container {
+                grid-template-columns: 1fr;
+                padding: 70px 5px 90px 5px;
+            }
+
+            .control-panel {
+                gap: 8px;
+                padding: 8px 12px;
+            }
+
             .control-btn {
                 width: 40px;
                 height: 40px;
                 font-size: 16px;
             }
-            
+
             .video-container.main-view .video-item:not(.main-video) {
                 width: 100px;
                 height: 75px;
-                bottom: 65px;
+                bottom: 70px;
             }
-            
+
             .video-container.main-view .video-item:not(.main-video):nth-child(2) {
-                right: 110px;
+                right: 120px;
             }
-            
+
             .video-container.main-view .video-item:not(.main-video):nth-child(3) {
-                right: 220px;
+                right: 230px;
             }
-            
-            .back-btn {
-                padding: 0.3rem 0.6rem;
-                font-size: 0.8rem;
-            }
-        }
-
-        /* Для планшетов */
-        @media (min-width: 768px) and (max-width: 1024px) {
-            .control-panel {
-                gap: 12px;
-                padding: 12px 24px;
-            }
-            
-            .control-btn {
-                width: 50px;
-                height: 50px;
-                font-size: 20px;
-            }
-            
-            .video-container {
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 8px;
-            }
-        }
-
-        /* Предотвращение масштабирования текста на iOS */
-        input, textarea, select {
-            font-size: 16px !important;
-        }
-
-        /* Улучшение производительности на мобильных */
-        .video-item {
-            transform: translateZ(0);
-            backface-visibility: hidden;
-            perspective: 1000;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        /* Стили для разрешения на мобильных */
-        .permission-request {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            padding: 2rem;
-            text-align: center;
-            gap: 1.5rem;
-        }
-
-        .permission-icon {
-            font-size: 4rem;
-            color: #0095ff;
-            margin-bottom: 1rem;
-        }
-
-        .permission-title {
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-        }
-
-        .permission-text {
-            font-size: 1rem;
-            color: rgba(255, 255, 255, 0.8);
-            max-width: 400px;
-            line-height: 1.5;
-        }
-
-        .permission-buttons {
-            display: flex;
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .permission-btn {
-            padding: 0.8rem 1.5rem;
-            border-radius: 8px;
-            border: none;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .permission-btn.allow {
-            background: #0095ff;
-            color: white;
-        }
-
-        .permission-btn.deny {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-
-        .permission-btn:hover {
-            transform: scale(1.05);
         }
     </style>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -658,70 +632,26 @@
         <div class="header-title">
             <a href="/dashboard" class="back-btn">
                 <i class="material-icons">arrow_back</i>
-                <span>Назад</span>
+                Назад
             </a>
             <div class="logo">
                 <i class="fas fa-graduation-cap"></i>
                 <span>Zindaki Academy</span>
             </div>
             <div class="room-info" id="roomInfo">
-                {{ room_name }} | {{ user_name }}
+                Комната: {{ room_name }} | Пользователь: {{ user_name }}
             </div>
         </div>
         <div class="connection-status" id="connectionStatus">
             <div class="status-indicator connecting"></div>
-            <span id="statusText">Подключение...</span>
-        </div>
-    </div>
-
-    <!-- Network Type Indicator -->
-    <div class="network-type" id="networkType">
-        Сеть: <span id="networkTypeText">?</span>
-    </div>
-
-    <!-- Mobile Network Warning -->
-    <div class="mobile-warning" id="mobileWarning" style="display: none;">
-        <i class="fas fa-mobile-alt"></i>
-        <span>Используется мобильный интернет. Рекомендуется WiFi.</span>
-    </div>
-
-    <!-- High Latency Warning -->
-    <div class="high-latency-warning" id="highLatencyWarning" style="display: none;">
-        <i class="fas fa-exclamation-triangle"></i>
-        <span>Высокая задержка сети (>500ms). Качество может снизиться.</span>
-    </div>
-
-    <!-- Permission Request Overlay -->
-    <div class="permission-request" id="permissionRequest" style="display: none;">
-        <div class="permission-icon">
-            <i class="fas fa-video"></i>
-        </div>
-        <div class="permission-title">
-            Доступ к камере и микрофону
-        </div>
-        <div class="permission-text">
-            Для участия в видеоконференции необходимо разрешить доступ к камере и микрофону. 
-            Разрешение требуется только для общения в конференции.
-        </div>
-        <div class="permission-buttons">
-            <button class="permission-btn allow" id="allowPermission">
-                <i class="fas fa-check"></i> Разрешить
-            </button>
-            <button class="permission-btn deny" id="denyPermission">
-                <i class="fas fa-times"></i> Отказать
-            </button>
+            <span>Подключение...</span>
         </div>
     </div>
 
     <!-- Loading Screen -->
     <div class="loading" id="loadingScreen">
         <div class="spinner"></div>
-        <div class="loading-text" id="loadingText">Подготовка к конференции...</div>
-        <div id="connectionDetails" style="font-size: 0.9rem; color: rgba(255,255,255,0.6); margin-top: 1rem;"></div>
-        <button class="retry-btn" id="retryBtn" style="display: none;">
-            <i class="fas fa-redo"></i>
-            Повторить попытку
-        </button>
+        <div class="loading-text">Подключение к конференции...</div>
     </div>
 
     <!-- Video Container -->
@@ -729,19 +659,43 @@
         <!-- Видео участников будет добавляться динамически -->
     </div>
 
-    <!-- Debug Info (только для разработки) -->
-    <div class="debug-info" id="debugInfo" style="display: none;"></div>
-
-    <!-- Battery Saving Mode Indicator -->
-    <div class="battery-saving" id="batterySaving" style="display: none;">
-        <i class="fas fa-battery-half"></i>
-        <span>Режим экономии заряда</span>
+    <!-- Screen Share Container -->
+    <div class="screen-share-item" id="screenShareContainer">
+        <div class="screen-share-controls">
+            <button class="screen-share-btn" id="stopScreenShareBtn">
+                <i class="material-icons">stop</i>
+                Остановить демонстрацию
+            </button>
+        </div>
+        <video id="screenShareVideo" autoplay playsinline></video>
     </div>
 
-    <!-- Data Saving Mode Indicator -->
-    <div class="data-saving" id="dataSaving" style="display: none;">
-        <i class="fas fa-tachometer-alt"></i>
-        <span>Экономия трафика</span>
+    <!-- Participants Panel -->
+    <div class="participants-panel" id="participantsPanel">
+        <div class="participants-title">
+            <i class="fas fa-users"></i>
+            Участники (<span id="participantsCount">0</span>)
+        </div>
+        <ul class="participant-list" id="participantList">
+            <!-- Список участников будет заполняться динамически -->
+        </ul>
+    </div>
+
+    <!-- Stats Panel -->
+    <div class="stats-panel" id="statsPanel">
+        <div class="stats-title">Статистика соединения</div>
+        <div class="stats-item">
+            <span>Ping:</span>
+            <span id="pingValue">-</span>
+        </div>
+        <div class="stats-item">
+            <span>Участников:</span>
+            <span id="participantsValue">0</span>
+        </div>
+        <div class="stats-item">
+            <span>Подключение:</span>
+            <span id="connectionType">polling</span>
+        </div>
     </div>
 
     <!-- Control Panel -->
@@ -758,29 +712,27 @@
         <button class="control-btn" id="participantsBtn" title="Список участников">
             <i class="fas fa-users"></i>
         </button>
-        <button class="control-btn" id="toggleDataSavingBtn" title="Экономия трафика">
-            <i class="fas fa-tachometer-alt"></i>
+        <button class="control-btn" id="statsBtn" title="Статистика">
+            <i class="fas fa-chart-bar"></i>
         </button>
         <button class="control-btn danger" id="leaveBtn" title="Покинуть конференцию">
             <i class="fas fa-phone-slash"></i>
         </button>
     </div>
 
-    <!-- Touch Controls Overlay -->
-    <div class="touch-controls" id="touchControls"></div>
-
     <!-- Scripts -->
     <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     
     <script>
-        // === КОНФИГУРАЦИЯ ДЛЯ МОБИЛЬНЫХ СЕТЕЙ ===
-        
         // Получаем параметры из URL
         const urlParams = new URLSearchParams(window.location.search);
         const roomName = '{{ room_name }}';
         const userName = '{{ user_name }}';
         const userId = '{{ user.username }}';
+
+        // Обновляем информацию о комнате
+        document.getElementById('roomInfo').textContent = `Комната: ${roomName} | Пользователь: ${userName}`;
 
         // Global variables
         let localStream = null;
@@ -798,605 +750,164 @@
         let connections = {};
         let calls = {};
         let mainVideoId = null;
-        let participants = new Map();
-        let pendingConnections = [];
-        let isPeerReady = false;
-        let isDataSaving = false;
-        let isBatterySaving = false;
+        let participants = new Map(); // peerId -> {id, name, originalUserId, connected, video, audio}
+        let pendingConnections = []; // Очередь соединений, пока peer не готов
+        let isPeerReady = false; // Флаг готовности PeerJS
         let pingInterval = null;
         let activityInterval = null;
         let lastPingTime = null;
-        let connectionAttempts = 0;
-        let maxConnectionAttempts = 5;
-        let currentNetworkType = 'unknown';
-        let isMobileNetwork = false;
-        let hasMediaPermission = false;
-        let isInitializingMedia = false;
-        
-        // Статистика соединения
         let connectionStats = {
             ping: 0,
             packetLoss: 0,
-            participants: 0,
-            iceState: 'new',
-            signalingState: 'stable'
+            participants: 0
         };
         
-        // === ОПТИМИЗИРОВАННЫЕ TURN/STUN СЕРВЕРЫ ДЛЯ МОБИЛЬНЫХ ===
-        const mobileOptimizedIceServers = [
-            // Основные STUN серверы
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
-            { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' },
-            
-            // Надежные публичные TURN серверы (работают с мобильными сетями)
-            {
-                urls: 'turn:numb.viagenie.ca:3478',
-                username: 'webrtc@live.com',
-                credential: 'muazkh'
-            },
-            {
-                urls: 'turn:numb.viagenie.ca:3478?transport=tcp',
-                username: 'webrtc@live.com',
-                credential: 'muazkh'
-            },
-            
-            // Резервные TURN серверы
-            {
-                urls: 'turn:openrelay.metered.ca:80',
-                username: 'openrelayproject',
-                credential: 'openrelayproject'
-            },
-            {
-                urls: 'turn:openrelay.metered.ca:443',
-                username: 'openrelayproject',
-                credential: 'openrelayproject'
-            },
-            {
-                urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-                username: 'openrelayproject',
-                credential: 'openrelayproject'
-            },
-            
-            // Дополнительные серверы
-            {
-                urls: 'turn:global.turn.twilio.com:3478?transport=udp',
-                username: 'c1e3f8f8d01b45e6e5e0a3c8e7a7b7b7',
-                credential: '5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d'
-            },
-            {
-                urls: 'turn:global.turn.twilio.com:3478?transport=tcp',
-                username: 'c1e3f8f8d01b45e6e5e0a3c8e7a7b7b7',
-                credential: '5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d'
-            }
-        ];
-
-        // Конфигурация для разных типов сети
-        const networkConfigs = {
-            'wifi': {
-                videoBitrate: 500000,
-                audioBitrate: 64000,
-                frameRate: 30,
-                resolution: { width: 1280, height: 720 }
-            },
-            '4g': {
-                videoBitrate: 300000,
-                audioBitrate: 32000,
-                frameRate: 20,
-                resolution: { width: 854, height: 480 }
-            },
-            '3g': {
-                videoBitrate: 150000,
-                audioBitrate: 16000,
-                frameRate: 15,
-                resolution: { width: 640, height: 360 }
-            },
-            '2g': {
-                videoBitrate: 50000,
-                audioBitrate: 8000,
-                frameRate: 10,
-                resolution: { width: 426, height: 240 }
-            },
-            'slow-2g': {
-                videoBitrate: 0,
-                audioBitrate: 8000,
-                frameRate: 0,
-                resolution: { width: 0, height: 0 }
-            },
-            'unknown': {
-                videoBitrate: 300000,
-                audioBitrate: 32000,
-                frameRate: 20,
-                resolution: { width: 854, height: 480 }
-            }
-        };
-
-        // === ОПРЕДЕЛЕНИЕ ТИПА СЕТИ ===
-        function detectNetworkType() {
-            try {
-                if (navigator.connection && navigator.connection.effectiveType) {
-                    const connection = navigator.connection;
-                    currentNetworkType = connection.effectiveType;
-                    isMobileNetwork = connection.type === 'cellular' || 
-                                     connection.type === 'bluetooth' || 
-                                     connection.type === 'wimax';
-                    
-                    console.log(`📶 Сеть: ${currentNetworkType}, Мобильная: ${isMobileNetwork}, Тип: ${connection.type}`);
-                    
-                    // Показываем предупреждение для мобильных сетей
-                    if (isMobileNetwork) {
-                        showElement('mobileWarning');
-                        
-                        // Активируем режим экономии трафика по умолчанию для мобильных
-                        if (!localStorage.getItem('dataSavingDisabled')) {
-                            enableDataSavingMode();
-                        }
-                    } else {
-                        hideElement('mobileWarning');
-                    }
-                    
-                    // Показываем тип сети
-                    updateElementText('networkTypeText', 
-                        `${currentNetworkType.toUpperCase()}${isMobileNetwork ? ' 📱' : ''}`);
-                    
-                    return currentNetworkType;
-                }
-            } catch (error) {
-                console.log('⚠️ Не удалось определить тип сети:', error);
-            }
-            return 'unknown';
-        }
-
-        // === ПОЛУЧЕНИЕ РАЗРЕШЕНИЯ НА МЕДИА ===
-        async function requestMediaPermission() {
-            if (isInitializingMedia) return false;
-            isInitializingMedia = true;
-            
-            try {
-                document.getElementById('loadingText').textContent = 'Запрос разрешения на доступ к камере и микрофону...';
-                
-                // Сначала проверяем разрешения
-                const videoPermission = await navigator.permissions.query({ name: 'camera' });
-                const audioPermission = await navigator.permissions.query({ name: 'microphone' });
-                
-                console.log('Разрешение камеры:', videoPermission.state);
-                console.log('Разрешение микрофона:', audioPermission.state);
-                
-                // Если уже есть разрешение, сразу получаем поток
-                if (videoPermission.state === 'granted' && audioPermission.state === 'granted') {
-                    console.log('✅ Разрешения уже получены');
-                    return await getUserMedia();
-                }
-                
-                // Показываем экран разрешения
-                document.getElementById('loadingScreen').style.display = 'none';
-                document.getElementById('permissionRequest').style.display = 'flex';
-                
-                // Ждем ответа пользователя
-                return new Promise((resolve) => {
-                    document.getElementById('allowPermission').onclick = async () => {
-                        hideElement('permissionRequest');
-                        showElement('loadingScreen');
-                        document.getElementById('loadingText').textContent = 'Получение доступа к медиаустройствам...';
-                        
-                        try {
-                            const stream = await getUserMedia();
-                            hasMediaPermission = true;
-                            resolve(stream);
-                        } catch (error) {
-                            handleMediaError(error);
-                            resolve(null);
-                        }
-                    };
-                    
-                    document.getElementById('denyPermission').onclick = () => {
-                        hideElement('permissionRequest');
-                        showElement('loadingScreen');
-                        document.getElementById('loadingText').textContent = 'Доступ к камере и микрофону отклонен';
-                        document.getElementById('retryBtn').style.display = 'flex';
-                        resolve(null);
-                    };
-                });
-                
-            } catch (error) {
-                console.error('Ошибка при запросе разрешений:', error);
-                // Пробуем получить медиа напрямую
-                try {
-                    const stream = await getUserMedia();
-                    hasMediaPermission = true;
-                    return stream;
-                } catch (mediaError) {
-                    handleMediaError(mediaError);
-                    return null;
-                }
-            } finally {
-                isInitializingMedia = false;
-            }
-        }
-
-        // === ПОЛУЧЕНИЕ МЕДИА ПОТОКА ===
-        async function getUserMedia() {
-            const constraints = getMediaConstraints();
-            console.log('Получение медиа с ограничениями:', constraints);
-            
-            try {
-                // Пробуем получить поток с видео и аудио
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                console.log('✅ Медиа поток получен:', 
-                    `Видео треков: ${stream.getVideoTracks().length}, ` +
-                    `Аудио треков: ${stream.getAudioTracks().length}`);
-                
-                // Проверяем треки
-                const videoTracks = stream.getVideoTracks();
-                const audioTracks = stream.getAudioTracks();
-                
-                if (videoTracks.length > 0) {
-                    videoTrack = videoTracks[0];
-                    console.log('Видео трек:', videoTrack.label, videoTrack.getSettings());
-                }
-                
-                if (audioTracks.length > 0) {
-                    audioTrack = audioTracks[0];
-                    console.log('Аудио трек:', audioTrack.label, audioTrack.getSettings());
-                }
-                
-                hasMediaPermission = true;
-                return stream;
-                
-            } catch (error) {
-                console.error('❌ Ошибка получения медиа:', error);
-                
-                // Пробуем получить только аудио, если видео не работает
-                if (error.name === 'NotFoundError' || error.name === 'OverconstrainedError') {
-                    console.log('🔄 Пробуем получить только аудио...');
-                    
-                    try {
-                        const audioOnlyStream = await navigator.mediaDevices.getUserMedia({
-                            audio: constraints.audio,
-                            video: false
-                        });
-                        
-                        console.log('✅ Аудио поток получен');
-                        audioTrack = audioOnlyStream.getAudioTracks()[0];
-                        hasMediaPermission = true;
-                        return audioOnlyStream;
-                    } catch (audioError) {
-                        console.error('❌ Ошибка получения аудио:', audioError);
-                        throw audioError;
-                    }
-                }
-                throw error;
-            }
-        }
-
-        // === ПОЛУЧЕНИЕ ОГРАНИЧЕНИЙ ДЛЯ МЕДИА ===
-        function getMediaConstraints() {
-            const networkType = detectNetworkType();
-            const config = networkConfigs[networkType] || networkConfigs['unknown'];
-            
-            console.log(`📊 Конфигурация для сети ${networkType}:`, config);
-            
-            // Для режима экономии трафика - снижаем качество
-            if (isDataSaving) {
-                config.videoBitrate = Math.floor(config.videoBitrate * 0.7);
-                config.frameRate = Math.floor(config.frameRate * 0.7);
-                console.log('💰 Режим экономии трафика:', config);
-            }
-            
-            // Для экономии заряда - снижаем качество
-            if (isBatterySaving) {
-                config.videoBitrate = Math.floor(config.videoBitrate * 0.8);
-                config.frameRate = Math.floor(config.frameRate * 0.8);
-                console.log('🔋 Режим экономии заряда:', config);
-            }
-            
-            // Если нет видео битрейта - только аудио
-            if (config.videoBitrate <= 0) {
-                return {
-                    audio: {
-                        sampleRate: 16000,
-                        channelCount: 1,
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true,
-                        latency: 0.01
-                    },
-                    video: false
-                };
-            }
-            
-            return {
-                video: {
-                    width: { ideal: config.resolution.width, max: 1280 },
-                    height: { ideal: config.resolution.height, max: 720 },
-                    frameRate: { ideal: config.frameRate, max: 30 },
-                    facingMode: 'user',
-                    deviceId: localStorage.getItem('preferredCamera') || undefined
-                },
-                audio: {
-                    sampleRate: 16000,
-                    channelCount: 1,
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true,
-                    latency: 0.01,
-                    deviceId: localStorage.getItem('preferredMicrophone') || undefined
-                }
-            };
-        }
-
-        // === РЕЖИМ ЭКОНОМИИ ТРАФИКА ===
-        function enableDataSavingMode() {
-            isDataSaving = true;
-            showElement('dataSaving');
-            document.getElementById('toggleDataSavingBtn').classList.add('active');
-            localStorage.setItem('dataSavingEnabled', 'true');
-            
-            // Перезапускаем видео с новыми настройками
-            if (videoTrack && localStream) {
-                const constraints = getMediaConstraints();
-                if (constraints.video) {
-                    try {
-                        videoTrack.applyConstraints(constraints.video);
-                        console.log('💰 Применены ограничения для экономии трафика');
-                    } catch (error) {
-                        console.error('Ошибка применения ограничений:', error);
-                    }
-                }
-            }
-        }
-
-        function disableDataSavingMode() {
-            isDataSaving = false;
-            hideElement('dataSaving');
-            document.getElementById('toggleDataSavingBtn').classList.remove('active');
-            localStorage.setItem('dataSavingEnabled', 'false');
-        }
-
-        // === МОНИТОРИНГ БАТАРЕИ ===
-        function monitorBattery() {
-            if ('getBattery' in navigator) {
-                navigator.getBattery().then(battery => {
-                    // Если заряд ниже 20% - включаем режим экономии
-                    if (battery.level < 0.2 && !battery.charging) {
-                        isBatterySaving = true;
-                        showElement('batterySaving');
-                        
-                        // Снижаем качество видео
-                        if (videoTrack) {
-                            const constraints = getMediaConstraints();
-                            if (constraints.video) {
-                                videoTrack.applyConstraints(constraints.video);
-                            }
-                        }
-                    }
-                    
-                    // Слушаем изменения уровня заряда
-                    battery.addEventListener('levelchange', () => {
-                        if (battery.level < 0.2 && !battery.charging) {
-                            isBatterySaving = true;
-                            showElement('batterySaving');
-                        } else {
-                            isBatterySaving = false;
-                            hideElement('batterySaving');
-                        }
-                    });
-                    
-                    battery.addEventListener('chargingchange', () => {
-                        if (battery.charging) {
-                            isBatterySaving = false;
-                            hideElement('batterySaving');
-                        }
-                    });
-                });
-            }
-        }
-
-        // === ИНИЦИАЛИЗАЦИЯ КОНФЕРЕНЦИИ ===
-        async function initializeConference() {
-            try {
-                console.log('🚀 Инициализация конференции...');
-                updateConnectionStatus('Инициализация...', 'connecting');
-                
-                // Определяем тип сети
-                detectNetworkType();
-                
-                // Мониторим батарею
-                monitorBattery();
-                
-                // Получаем разрешение на медиа
-                document.getElementById('loadingText').textContent = 'Запрос доступа к камере и микрофону...';
-                localStream = await requestMediaPermission();
-                
-                if (!localStream) {
-                    throw new Error('Не удалось получить доступ к медиаустройствам');
-                }
-                
-                // Создаем уникальный ID для PeerJS
-                const timestamp = Date.now();
-                const random = Math.floor(Math.random() * 10000);
-                peerId = `mobile-${userId}-${timestamp}-${random}`;
-                
-                console.log('🆔 Peer ID:', peerId);
-                
-                // Инициализируем PeerJS
-                peer = new Peer(peerId, {
-                    config: {
-                        iceServers: mobileOptimizedIceServers,
-                        iceTransportPolicy: isMobileNetwork ? 'relay' : 'all',
-                        iceCandidatePoolSize: isMobileNetwork ? 5 : 10,
-                        bundlePolicy: 'max-bundle',
-                        rtcpMuxPolicy: 'require'
-                    },
-                    debug: 2,
-                    secure: true
-                });
-                
-                // Настраиваем обработчики PeerJS
-                setupPeerHandlers();
-                
-            } catch (error) {
-                console.error('❌ Ошибка инициализации конференции:', error);
-                handleInitializationError(error);
-            }
-        }
-
-        // === НАСТРОЙКА ОБРАБОТЧИКОВ PEERJS ===
-        function setupPeerHandlers() {
-            peer.on('error', (err) => {
-                console.error('❌ PeerJS error:', err);
-                handlePeerError(err);
-            });
-            
-            peer.on('open', (id) => {
-                console.log('✅ PeerJS открыт с ID:', id);
-                peerId = id;
-                isPeerReady = true;
-                
-                // Добавляем локальное видео
-                addLocalVideo(localStream);
-                
-                // Подключаемся к серверу
-                connectToServer();
-                
-                // Обрабатываем ожидающие соединения
-                processPendingConnections();
-                
-                // Запускаем мониторинг пинга
-                startPingMonitoring();
-            });
-            
-            peer.on('call', (call) => {
-                console.log('📞 Входящий вызов от:', call.peer);
-                
-                const streamToAnswerWith = isScreenSharing && screenStream ? screenStream : localStream;
-                
-                try {
-                    call.answer(streamToAnswerWith);
-                    
-                    call.on('stream', (remoteStream) => {
-                        console.log('✅ Получен удаленный поток от:', call.peer);
-                        addRemoteVideo(call.peer, remoteStream);
-                        
-                        // Оптимизация для мобильных
-                        if (isMobileNetwork || isDataSaving) {
-                            const videoElement = document.getElementById(`remoteVideo-${call.peer}`);
-                            if (videoElement) {
-                                videoElement.playbackRate = 0.9;
-                            }
-                        }
-                    });
-                    
-                    call.on('close', () => {
-                        console.log('📞 Вызов завершен с:', call.peer);
-                        removeRemoteVideo(call.peer);
-                        if (calls[call.peer]) {
-                            delete calls[call.peer];
-                        }
-                    });
-                    
-                    calls[call.peer] = call;
-                } catch (error) {
-                    console.error('❌ Ошибка ответа на вызов:', error);
-                }
-            });
-            
-            peer.on('connection', (conn) => {
-                console.log('🔗 Входящее подключение:', conn.peer);
-                
-                conn.on('open', () => {
-                    console.log('✅ Подключение установлено с:', conn.peer);
-                    connections[conn.peer] = conn;
-                    
-                    // Отправляем информацию о себе
-                    conn.send(JSON.stringify({
-                        type: 'user_info',
-                        user_id: userId,
-                        user_name: currentUser
-                    }));
-                });
-                
-                conn.on('data', (data) => {
-                    try {
-                        const parsedData = JSON.parse(data);
-                        if (parsedData.type === 'user_info') {
-                            console.log('👤 Информация о пользователе:', parsedData.user_name);
-                        }
-                    } catch (e) {
-                        console.log('📦 Данные от', conn.peer, ':', data);
-                    }
-                });
-            });
-        }
-
-        // === ПОДКЛЮЧЕНИЕ К СЕРВЕРУ ===
+        // Улучшенная конфигурация Socket.IO
         const socket = io({
             transports: ['websocket', 'polling'],
             upgrade: true,
             forceNew: false,
             reconnection: true,
-            reconnectionAttempts: 10,
+            reconnectionAttempts: Infinity,
             reconnectionDelay: 1000,
-            reconnectionDelayMax: 10000,
-            timeout: 30000,
+            reconnectionDelayMax: 5000,
+            timeout: 20000,
             autoConnect: true
         });
 
+        // Обработчики событий соединения
         socket.on('connect', () => {
-            console.log('✅ Подключено к серверу');
+            console.log('✅ Connected to server, transport:', socket.io.engine.transport.name);
             updateConnectionStatus('Подключено к серверу', 'connected');
-            connectionAttempts = 0;
+            connectionType.textContent = socket.io.engine.transport.name;
+            
+            // При переподключении - rejoiн комнаты
+            if (currentRoom && userId && peer && peer.open && isPeerReady) {
+                console.log('🔄 Rejoining room after reconnect...');
+                socket.emit('join_room', {
+                    room_name: currentRoom,
+                    user_id: userId,
+                    peer_id: peerId,
+                    user_name: currentUser
+                });
+            }
+        });
+
+        socket.on('disconnect', (reason) => {
+            console.log('❌ Disconnected:', reason);
+            updateConnectionStatus('Переподключение...', 'connecting');
+            
+            if (reason === 'io server disconnect') {
+                // Сервер принудительно отключил - нужно переподключиться
+                console.log('🔄 Server disconnected, reconnecting...');
+                socket.connect();
+            }
         });
 
         socket.on('connect_error', (error) => {
-            console.error('❌ Ошибка подключения:', error);
+            console.error('❌ Connection error:', error);
             updateConnectionStatus('Ошибка подключения', 'error');
-            
-            connectionAttempts++;
-            if (connectionAttempts >= maxConnectionAttempts) {
-                showElement('retryBtn');
-            }
+        });
+
+        socket.on('reconnect', (attemptNumber) => {
+            console.log('🔄 Reconnected after', attemptNumber, 'attempts');
+            updateConnectionStatus('Подключено к серверу', 'connected');
+            showNotification('Соединение восстановлено');
+        });
+
+        socket.on('reconnect_attempt', (attemptNumber) => {
+            console.log('🔄 Reconnection attempt:', attemptNumber);
+            updateConnectionStatus(`Переподключение... (попытка ${attemptNumber})`, 'connecting');
+        });
+
+        socket.on('reconnect_error', (error) => {
+            console.error('❌ Reconnection error:', error);
+            updateConnectionStatus('Ошибка переподключения', 'error');
+        });
+
+        socket.on('reconnect_failed', () => {
+            console.error('❌ Reconnection failed');
+            updateConnectionStatus('Не удалось подключиться', 'error');
+            showNotification('Не удалось восстановить соединение', 'error');
+        });
+
+        socket.on('connected', (data) => {
+            console.log('Server connected:', data.message);
         });
 
         socket.on('room_joined', (data) => {
-            console.log('✅ Присоединились к комнате:', data.room_name);
-            updateConnectionStatus('В комнате', 'connected');
+            console.log('✅ Joined room:', data.room_name);
+            updateConnectionStatus('В комнате: ' + data.room_name, 'connected');
             
-            // Показываем интерфейс
-            hideElement('loadingScreen');
-            showElement('videoContainer');
-            showElement('controlPanel');
+            // Hide loading and show controls
+            loadingScreen.style.display = 'none';
+            videoContainer.style.display = 'grid';
+            controlPanel.style.display = 'flex';
             
             showNotification(`Подключено к комнате: ${data.room_name}`);
             
-            // Подключаемся к существующим участникам
+            // Connect to existing participants - ВАЖНО: используем peer_id!
             for (const [participantId, participant] of Object.entries(data.participants)) {
-                if (participant.peer_id && participant.peer_id !== peerId) {
+                console.log('Found participant:', participant.user_name, 'peer_id:', participant.peer_id);
+                if (participant.peer_id) {
                     connectToPeer(participant.peer_id, participant.user_name, participant.user_id);
+                } else {
+                    console.warn('No peer_id for participant:', participant.user_name);
                 }
             }
             
+            updateParticipantsList();
+            
+            // Запускаем отправку активности
             startActivityMonitoring();
         });
 
         socket.on('user_joined', (data) => {
-            console.log('👤 Пользователь присоединился:', data.user_name);
-            showNotification(`${data.user_name} присоединился`);
+            console.log('👤 User joined:', data.user_name, 'peer_id:', data.peer_id, 'user_id:', data.user_id);
+            showNotification(`${data.user_name} присоединился к конференции`);
             
-            if (data.peer_id && data.peer_id !== peerId) {
+            // ВАЖНО: используем peer_id для подключения!
+            if (data.peer_id) {
                 connectToPeer(data.peer_id, data.user_name, data.user_id);
+            } else {
+                console.warn('No peer_id for new user:', data.user_name);
             }
+            
+            updateParticipantsList();
         });
 
         socket.on('user_left', (data) => {
-            console.log('👤 Пользователь вышел:', data.user_id);
+            console.log('👤 User left:', data.user_id, 'Reason:', data.reason);
+            
+            // Ищем и удаляем участника по user_id
             removeRemoteVideoByUserId(data.user_id);
             
+            // Обновляем список участников
+            updateParticipantsList();
+            
+            // Показываем уведомление
             const user = findParticipantByUserId(data.user_id);
             if (user) {
-                showNotification(`${user.name} покинул конференцию`);
+                let message = `${user.name} покинул конференцию`;
+                if (data.reason === 'disconnected') {
+                    message = `${user.name} отключился`;
+                } else if (data.reason === 'reconnected') {
+                    message = `${user.name} переподключился`;
+                } else if (data.reason === 'inactive') {
+                    message = `${user.name} неактивен`;
+                }
+                showNotification(message);
+            }
+        });
+
+        socket.on('screen_share_status', (data) => {
+            console.log('Screen share status:', data);
+            if (data.user_id !== userId) {
+                if (data.is_sharing) {
+                    showNotification(`${data.user_name || data.user_id} начал демонстрацию экрана`);
+                } else {
+                    showNotification(`${data.user_name || data.user_id} остановил демонстрацию экрана`);
+                }
             }
         });
 
@@ -1404,42 +915,302 @@
             if (lastPingTime) {
                 const ping = Date.now() - lastPingTime;
                 connectionStats.ping = ping;
-                
-                // Предупреждение о высокой задержке
-                if (ping > 500) {
-                    showElement('highLatencyWarning');
-                } else {
-                    hideElement('highLatencyWarning');
-                }
+                pingValue.textContent = ping + 'ms';
             }
         });
 
-        function connectToServer() {
-            socket.emit('join_room', {
-                room_name: currentRoom,
-                user_id: userId,
-                peer_id: peerId,
-                user_name: currentUser,
-                is_mobile: isMobileNetwork,
-                network_type: currentNetworkType
-            });
+        socket.on('error', (data) => {
+            console.error('Server error:', data.message);
+            showNotification('Ошибка сервера: ' + data.message, 'error');
+        });
+        
+        // DOM elements
+        const videoContainer = document.getElementById('videoContainer');
+        const loadingScreen = document.getElementById('loadingScreen');
+        const controlPanel = document.getElementById('controlPanel');
+        const toggleVideoBtn = document.getElementById('toggleVideoBtn');
+        const toggleAudioBtn = document.getElementById('toggleAudioBtn');
+        const screenShareBtn = document.getElementById('screenShareBtn');
+        const stopScreenShareBtn = document.getElementById('stopScreenShareBtn');
+        const participantsBtn = document.getElementById('participantsBtn');
+        const statsBtn = document.getElementById('statsBtn');
+        const leaveBtn = document.getElementById('leaveBtn');
+        const screenShareContainer = document.getElementById('screenShareContainer');
+        const screenShareVideo = document.getElementById('screenShareVideo');
+        const participantsPanel = document.getElementById('participantsPanel');
+        const participantList = document.getElementById('participantList');
+        const participantsCount = document.getElementById('participantsCount');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const statsPanel = document.getElementById('statsPanel');
+        const pingValue = document.getElementById('pingValue');
+        const participantsValue = document.getElementById('participantsValue');
+        const connectionType = document.getElementById('connectionType');
+
+        // Initialize conference - ОСНОВНОЙ ИСПРАВЛЕННЫЙ КОД
+        async function initializeConference() {
+            try {
+                showNotification('Инициализация медиаустройств...', 'info');
+
+                // Get user media
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 30 }
+                    },
+                    audio: {
+                        sampleRate: 16000,
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+                
+                // Initialize PeerJS - ВАЖНО: делаем это ДО join_room
+                const timestamp = Date.now();
+                const random = Math.random().toString(36).substring(7);
+                peerId = `peer-${userId}-${timestamp}-${random}`;
+                console.log('Initializing PeerJS with ID:', peerId);
+                
+                peer = new Peer(peerId, {
+                    config: {
+                        iceServers: [
+                            { urls: 'stun:stun.l.google.com:19302' },
+                            { urls: 'stun:stun1.l.google.com:19302' },
+                            { urls: 'stun:stun2.l.google.com:19302' },
+                            { urls: 'stun:stun3.l.google.com:19302' },
+                            { urls: 'stun:stun4.l.google.com:19302' }
+                        ]
+                    },
+                    debug: 2
+                });
+                
+                // Устанавливаем обработчики ДО открытия peer
+                peer.on('error', (err) => {
+                    console.error('❌ PeerJS error:', err);
+                    updateConnectionStatus('Ошибка PeerJS', 'error');
+                    showNotification('Ошибка медиасоединения: ' + err.message, 'error');
+                });
+                
+                peer.on('connection', (conn) => {
+                    console.log('🔗 Incoming data connection:', conn.peer);
+                    
+                    conn.on('open', () => {
+                        console.log('✅ Data connection established with:', conn.peer);
+                        connections[conn.peer] = conn;
+                        
+                        // Находим участника по peer_id
+                        if (participants.has(conn.peer)) {
+                            participants.get(conn.peer).connected = true;
+                        } else {
+                            // Если участник еще не добавлен, добавляем
+                            participants.set(conn.peer, {
+                                id: conn.peer,
+                                name: 'Участник',
+                                originalUserId: conn.peer,
+                                connected: true,
+                                video: false,
+                                audio: false
+                            });
+                        }
+                        updateParticipantsList();
+                    });
+                    
+                    conn.on('close', () => {
+                        console.log('🔗 Data connection closed with:', conn.peer);
+                        removeRemoteVideo(conn.peer);
+                        delete connections[conn.peer];
+                        
+                        // Обновляем статус участника
+                        if (participants.has(conn.peer)) {
+                            participants.get(conn.peer).connected = false;
+                        }
+                        updateParticipantsList();
+                    });
+                    
+                    conn.on('data', (data) => {
+                        console.log('📦 Data from', conn.peer, ':', data);
+                        try {
+                            const parsedData = JSON.parse(data);
+                            if (parsedData.type === 'user_info') {
+                                // Обновляем имя участника
+                                if (participants.has(conn.peer)) {
+                                    participants.get(conn.peer).name = parsedData.user_name;
+                                    participants.get(conn.peer).originalUserId = parsedData.user_id;
+                                    updateParticipantsList();
+                                }
+                            }
+                        } catch (e) {
+                            console.log('Raw data:', data);
+                        }
+                    });
+                });
+                
+                // ВАЖНО: устанавливаем обработчик ВХОДЯЩИХ ВЫЗОВОВ ДО открытия peer
+                peer.on('call', (call) => {
+                    console.log('📞 Incoming call from:', call.peer);
+                    
+                    // Answer with current stream
+                    const streamToAnswerWith = isScreenSharing && screenStream ? screenStream : localStream;
+                    console.log('📞 Answering call with stream:', streamToAnswerWith);
+                    
+                    try {
+                        call.answer(streamToAnswerWith);
+                    } catch (error) {
+                        console.error('❌ Error answering call:', error);
+                        return;
+                    }
+                    
+                    call.on('stream', (remoteStream) => {
+                        console.log('✅ Received remote stream from:', call.peer);
+                        addRemoteVideo(call.peer, remoteStream);
+                        
+                        // Обновляем статус участника
+                        if (participants.has(call.peer)) {
+                            participants.get(call.peer).connected = true;
+                            participants.get(call.peer).video = true;
+                            participants.get(call.peer).audio = true;
+                        } else {
+                            // Если участник еще не добавлен, добавляем
+                            participants.set(call.peer, {
+                                id: call.peer,
+                                name: 'Участник',
+                                originalUserId: call.peer,
+                                connected: true,
+                                video: true,
+                                audio: true
+                            });
+                        }
+                        updateParticipantsList();
+                    });
+                    
+                    call.on('close', () => {
+                        console.log('📞 Call ended with:', call.peer);
+                        removeRemoteVideo(call.peer);
+                        if (calls[call.peer]) {
+                            delete calls[call.peer];
+                        }
+                        
+                        // Обновляем статус участника
+                        if (participants.has(call.peer)) {
+                            participants.get(call.peer).connected = false;
+                        }
+                        updateParticipantsList();
+                    });
+                    
+                    call.on('error', (error) => {
+                        console.error('❌ Call error with', call.peer, ':', error);
+                    });
+                    
+                    calls[call.peer] = call;
+                });
+                
+                // Ждем, пока peer откроется, и ТОЛЬКО ПОТОМ присоединяемся к комнате
+                peer.on('open', async (id) => {
+                    console.log('✅ PeerJS opened with ID:', id);
+                    peerId = id; // Сохраняем реальный PeerJS ID
+                    isPeerReady = true;
+                    
+                    // Add local video
+                    addLocalVideo(localStream);
+                    
+                    updateConnectionStatus('Подключение к комнате...', 'connecting');
+                    
+                    // ТЕПЕРЬ присоединяемся к комнате на сервере
+                    // ВАЖНО: отправляем peer_id вместе с user_id
+                    socket.emit('join_room', {
+                        room_name: currentRoom,
+                        user_id: userId,
+                        peer_id: peerId,
+                        user_name: currentUser
+                    });
+                    
+                    // Обрабатываем отложенные соединения
+                    console.log('🔄 Processing pending connections:', pendingConnections.length);
+                    for (const pending of pendingConnections) {
+                        console.log('Processing pending connection to:', pending.remotePeerId);
+                        connectToPeer(pending.remotePeerId, pending.remoteUserName, pending.originalUserId);
+                    }
+                    pendingConnections = [];
+
+                    // Start ping monitoring
+                    startPingMonitoring();
+                });
+                
+            } catch (error) {
+                console.error('❌ Error initializing conference:', error);
+                updateConnectionStatus('Ошибка инициализации', 'error');
+                
+                if (error.name === 'NotAllowedError') {
+                    showNotification('Ошибка: Разрешите доступ к камере и микрофону', 'error');
+                } else if (error.name === 'NotFoundError') {
+                    showNotification('Ошибка: Камера или микрофон не найдены', 'error');
+                } else {
+                    showNotification('Ошибка инициализации: ' + error.message, 'error');
+                }
+                
+                loadingScreen.innerHTML = `
+                    <i class="fas fa-exclamation-triangle" style="font-size: 4rem; color: #ff3b30; margin-bottom: 1rem;"></i>
+                    <h3>Ошибка подключения</h3>
+                    <p>${error.message}</p>
+                    <button class="back-btn" onclick="goToDashboard()" style="margin-top: 1rem;">
+                        <i class="material-icons">arrow_back</i>
+                        Вернуться в кабинет
+                    </button>
+                `;
+            }
         }
 
-        // === ПОДКЛЮЧЕНИЕ К ДРУГИМ УЧАСТНИКАМ ===
+        // Start activity monitoring
+        function startActivityMonitoring() {
+            // Отправляем активность каждые 30 секунд
+            activityInterval = setInterval(() => {
+                if (socket.connected) {
+                    socket.emit('update_activity');
+                }
+            }, 30000);
+        }
+
+        // Connect to specific peer - ИСПРАВЛЕННАЯ ВЕРСИЯ
         function connectToPeer(remotePeerId, remoteUserName, originalUserId = remoteUserName) {
+            // Проверяем, что это не мы сами
             if (!remotePeerId || remotePeerId === peerId) {
-                console.log('⏭️ Пропускаем подключение к себе');
+                console.log('Skipping connection to self or invalid:', remotePeerId);
                 return;
             }
             
+            // Проверяем, что уже не подключены
             if (connections[remotePeerId] || calls[remotePeerId]) {
-                console.log('⏭️ Уже подключены к:', remotePeerId);
+                console.log('Already connected to:', remotePeerId);
                 return;
             }
             
-            console.log('🔗 Подключаемся к пиру:', remotePeerId);
+            console.log('🔗 Connecting to peer:', remotePeerId, 'name:', remoteUserName, 'originalUserId:', originalUserId);
             
-            // Добавляем в список участников
+            // Если PeerJS еще не готов - ставим в очередь
+            if (!isPeerReady) {
+                console.log('⏳ Peer not ready, queuing connection to:', remotePeerId);
+                pendingConnections.push({
+                    remotePeerId,
+                    remoteUserName,
+                    originalUserId
+                });
+                
+                // Добавляем в участники сразу (как ожидающих)
+                participants.set(remotePeerId, {
+                    id: remotePeerId,
+                    name: remoteUserName,
+                    originalUserId: originalUserId,
+                    connected: false,
+                    video: false,
+                    audio: false
+                });
+                updateParticipantsList();
+                return;
+            }
+            
+            // Добавляем в участники сразу
             participants.set(remotePeerId, {
                 id: remotePeerId,
                 name: remoteUserName,
@@ -1448,87 +1219,120 @@
                 video: false,
                 audio: false
             });
+            updateParticipantsList();
             
-            // Создаем data connection
             try {
+                // Создаем data connection (для обмена сообщениями)
                 const conn = peer.connect(remotePeerId, {
                     reliable: true,
                     serialization: 'json'
                 });
                 
                 conn.on('open', () => {
-                    console.log('✅ Data connection установлена с:', remotePeerId);
+                    console.log('✅ Data connection established with:', remotePeerId);
                     connections[remotePeerId] = conn;
                     
-                    participants.get(remotePeerId).connected = true;
+                    // Отправляем информацию о себе
+                    conn.send(JSON.stringify({
+                        type: 'user_info',
+                        user_id: userId,
+                        user_name: currentUser
+                    }));
                     
-                    // Инициируем видеозвонок
-                    initiateVideoCall(remotePeerId, remoteUserName);
+                    // Обновляем статус
+                    participants.get(remotePeerId).connected = true;
+                    updateParticipantsList();
+                    
+                    // Теперь инициируем видеозвонок
+                    initiateVideoCall(remotePeerId, remoteUserName, originalUserId);
+                });
+                
+                conn.on('close', () => {
+                    console.log('🔗 Data connection closed with:', remotePeerId);
+                    participants.get(remotePeerId).connected = false;
+                    delete connections[remotePeerId];
+                    updateParticipantsList();
                 });
                 
                 conn.on('error', (error) => {
-                    console.error('❌ Ошибка соединения с', remotePeerId, ':', error);
+                    console.error('❌ Connection error with', remotePeerId, ':', error);
+                });
+                
+                conn.on('data', (data) => {
+                    console.log('📦 Data from', remotePeerId, ':', data);
                 });
                 
             } catch (error) {
-                console.error('❌ Ошибка подключения к пиру:', error);
+                console.error('❌ Error connecting to peer:', error);
+                showNotification('Ошибка подключения к ' + remoteUserName, 'error');
             }
         }
 
-        // === ВИДЕОЗВОНОК ===
-        function initiateVideoCall(remotePeerId, remoteUserName) {
+        // Initiate video call
+        function initiateVideoCall(remotePeerId, remoteUserName, originalUserId = remoteUserName) {
             if (calls[remotePeerId]) {
-                console.log('⏭️ Вызов уже существует с:', remotePeerId);
+                console.log('Call already exists with:', remotePeerId);
                 return;
             }
             
-            console.log('📞 Инициируем видеозвонок к:', remotePeerId);
+            console.log('📞 Initiating video call to:', remotePeerId);
             
             try {
                 const streamToSend = isScreenSharing && screenStream ? screenStream : localStream;
                 if (!streamToSend) {
-                    console.error('❌ Нет потока для отправки');
+                    console.error('No stream to send');
                     return;
                 }
                 
                 const call = peer.call(remotePeerId, streamToSend);
                 if (!call) {
-                    console.error('❌ Не удалось создать вызов');
+                    console.error('Failed to create call');
                     return;
                 }
                 
                 call.on('stream', (remoteStream) => {
-                    console.log('✅ Получен поток от:', remotePeerId);
+                    console.log('✅ Received stream from:', remotePeerId);
                     addRemoteVideo(remotePeerId, remoteStream);
                     
+                    // Обновляем статус участника
                     if (participants.has(remotePeerId)) {
                         participants.get(remotePeerId).connected = true;
                         participants.get(remotePeerId).video = true;
                         participants.get(remotePeerId).audio = true;
                     }
+                    updateParticipantsList();
                 });
                 
                 call.on('close', () => {
-                    console.log('📞 Вызов завершен с:', remotePeerId);
+                    console.log('📞 Call ended with:', remotePeerId);
                     removeRemoteVideo(remotePeerId);
                     if (calls[remotePeerId]) {
                         delete calls[remotePeerId];
                     }
+                    
+                    // Обновляем статус участника
+                    if (participants.has(remotePeerId)) {
+                        participants.get(remotePeerId).connected = false;
+                    }
+                    updateParticipantsList();
                 });
                 
                 call.on('error', (error) => {
-                    console.error('❌ Ошибка вызова с', remotePeerId, ':', error);
+                    console.error('❌ Call error with', remotePeerId, ':', error);
                 });
                 
                 calls[remotePeerId] = call;
             } catch (error) {
-                console.error('❌ Ошибка инициации вызова:', error);
+                console.error('❌ Error initiating call:', error);
             }
         }
 
-        // === ВИДЕО ЭЛЕМЕНТЫ ===
+        // Add local video
         function addLocalVideo(stream) {
-            if (document.getElementById('localVideoItem')) return;
+            // Проверяем, не добавлено ли уже локальное видео
+            if (document.getElementById('localVideoItem')) {
+                return;
+            }
             
             const videoItem = document.createElement('div');
             videoItem.className = 'video-item local-video';
@@ -1541,15 +1345,30 @@
             video.playsInline = true;
             video.srcObject = stream;
             
+            const participantInfo = document.createElement('div');
+            participantInfo.className = 'participant-info';
+            participantInfo.innerHTML = `
+                <div class="participant-status"></div>
+                <span>${currentUser} (Вы)</span>
+                <div class="audio-indicator" id="localAudioIndicator"></div>
+            `;
+            
             videoItem.appendChild(video);
-            document.getElementById('videoContainer').appendChild(videoItem);
+            videoItem.appendChild(participantInfo);
+            videoContainer.appendChild(videoItem);
             
-            // Сохраняем треки
-            const tracks = stream.getTracks();
-            videoTrack = tracks.find(t => t.kind === 'video');
-            audioTrack = tracks.find(t => t.kind === 'audio');
+            // Store tracks for later use
+            const videoTracks = stream.getVideoTracks();
+            const audioTracks = stream.getAudioTracks();
             
-            // Добавляем себя в список участников
+            if (videoTracks.length > 0) {
+                videoTrack = videoTracks[0];
+            }
+            if (audioTracks.length > 0) {
+                audioTrack = audioTracks[0];
+            }
+            
+            // Add to participants list
             participants.set(peerId, {
                 id: peerId,
                 name: currentUser + ' (Вы)',
@@ -1559,11 +1378,16 @@
                 audio: isAudioEnabled,
                 isLocal: true
             });
+            
+            updateParticipantsList();
         }
 
+        // Add remote video
         function addRemoteVideo(peerId, stream) {
+            // Проверяем, не добавлено ли уже это видео
             const existingVideo = document.getElementById(`videoItem-${peerId}`);
             if (existingVideo) {
+                console.log('Video already exists for:', peerId);
                 const video = existingVideo.querySelector('video');
                 if (video) {
                     video.srcObject = stream;
@@ -1571,7 +1395,10 @@
                 return;
             }
             
-            const user = participants.get(peerId) || { name: 'Участник' };
+            const user = participants.get(peerId) || { 
+                name: 'Участник',
+                originalUserId: peerId 
+            };
             
             const videoItem = document.createElement('div');
             videoItem.className = 'video-item';
@@ -1583,27 +1410,65 @@
             video.playsInline = true;
             video.srcObject = stream;
             
-            videoItem.appendChild(video);
-            document.getElementById('videoContainer').appendChild(videoItem);
+            const participantInfo = document.createElement('div');
+            participantInfo.className = 'participant-info';
+            participantInfo.innerHTML = `
+                <div class="participant-status"></div>
+                <span>${user.name}</span>
+                <div class="audio-indicator" id="audioIndicator-${peerId}"></div>
+            `;
             
+            videoItem.appendChild(video);
+            videoItem.appendChild(participantInfo);
+            videoContainer.appendChild(videoItem);
+            
+            // Добавляем обработчик клика для переключения главного видео
+            videoItem.addEventListener('click', () => {
+                setMainVideo(videoItem.id);
+            });
+            
+            // Обновляем статус участника
             participants.set(peerId, {
                 ...user,
                 connected: true,
                 video: true,
                 audio: true
             });
+            
+            updateParticipantsList();
+            
+            // Если это первый участник (кроме нас), делаем его главным видео
+            const allVideos = document.querySelectorAll('.video-item:not(#localVideoItem)');
+            if (allVideos.length === 1 && !mainVideoId) {
+                setMainVideo(videoItem.id);
+            }
         }
 
+        // Remove remote video
         function removeRemoteVideo(peerId) {
             const videoItem = document.getElementById(`videoItem-${peerId}`);
             if (videoItem) {
+                // Если удаляем главное видео, выбираем новое
+                if (videoItem.id === mainVideoId) {
+                    const remainingVideos = document.querySelectorAll('.video-item:not(.main-video)');
+                    if (remainingVideos.length > 0) {
+                        setMainVideo(remainingVideos[0].id);
+                    } else {
+                        exitFullscreenMode();
+                    }
+                }
+                
+                // Останавливаем поток
                 const video = videoItem.querySelector('video');
                 if (video && video.srcObject) {
-                    video.srcObject.getTracks().forEach(track => track.stop());
+                    const tracks = video.srcObject.getTracks();
+                    tracks.forEach(track => track.stop());
                 }
+                
                 videoItem.remove();
             }
             
+            // Закрываем соединения
             if (connections[peerId]) {
                 connections[peerId].close();
                 delete connections[peerId];
@@ -1614,250 +1479,475 @@
                 delete calls[peerId];
             }
             
+            // Удаляем из участников
             participants.delete(peerId);
+            updateParticipantsList();
         }
 
+        // Remove remote video by user_id
         function removeRemoteVideoByUserId(userId) {
+            console.log('🔍 Searching for participant with user_id:', userId);
+            
+            // Ищем участника по originalUserId
             let foundPeerId = null;
             for (const [peerId, participant] of participants.entries()) {
+                console.log('Checking participant:', participant.originalUserId, 'vs', userId);
                 if (participant.originalUserId === userId) {
                     foundPeerId = peerId;
+                    console.log('✅ Found participant to remove:', peerId, participant.name);
                     break;
                 }
             }
+            
             if (foundPeerId) {
                 removeRemoteVideo(foundPeerId);
+            } else {
+                console.log('❌ Participant not found for user_id:', userId);
             }
         }
 
+        // Find participant by user_id
         function findParticipantByUserId(userId) {
             for (const participant of participants.values()) {
-                if (participant.originalUserId === userId) return participant;
+                if (participant.originalUserId === userId) {
+                    return participant;
+                }
             }
             return null;
         }
 
-        // === УТИЛИТЫ ===
-        function updateConnectionStatus(message, status) {
-            const indicator = document.querySelector('.status-indicator');
-            const statusText = document.getElementById('statusText');
+        // Set main video
+        function setMainVideo(videoItemId) {
+            // Если уже выбрано это видео, выходим из полноэкранного режима
+            if (mainVideoId === videoItemId) {
+                exitFullscreenMode();
+                return;
+            }
             
-            if (statusText) statusText.textContent = message;
-            if (indicator) {
-                indicator.className = 'status-indicator';
-                if (status === 'connected') indicator.style.background = '#00ff88';
-                else if (status === 'connecting') indicator.style.background = '#ff9500';
-                else if (status === 'error') indicator.style.background = '#ff3b30';
+            // Убираем предыдущее главное видео
+            if (mainVideoId) {
+                const prevMainVideo = document.getElementById(mainVideoId);
+                if (prevMainVideo) {
+                    prevMainVideo.classList.remove('main-video');
+                }
+            }
+            
+            // Устанавливаем новое главное видео
+            const newMainVideo = document.getElementById(videoItemId);
+            if (newMainVideo) {
+                newMainVideo.classList.add('main-video');
+                mainVideoId = videoItemId;
+                enterFullscreenMode();
             }
         }
 
-        function showNotification(message) {
-            console.log('📢', message);
+        // Enter fullscreen mode
+        function enterFullscreenMode() {
+            videoContainer.classList.add('main-view');
+            isFullscreen = true;
+        }
+        
+        // Exit fullscreen mode
+        function exitFullscreenMode() {
+            videoContainer.classList.remove('main-view');
+            mainVideoId = null;
+            isFullscreen = false;
+            
+            // Убираем класс main-video со всех элементов
+            document.querySelectorAll('.video-item').forEach(item => {
+                item.classList.remove('main-video');
+            });
         }
 
+        // Update participants list
+        function updateParticipantsList() {
+            participantList.innerHTML = '';
+            const count = participants.size;
+            participantsCount.textContent = count;
+            participantsValue.textContent = count;
+            
+            participants.forEach((participant, id) => {
+                const participantItem = document.createElement('li');
+                participantItem.className = 'participant-item';
+                
+                const avatar = document.createElement('div');
+                avatar.className = 'participant-avatar';
+                avatar.textContent = participant.name.charAt(0).toUpperCase();
+                
+                const name = document.createElement('div');
+                name.className = 'participant-name';
+                name.textContent = participant.name;
+                
+                const status = document.createElement('div');
+                status.className = 'participant-status';
+                status.style.width = '8px';
+                status.style.height = '8px';
+                status.style.borderRadius = '50%';
+                status.style.backgroundColor = participant.connected ? '#00ff88' : '#ff3b30';
+                status.style.marginLeft = 'auto';
+                status.style.marginRight = '0';
+                status.title = participant.connected ? 'Подключен' : 'Отключен';
+                
+                participantItem.appendChild(avatar);
+                participantItem.appendChild(name);
+                participantItem.appendChild(status);
+                participantList.appendChild(participantItem);
+            });
+        }
+
+        // Update connection status
+        function updateConnectionStatus(message, status) {
+            const statusElement = connectionStatus.querySelector('span');
+            const indicator = connectionStatus.querySelector('.status-indicator');
+            
+            if (statusElement) statusElement.textContent = message;
+            if (indicator) {
+                indicator.className = 'status-indicator';
+                
+                if (status === 'connected') {
+                    indicator.style.background = '#00ff88';
+                } else if (status === 'connecting') {
+                    indicator.style.background = '#ff9500';
+                } else if (status === 'error') {
+                    indicator.style.background = '#ff3b30';
+                }
+            }
+        }
+
+        // Start ping monitoring
         function startPingMonitoring() {
             pingInterval = setInterval(() => {
                 if (socket.connected) {
                     lastPingTime = Date.now();
                     socket.emit('ping');
                 }
+            }, 3000); // Ping every 3 seconds
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            // Удаляем старые уведомления
+            const oldNotifications = document.querySelectorAll('.notification');
+            oldNotifications.forEach(notif => {
+                if (notif.parentNode) notif.parentNode.removeChild(notif);
+            });
+            
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            
+            if (type === 'error') {
+                notification.classList.add('error');
+            } else if (type === 'warning') {
+                notification.classList.add('warning');
+            }
+            
+            let icon = 'info';
+            if (type === 'error') icon = 'error';
+            if (type === 'warning') icon = 'warning';
+            
+            notification.innerHTML = `
+                <i class="material-icons">${icon}</i>
+                <span>${message}</span>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
             }, 3000);
         }
 
-        function startActivityMonitoring() {
-            activityInterval = setInterval(() => {
-                if (socket.connected) socket.emit('update_activity');
-            }, 30000);
-        }
-
-        function processPendingConnections() {
-            for (const pending of pendingConnections) {
-                connectToPeer(pending.remotePeerId, pending.remoteUserName, pending.originalUserId);
-            }
-            pendingConnections = [];
-        }
-
-        function handleMediaError(error) {
-            console.error('❌ Ошибка медиа:', error);
-            
-            let errorMessage = 'Ошибка доступа к медиаустройствам';
-            if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-                errorMessage = 'Доступ к камере и микрофону запрещен. Разрешите доступ в настройках браузера.';
-            } else if (error.name === 'NotFoundError') {
-                errorMessage = 'Камера или микрофон не найдены.';
-            } else if (error.name === 'NotReadableError') {
-                errorMessage = 'Камера или микрофон уже используются другим приложением.';
-            } else if (error.name === 'OverconstrainedError') {
-                errorMessage = 'Требуемые настройки камеры/микрофона недоступны.';
-            } else {
-                errorMessage = error.message;
-            }
-            
-            document.getElementById('loadingText').textContent = errorMessage;
-            showElement('retryBtn');
-        }
-
-        function handleInitializationError(error) {
-            console.error('❌ Ошибка инициализации конференции:', error);
-            updateConnectionStatus('Ошибка инициализации', 'error');
-            
-            let errorMessage = 'Ошибка подключения';
-            if (error.message.includes('медиа') || error.name.includes('Media')) {
-                errorMessage = 'Ошибка доступа к камере/микрофону';
-            } else if (error.message.includes('сеть') || error.name.includes('Network')) {
-                errorMessage = 'Ошибка сетевого подключения';
-            }
-            
-            document.getElementById('loadingText').textContent = errorMessage;
-            showElement('retryBtn');
-        }
-
-        function handlePeerError(err) {
-            console.error('PeerJS error:', err);
-            
-            // Пытаемся переподключиться для мобильных
-            if (isMobileNetwork && err.type !== 'browser-incompatible') {
-                setTimeout(() => {
-                    if (peer && !peer.disconnected) {
-                        peer.reconnect();
-                    }
-                }, 2000);
-            }
-        }
-
-        // === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ DOM ===
-        function showElement(id) {
-            const element = document.getElementById(id);
-            if (element) element.style.display = 'flex';
-        }
-
-        function hideElement(id) {
-            const element = document.getElementById(id);
-            if (element) element.style.display = 'none';
-        }
-
-        function updateElementText(id, text) {
-            const element = document.getElementById(id);
-            if (element) element.textContent = text;
-        }
-
-        // === ОБРАБОТЧИКИ КНОПОК ===
-        document.getElementById('toggleVideoBtn').addEventListener('click', () => {
-            if (!videoTrack) return;
-            
+        // Control event listeners
+        toggleVideoBtn.addEventListener('click', () => {
             isVideoEnabled = !isVideoEnabled;
-            videoTrack.enabled = isVideoEnabled;
-            
-            const icon = isVideoEnabled ? 'fas fa-video' : 'fas fa-video-slash';
-            document.getElementById('toggleVideoBtn').innerHTML = `<i class="${icon}"></i>`;
-            document.getElementById('toggleVideoBtn').classList.toggle('active', !isVideoEnabled);
-            
-            showNotification(isVideoEnabled ? 'Камера включена' : 'Камера выключена');
-        });
-        
-        document.getElementById('toggleAudioBtn').addEventListener('click', () => {
-            if (!audioTrack) return;
-            
-            isAudioEnabled = !isAudioEnabled;
-            audioTrack.enabled = isAudioEnabled;
-            
-            const icon = isAudioEnabled ? 'fas fa-microphone' : 'fas fa-microphone-slash';
-            document.getElementById('toggleAudioBtn').innerHTML = `<i class="${icon}"></i>`;
-            document.getElementById('toggleAudioBtn').classList.toggle('active', !isAudioEnabled);
-            
-            showNotification(isAudioEnabled ? 'Микрофон включен' : 'Микрофон выключен');
-        });
-        
-        document.getElementById('toggleDataSavingBtn').addEventListener('click', () => {
-            if (isDataSaving) {
-                disableDataSavingMode();
-                showNotification('Режим экономии трафика выключен');
-            } else {
-                enableDataSavingMode();
-                showNotification('Режим экономии трафика включен');
+            if (videoTrack) {
+                videoTrack.enabled = isVideoEnabled;
+                toggleVideoBtn.innerHTML = isVideoEnabled 
+                    ? '<i class="fas fa-video"></i>' 
+                    : '<i class="fas fa-video-slash"></i>';
+                toggleVideoBtn.classList.toggle('active', !isVideoEnabled);
+                
+                // Update participants list
+                if (participants.has(peerId)) {
+                    participants.get(peerId).video = isVideoEnabled;
+                    updateParticipantsList();
+                }
+                
+                showNotification(isVideoEnabled ? 'Камера включена' : 'Камера выключена');
             }
         });
         
-        document.getElementById('leaveBtn').addEventListener('click', () => {
+        toggleAudioBtn.addEventListener('click', () => {
+            isAudioEnabled = !isAudioEnabled;
+            if (audioTrack) {
+                audioTrack.enabled = isAudioEnabled;
+                toggleAudioBtn.innerHTML = isAudioEnabled 
+                    ? '<i class="fas fa-microphone"></i>' 
+                    : '<i class="fas fa-microphone-slash"></i>';
+                toggleAudioBtn.classList.toggle('active', !isAudioEnabled);
+                
+                // Update participants list
+                if (participants.has(peerId)) {
+                    participants.get(peerId).audio = isAudioEnabled;
+                    updateParticipantsList();
+                }
+                
+                showNotification(isAudioEnabled ? 'Микрофон включен' : 'Микрофон выключен');
+            }
+        });
+        
+        screenShareBtn.addEventListener('click', toggleScreenShare);
+        stopScreenShareBtn.addEventListener('click', stopScreenShare);
+        
+        participantsBtn.addEventListener('click', () => {
+            participantsPanel.classList.toggle('active');
+            statsPanel.classList.remove('active');
+        });
+        
+        statsBtn.addEventListener('click', () => {
+            statsPanel.classList.toggle('active');
+            participantsPanel.classList.remove('active');
+        });
+        
+        leaveBtn.addEventListener('click', () => {
             if (confirm('Завершить видеоконференцию?')) {
                 leaveConference();
             }
         });
-        
-        document.getElementById('retryBtn').addEventListener('click', () => {
-            hideElement('retryBtn');
-            initializeConference();
-        });
 
-        // === ЗАВЕРШЕНИЕ КОНФЕРЕНЦИИ ===
+        // Screen sharing functions
+        async function toggleScreenShare() {
+            if (isScreenSharing) {
+                await stopScreenShare();
+            } else {
+                await startScreenShare();
+            }
+        }
+
+        async function startScreenShare() {
+            try {
+                if (!navigator.mediaDevices.getDisplayMedia) {
+                    throw new Error('Демонстрация экрана не поддерживается в этом браузере');
+                }
+                
+                screenStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 },
+                        frameRate: { ideal: 30 }
+                    },
+                    audio: false
+                });
+                
+                screenShareVideo.srcObject = screenStream;
+                screenShareContainer.classList.add('active');
+                
+                screenShareBtn.innerHTML = '<i class="fas fa-stop"></i>';
+                screenShareBtn.classList.add('warning');
+                
+                isScreenSharing = true;
+                
+                // Notify other participants
+                socket.emit('screen_share_status', {
+                    room_name: currentRoom,
+                    user_id: userId,
+                    user_name: currentUser,
+                    is_sharing: true
+                });
+                
+                // Replace video track in all existing calls
+                const screenVideoTrack = screenStream.getVideoTracks()[0];
+                for (const call of Object.values(calls)) {
+                    if (call.peerConnection) {
+                        const senders = call.peerConnection.getSenders();
+                        for (const sender of senders) {
+                            if (sender.track && sender.track.kind === 'video') {
+                                try {
+                                    await sender.replaceTrack(screenVideoTrack);
+                                } catch (e) {
+                                    console.error('Error replacing track:', e);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                showNotification('Демонстрация экрана начата');
+                
+                // Handle when screen sharing is stopped by browser UI
+                screenStream.getVideoTracks()[0].onended = () => {
+                    stopScreenShare();
+                };
+                
+            } catch (error) {
+                console.error('Error starting screen share:', error);
+                showNotification('Ошибка демонстрации экрана: ' + (error.message || 'Не поддерживается'), 'error');
+            }
+        }
+
+        async function stopScreenShare() {
+            if (!isScreenSharing) return;
+            
+            screenShareContainer.classList.remove('active');
+            
+            // Stop screen stream
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+                screenStream = null;
+            }
+            
+            screenShareBtn.innerHTML = '<i class="fas fa-desktop"></i>';
+            screenShareBtn.classList.remove('warning');
+            
+            isScreenSharing = false;
+            
+            // Notify other participants
+            socket.emit('screen_share_status', {
+                room_name: currentRoom,
+                user_id: userId,
+                user_name: currentUser,
+                is_sharing: false
+            });
+            
+            // Restore camera video track in all existing calls
+            if (localStream) {
+                const cameraVideoTrack = localStream.getVideoTracks()[0];
+                for (const call of Object.values(calls)) {
+                    if (call.peerConnection) {
+                        const senders = call.peerConnection.getSenders();
+                        for (const sender of senders) {
+                            if (sender.track && sender.track.kind === 'video') {
+                                try {
+                                    await sender.replaceTrack(cameraVideoTrack);
+                                } catch (e) {
+                                    console.error('Error restoring camera track:', e);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            showNotification('Демонстрация экрана остановлена');
+        }
+
+        // Leave conference
         function leaveConference() {
             showNotification('Завершение конференции...');
             
+            // Notify server
             socket.emit('leave_room', {
                 room_name: currentRoom,
                 user_id: userId
             });
             
-            // Очистка ресурсов
-            if (isScreenSharing && screenStream) {
-                screenStream.getTracks().forEach(track => track.stop());
-                screenStream = null;
+            // Clean up
+            if (isScreenSharing) {
+                stopScreenShare();
             }
             
-            if (pingInterval) clearInterval(pingInterval);
-            if (activityInterval) clearInterval(activityInterval);
+            // Clear intervals
+            if (pingInterval) {
+                clearInterval(pingInterval);
+            }
+            if (activityInterval) {
+                clearInterval(activityInterval);
+            }
             
-            for (const conn of Object.values(connections)) conn.close();
-            for (const call of Object.values(calls)) call.close();
+            // Close all connections
+            for (const conn of Object.values(connections)) {
+                if (conn.close) conn.close();
+            }
+            connections = {};
             
+            // Close all calls
+            for (const call of Object.values(calls)) {
+                if (call.close) call.close();
+            }
+            calls = {};
+            
+            // Stop local stream
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
                 localStream = null;
             }
             
+            // Destroy PeerJS instance
             if (peer) {
                 peer.destroy();
                 peer = null;
             }
             
+            // Disconnect socket
             socket.disconnect();
             
+            // Redirect to dashboard
             setTimeout(() => {
-                window.location.href = '/dashboard';
+                goToDashboard();
             }, 1000);
         }
 
-        // === ЗАПУСК ПРИ ЗАГРУЗКЕ ===
-        window.addEventListener('load', () => {
-            console.log('🚀 Загрузка видеоконференции...');
-            
-            // Обновляем информацию о комнате
-            document.getElementById('roomInfo').textContent = `${roomName} | ${userName}`;
-            
-            // Проверяем сохраненные настройки
-            if (localStorage.getItem('dataSavingEnabled') === 'true') {
-                enableDataSavingMode();
-            }
-            
-            // Запускаем конференцию
-            initializeConference();
-        });
+        function goToDashboard() {
+            window.location.href = '/dashboard';
+        }
 
+        // Initialize when page loads
+        window.addEventListener('load', initializeConference);
+
+        // Handle page unload
         window.addEventListener('beforeunload', () => {
             if (peer || socket.connected) {
                 leaveConference();
             }
         });
 
-        // Обработка смены ориентации экрана
-        window.addEventListener('orientationchange', () => {
-            setTimeout(() => {
-                const isLandscape = window.innerWidth > window.innerHeight;
-                const panelHeight = isLandscape && window.innerHeight < 500 ? '100px' : '120px';
-                document.getElementById('videoContainer').style.height = `calc(100vh - ${panelHeight})`;
-            }, 300);
+        // Close panels when clicking outside
+        document.addEventListener('click', (e) => {
+            if (participantsPanel && participantsBtn && 
+                !participantsPanel.contains(e.target) && !participantsBtn.contains(e.target)) {
+                participantsPanel.classList.remove('active');
+            }
+            if (statsPanel && statsBtn && 
+                !statsPanel.contains(e.target) && !statsBtn.contains(e.target)) {
+                statsPanel.classList.remove('active');
+            }
         });
 
+        // Handle keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Space bar to toggle audio
+            if (e.code === 'Space' && e.target === document.body) {
+                e.preventDefault();
+                toggleAudioBtn.click();
+            }
+            
+            // Escape to exit fullscreen or leave conference
+            if (e.code === 'Escape') {
+                if (isFullscreen) {
+                    exitFullscreenMode();
+                }
+            }
+            
+            // Ctrl+D for screen share
+            if (e.ctrlKey && e.code === 'KeyD') {
+                e.preventDefault();
+                screenShareBtn.click();
+            }
+            
+            // Ctrl+M to toggle mute
+            if (e.ctrlKey && e.code === 'KeyM') {
+                e.preventDefault();
+                toggleAudioBtn.click();
+            }
+            
+            // Ctrl+V to toggle video
+            if (e.ctrlKey && e.code === 'KeyV') {
+                e.preventDefault();
+                toggleVideoBtn.click();
+            }
+        });
     </script>
 </body>
 </html>
