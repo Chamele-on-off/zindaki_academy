@@ -1,18 +1,6 @@
-# docker-compose.yml
 version: '3.8'
 
 services:
-  coturn:
-    image: instrumentisto/coturn:4.5.2
-    ports:
-      - "3478:3478/udp"
-      - "3478:3478/tcp"
-      - "49152-65535:49152-65535/udp"
-    volumes:
-      - ./coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
-    command: ["--config-file", "/etc/coturn/turnserver.conf", "--log-file", "stdout", "--verbose"]
-    restart: unless-stopped
-
   nginx:
     image: nginx:alpine
     ports:
