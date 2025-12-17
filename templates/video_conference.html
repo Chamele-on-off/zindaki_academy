@@ -111,7 +111,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 10px;
-            padding: 80px 10px 160px 10px;
+            padding: 80px 10px 100px 10px;
         }
 
         .video-container.main-view {
@@ -122,7 +122,7 @@
             position: absolute;
             width: 200px;
             height: 150px;
-            bottom: 160px;
+            bottom: 100px;
             right: 20px;
             z-index: 10;
             border: 2px solid rgba(255, 255, 255, 0.2);
@@ -544,219 +544,6 @@
             margin-bottom: 0.3rem;
         }
 
-        /* Drawing Window */
-        .drawing-window {
-            position: fixed;
-            top: 15%;
-            left: 10%;
-            background: #F5F6F8;
-            padding: 0;
-            border-radius: 16px;
-            width: 75%;
-            height: 65%;
-            overflow: hidden;
-            z-index: 6;
-            display: none;
-            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px #E6E9EF;
-            color: #333333;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            resize: both;
-            min-width: 400px;
-            min-height: 300px;
-        }
-
-        .drawing-window.active {
-            display: block;
-        }
-
-        .window-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            background: white;
-            border-bottom: 1px solid #E6E9EF;
-            cursor: move;
-            user-select: none;
-        }
-
-        .window-title {
-            font-weight: 600;
-            color: #212529;
-        }
-
-        .window-close {
-            width: 30px;
-            height: 30px;
-            border-radius: 6px;
-            border: none;
-            background: #f8f9fa;
-            color: #6c757d;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .window-close:hover {
-            background: #ff3b30;
-            color: white;
-        }
-
-        .board-toolbar {
-            display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            background: white;
-            border-bottom: 1px solid #E6E9EF;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .toolbar-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            border: 1px solid #E6E9EF;
-            background: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            color: #6c757d;
-            font-size: 16px;
-        }
-
-        .toolbar-btn:hover, .toolbar-btn.active {
-            background: #7E76F9;
-            color: white;
-            border-color: #7E76F9;
-        }
-
-        .toolbar-separator {
-            width: 1px;
-            height: 20px;
-            background: #E6E9EF;
-            margin: 0 8px;
-        }
-
-        #drawing-canvas-container {
-            flex: 1;
-            height: calc(100% - 56px);
-            overflow: hidden;
-            background: #F5F6F8;
-            position: relative;
-            touch-action: none;
-        }
-
-        #drawing-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            cursor: crosshair;
-            touch-action: none;
-        }
-
-        .color-picker {
-            display: flex;
-            gap: 5px;
-            align-items: center;
-            margin-left: 10px;
-        }
-
-        .color-option {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            cursor: pointer;
-            border: 2px solid transparent;
-        }
-
-        .color-option.active {
-            border-color: #212529;
-        }
-
-        .drawing-zoom-controls {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: white;
-            border-radius: 12px;
-            padding: 8px;
-            display: flex;
-            gap: 4px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            z-index: 10;
-        }
-
-        .zoom-btn {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            border: 1px solid #E6E9EF;
-            background: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 16px;
-            color: #6c757d;
-            transition: all 0.2s ease;
-        }
-
-        .zoom-btn:hover {
-            background: #f8f9fa;
-            color: #7E76F9;
-        }
-
-        .board-grid {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                linear-gradient(#E6E9EF 1px, transparent 1px),
-                linear-gradient(90deg, #E6E9EF 1px, transparent 1px);
-            background-size: 20px 20px;
-            opacity: 0.3;
-            pointer-events: none;
-        }
-
-        /* Resize handle */
-        .resize-handle {
-            position: absolute;
-            background: transparent;
-            z-index: 10;
-        }
-
-        .resize-handle-e {
-            top: 0;
-            right: 0;
-            width: 10px;
-            height: 100%;
-            cursor: ew-resize;
-        }
-
-        .resize-handle-s {
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 10px;
-            cursor: ns-resize;
-        }
-
-        .resize-handle-se {
-            bottom: 0;
-            right: 0;
-            width: 15px;
-            height: 15px;
-            cursor: nwse-resize;
-        }
-
         /* Responsive */
         @media (max-width: 768px) {
             .header-bar {
@@ -785,7 +572,7 @@
             .video-container.main-view .video-item:not(.main-video) {
                 width: 120px;
                 height: 90px;
-                bottom: 140px;
+                bottom: 80px;
                 right: 10px;
             }
 
@@ -797,24 +584,17 @@
                 right: 270px;
             }
 
-            .participants-panel, .stats-panel, .drawing-window {
+            .participants-panel, .stats-panel {
                 right: 10px;
                 left: 10px;
                 min-width: auto;
-            }
-
-            .drawing-window {
-                width: 90%;
-                height: 60%;
-                top: 10%;
-                left: 5%;
             }
         }
 
         @media (max-width: 480px) {
             .video-container {
                 grid-template-columns: 1fr;
-                padding: 70px 5px 130px 5px;
+                padding: 70px 5px 90px 5px;
             }
 
             .control-panel {
@@ -831,7 +611,7 @@
             .video-container.main-view .video-item:not(.main-video) {
                 width: 100px;
                 height: 75px;
-                bottom: 130px;
+                bottom: 70px;
             }
 
             .video-container.main-view .video-item:not(.main-video):nth-child(2) {
@@ -840,32 +620,6 @@
 
             .video-container.main-view .video-item:not(.main-video):nth-child(3) {
                 right: 230px;
-            }
-
-            .drawing-window {
-                width: 95%;
-                height: 55%;
-                top: 5%;
-                left: 2.5%;
-            }
-
-            .board-toolbar {
-                gap: 5px;
-            }
-            
-            .toolbar-btn {
-                width: 32px;
-                height: 32px;
-                font-size: 12px;
-            }
-            
-            .color-picker {
-                margin-left: 5px;
-            }
-            
-            .color-option {
-                width: 16px;
-                height: 16px;
             }
         }
     </style>
@@ -916,54 +670,6 @@
         <video id="screenShareVideo" autoplay playsinline></video>
     </div>
 
-    <!-- Drawing Window -->
-    <div class="drawing-window" id="drawingWindow">
-        <div class="window-header">
-            <div class="window-title">Доска для рисования</div>
-            <button class="window-close" id="closeDrawing">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="board-toolbar">
-            <button class="toolbar-btn active" id="drawingPen" title="Карандаш">
-                <i class="fas fa-pen"></i>
-            </button>
-            <button class="toolbar-btn" id="drawingEraser" title="Ластик">
-                <i class="fas fa-eraser"></i>
-            </button>
-            <div class="toolbar-separator"></div>
-            <button class="toolbar-btn" id="clearDrawing" title="Очистить рисунок">
-                <i class="fas fa-trash"></i>
-            </button>
-            <div class="color-picker">
-                <div class="color-option active" style="background-color: #000000;" data-color="#000000"></div>
-                <div class="color-option" style="background-color: #ff0000;" data-color="#ff0000"></div>
-                <div class="color-option" style="background-color: #0000ff;" data-color="#0000ff"></div>
-                <div class="color-option" style="background-color: #00aa00;" data-color="#00aa00"></div>
-            </div>
-        </div>
-        <div id="drawing-canvas-container">
-            <div class="board-grid"></div>
-            <canvas id="drawing-canvas"></canvas>
-        </div>
-        <div class="drawing-zoom-controls">
-            <button class="zoom-btn" id="drawingZoomOut" title="Уменьшить">
-                <i class="fas fa-minus"></i>
-            </button>
-            <button class="zoom-btn" id="drawingZoomReset" title="Сбросить масштаб">
-                <i class="fas fa-search"></i>
-            </button>
-            <button class="zoom-btn" id="drawingZoomIn" title="Увеличить">
-                <i class="fas fa-plus"></i>
-            </button>
-        </div>
-        
-        <!-- Ручки для изменения размера -->
-        <div class="resize-handle resize-handle-e"></div>
-        <div class="resize-handle resize-handle-s"></div>
-        <div class="resize-handle resize-handle-se"></div>
-    </div>
-
     <!-- Participants Panel -->
     <div class="participants-panel" id="participantsPanel">
         <div class="participants-title">
@@ -1002,9 +708,6 @@
         </button>
         <button class="control-btn" id="screenShareBtn" title="Демонстрация экрана">
             <i class="fas fa-desktop"></i>
-        </button>
-        <button class="control-btn" id="drawingBtn" title="Открыть доску для рисования">
-            <i class="fas fa-paint-brush"></i>
         </button>
         <button class="control-btn" id="participantsBtn" title="Список участников">
             <i class="fas fa-users"></i>
@@ -1058,35 +761,6 @@
             packetLoss: 0,
             participants: 0
         };
-        
-        // Drawing variables
-        let drawingWindow = null;
-        let drawingCanvas = null;
-        let drawingCtx = null;
-        let isDrawing = false;
-        let lastX = 0;
-        let lastY = 0;
-        let currentColor = '#000000';
-        let currentTool = 'pen';
-        let isEraser = false;
-        let isDrawingWindowOpen = false;
-        let drawingScale = 1;
-        let isDraggingWindow = false;
-        let currentDraggedWindow = null;
-        let dragOffsetX = 0;
-        let dragOffsetY = 0;
-        let isResizingWindow = false;
-        let currentResizedWindow = null;
-        let resizeDirection = '';
-        let startWidth = 0;
-        let startHeight = 0;
-        let startX = 0;
-        let startY = 0;
-
-        // Drawing data for synchronization
-        let drawingHistory = [];
-        let drawingHistoryIndex = -1;
-        let isDrawingDataSent = false;
         
         // Улучшенная конфигурация Socket.IO
         const socket = io({
@@ -1250,23 +924,6 @@
             console.error('Server error:', data.message);
             showNotification('Ошибка сервера: ' + data.message, 'error');
         });
-
-        // Новый обработчик для получения данных рисования
-        socket.on('drawing_data', (data) => {
-            console.log('🎨 Получены данные рисования от:', data.user_id);
-            if (data.user_id !== userId && isDrawingWindowOpen) {
-                applyDrawingData(data);
-            }
-        });
-
-        // Новый обработчик для очистки доски
-        socket.on('clear_drawing', (data) => {
-            console.log('🧹 Получена команда очистки доски от:', data.user_id);
-            if (data.user_id !== userId && isDrawingWindowOpen) {
-                clearDrawingCanvas();
-                showNotification(`${data.user_name || data.user_id} очистил доску`);
-            }
-        });
         
         // DOM elements
         const videoContainer = document.getElementById('videoContainer');
@@ -1275,7 +932,6 @@
         const toggleVideoBtn = document.getElementById('toggleVideoBtn');
         const toggleAudioBtn = document.getElementById('toggleAudioBtn');
         const screenShareBtn = document.getElementById('screenShareBtn');
-        const drawingBtn = document.getElementById('drawingBtn');
         const stopScreenShareBtn = document.getElementById('stopScreenShareBtn');
         const participantsBtn = document.getElementById('participantsBtn');
         const statsBtn = document.getElementById('statsBtn');
@@ -1291,10 +947,6 @@
         const participantsValue = document.getElementById('participantsValue');
         const connectionType = document.getElementById('connectionType');
 
-        // Drawing DOM elements
-        drawingWindow = document.getElementById('drawingWindow');
-        drawingCanvas = document.getElementById('drawing-canvas');
-        
         // Initialize conference - ОСНОВНОЙ ИСПРАВЛЕННЫЙ КОД
         async function initializeConference() {
             try {
@@ -1390,9 +1042,6 @@
                                     participants.get(conn.peer).originalUserId = parsedData.user_id;
                                     updateParticipantsList();
                                 }
-                            } else if (parsedData.type === 'drawing') {
-                                // Получаем данные рисования от других участников
-                                handleDrawingDataFromPeer(parsedData);
                             }
                         } catch (e) {
                             console.log('Raw data:', data);
@@ -1468,9 +1117,6 @@
                     // Add local video
                     addLocalVideo(localStream);
                     
-                    // Initialize drawing
-                    initDrawing();
-                    
                     updateConnectionStatus('Подключение к комнате...', 'connecting');
                     
                     // ТЕПЕРЬ присоединяемся к комнате на сервере
@@ -1516,523 +1162,6 @@
                     </button>
                 `;
             }
-        }
-
-        // Initialize drawing
-        function initDrawing() {
-            if (!drawingCanvas) return;
-            
-            // Set canvas size
-            const container = drawingCanvas.parentElement;
-            drawingCanvas.width = container.clientWidth;
-            drawingCanvas.height = container.clientHeight;
-            
-            drawingCtx = drawingCanvas.getContext('2d');
-            drawingCtx.lineWidth = 3;
-            drawingCtx.lineCap = 'round';
-            drawingCtx.lineJoin = 'round';
-            drawingCtx.strokeStyle = currentColor;
-            
-            // Initialize event listeners for drawing
-            initDrawingEventListeners();
-            initDrawingWindowManagement();
-            initDrawingControls();
-            
-            console.log('🎨 Drawing system initialized');
-        }
-
-        // Initialize drawing event listeners
-        function initDrawingEventListeners() {
-            // Mouse events
-            drawingCanvas.addEventListener('mousedown', startDrawing);
-            drawingCanvas.addEventListener('mousemove', draw);
-            drawingCanvas.addEventListener('mouseup', stopDrawing);
-            drawingCanvas.addEventListener('mouseout', stopDrawing);
-            
-            // Touch events for mobile
-            drawingCanvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-            drawingCanvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-            drawingCanvas.addEventListener('touchend', handleTouchEnd);
-            
-            // Resize canvas when window resizes
-            window.addEventListener('resize', () => {
-                const container = drawingCanvas.parentElement;
-                drawingCanvas.width = container.clientWidth;
-                drawingCanvas.height = container.clientHeight;
-                redrawHistory();
-            });
-        }
-
-        // Initialize drawing window management
-        function initDrawingWindowManagement() {
-            // Window dragging
-            const header = drawingWindow.querySelector('.window-header');
-            
-            header.addEventListener('mousedown', startDragWindow);
-            header.addEventListener('touchstart', startDragWindow, { passive: false });
-            
-            // Window resizing
-            const resizeHandles = drawingWindow.querySelectorAll('.resize-handle');
-            resizeHandles.forEach(handle => {
-                handle.addEventListener('mousedown', startResize);
-                handle.addEventListener('touchstart', startResize, { passive: false });
-            });
-            
-            // Close button
-            document.getElementById('closeDrawing').addEventListener('click', closeDrawingWindow);
-        }
-
-        // Initialize drawing controls
-        function initDrawingControls() {
-            // Tool buttons
-            document.getElementById('drawingPen').addEventListener('click', () => setDrawingTool('pen'));
-            document.getElementById('drawingEraser').addEventListener('click', () => setDrawingTool('eraser'));
-            document.getElementById('clearDrawing').addEventListener('click', clearDrawingAndSync);
-            
-            // Color picker
-            const colorOptions = document.querySelectorAll('.color-option');
-            colorOptions.forEach(option => {
-                option.addEventListener('click', () => {
-                    colorOptions.forEach(opt => opt.classList.remove('active'));
-                    option.classList.add('active');
-                    currentColor = option.dataset.color;
-                    if (!isEraser) {
-                        drawingCtx.strokeStyle = currentColor;
-                    }
-                });
-            });
-            
-            // Zoom controls
-            document.getElementById('drawingZoomIn').addEventListener('click', () => zoomDrawing(1.1));
-            document.getElementById('drawingZoomOut').addEventListener('click', () => zoomDrawing(0.9));
-            document.getElementById('drawingZoomReset').addEventListener('click', () => resetDrawingZoom());
-        }
-
-        // Drawing functions
-        function getCanvasCoordinates(e) {
-            const rect = drawingCanvas.getBoundingClientRect();
-            const scaleX = drawingCanvas.width / rect.width;
-            const scaleY = drawingCanvas.height / rect.height;
-            
-            let clientX, clientY;
-            
-            if (e.type.includes('touch')) {
-                clientX = e.touches[0].clientX;
-                clientY = e.touches[0].clientY;
-            } else {
-                clientX = e.clientX;
-                clientY = e.clientY;
-            }
-            
-            return {
-                x: (clientX - rect.left) * scaleX,
-                y: (clientY - rect.top) * scaleY
-            };
-        }
-
-        function startDrawing(e) {
-            if (!isDrawingWindowOpen) return;
-            
-            isDrawing = true;
-            const coords = getCanvasCoordinates(e);
-            [lastX, lastY] = [coords.x, coords.y];
-            
-            // Save starting point
-            drawingCtx.beginPath();
-            drawingCtx.moveTo(lastX, lastY);
-            
-            // Save to history
-            saveToDrawingHistory({
-                type: 'start',
-                x: lastX,
-                y: lastY,
-                color: currentColor,
-                width: isEraser ? 20 : 3,
-                isEraser: isEraser
-            });
-            
-            e.preventDefault();
-        }
-
-        function draw(e) {
-            if (!isDrawing) return;
-            
-            const coords = getCanvasCoordinates(e);
-            const currentX = coords.x;
-            const currentY = coords.y;
-            
-            drawingCtx.lineTo(currentX, currentY);
-            drawingCtx.stroke();
-            
-            // Save to history
-            saveToDrawingHistory({
-                type: 'draw',
-                x: currentX,
-                y: currentY,
-                color: currentColor,
-                width: isEraser ? 20 : 3,
-                isEraser: isEraser
-            });
-            
-            // Send drawing data to other participants
-            sendDrawingData({
-                type: 'draw',
-                x: currentX,
-                y: currentY,
-                fromX: lastX,
-                fromY: lastY,
-                color: currentColor,
-                width: isEraser ? 20 : 3,
-                isEraser: isEraser
-            });
-            
-            [lastX, lastY] = [currentX, currentY];
-            
-            e.preventDefault();
-        }
-
-        function stopDrawing() {
-            if (!isDrawing) return;
-            
-            isDrawing = false;
-            drawingCtx.closePath();
-            
-            // Send end drawing signal
-            sendDrawingData({
-                type: 'end',
-                color: currentColor,
-                width: isEraser ? 20 : 3,
-                isEraser: isEraser
-            });
-        }
-
-        function handleTouchStart(e) {
-            if (!isDrawingWindowOpen) return;
-            
-            e.preventDefault();
-            const touch = e.touches[0];
-            const customEvent = {
-                type: 'mousedown',
-                clientX: touch.clientX,
-                clientY: touch.clientY,
-                target: drawingCanvas
-            };
-            startDrawing(customEvent);
-        }
-
-        function handleTouchMove(e) {
-            if (!isDrawing || !isDrawingWindowOpen) return;
-            
-            e.preventDefault();
-            const touch = e.touches[0];
-            const customEvent = {
-                type: 'mousemove',
-                clientX: touch.clientX,
-                clientY: touch.clientY,
-                target: drawingCanvas
-            };
-            draw(customEvent);
-        }
-
-        function handleTouchEnd() {
-            if (!isDrawing) return;
-            stopDrawing();
-        }
-
-        function setDrawingTool(tool) {
-            currentTool = tool;
-            isEraser = (tool === 'eraser');
-            
-            document.getElementById('drawingPen').classList.toggle('active', tool === 'pen');
-            document.getElementById('drawingEraser').classList.toggle('active', tool === 'eraser');
-            
-            if (tool === 'pen') {
-                drawingCtx.lineWidth = 3;
-                drawingCtx.strokeStyle = currentColor;
-                drawingCtx.globalCompositeOperation = 'source-over';
-            } else if (tool === 'eraser') {
-                drawingCtx.lineWidth = 20;
-                drawingCtx.strokeStyle = '#F5F6F8';
-                drawingCtx.globalCompositeOperation = 'destination-out';
-            }
-        }
-
-        function clearDrawingCanvas() {
-            drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-            drawingHistory = [];
-            drawingHistoryIndex = -1;
-        }
-
-        function clearDrawingAndSync() {
-            clearDrawingCanvas();
-            
-            // Send clear command to other participants
-            socket.emit('clear_drawing', {
-                room_name: currentRoom,
-                user_id: userId,
-                user_name: currentUser
-            });
-            
-            showNotification('Доска очищена');
-        }
-
-        function saveToDrawingHistory(data) {
-            drawingHistory.push(data);
-            drawingHistoryIndex++;
-        }
-
-        function redrawHistory() {
-            clearDrawingCanvas();
-            
-            let currentPath = null;
-            drawingHistory.forEach(data => {
-                if (data.type === 'start') {
-                    drawingCtx.beginPath();
-                    drawingCtx.moveTo(data.x, data.y);
-                    drawingCtx.strokeStyle = data.isEraser ? '#F5F6F8' : data.color;
-                    drawingCtx.lineWidth = data.width;
-                    drawingCtx.globalCompositeOperation = data.isEraser ? 'destination-out' : 'source-over';
-                    currentPath = { x: data.x, y: data.y };
-                } else if (data.type === 'draw' && currentPath) {
-                    drawingCtx.lineTo(data.x, data.y);
-                    drawingCtx.stroke();
-                    currentPath = { x: data.x, y: data.y };
-                }
-            });
-        }
-
-        function sendDrawingData(data) {
-            // Send via Socket.IO to all participants
-            socket.emit('drawing_data', {
-                room_name: currentRoom,
-                user_id: userId,
-                user_name: currentUser,
-                data: data
-            });
-            
-            // Also send via PeerJS data connections for faster updates
-            Object.values(connections).forEach(conn => {
-                try {
-                    conn.send(JSON.stringify({
-                        type: 'drawing',
-                        data: data,
-                        user_id: userId,
-                        user_name: currentUser
-                    }));
-                } catch (error) {
-                    console.error('Error sending drawing data via PeerJS:', error);
-                }
-            });
-        }
-
-        function handleDrawingDataFromPeer(data) {
-            if (!isDrawingWindowOpen || data.user_id === userId) return;
-            
-            applyDrawingData({
-                user_id: data.user_id,
-                user_name: data.user_name,
-                data: data.data
-            });
-        }
-
-        function applyDrawingData(data) {
-            const drawingData = data.data;
-            
-            // Set drawing context based on received data
-            if (drawingData.isEraser) {
-                drawingCtx.globalCompositeOperation = 'destination-out';
-                drawingCtx.strokeStyle = '#F5F6F8';
-            } else {
-                drawingCtx.globalCompositeOperation = 'source-over';
-                drawingCtx.strokeStyle = drawingData.color || '#000000';
-            }
-            
-            drawingCtx.lineWidth = drawingData.width || 3;
-            drawingCtx.lineCap = 'round';
-            drawingCtx.lineJoin = 'round';
-            
-            if (drawingData.type === 'start') {
-                drawingCtx.beginPath();
-                drawingCtx.moveTo(drawingData.x, drawingData.y);
-            } else if (drawingData.type === 'draw') {
-                drawingCtx.beginPath();
-                drawingCtx.moveTo(drawingData.fromX, drawingData.fromY);
-                drawingCtx.lineTo(drawingData.x, drawingData.y);
-                drawingCtx.stroke();
-            } else if (drawingData.type === 'end') {
-                drawingCtx.closePath();
-            }
-            
-            // Add to history for local redraw
-            saveToDrawingHistory(drawingData);
-        }
-
-        function zoomDrawing(factor) {
-            drawingScale *= factor;
-            drawingScale = Math.max(0.5, Math.min(3, drawingScale));
-            
-            const container = drawingCanvas.parentElement;
-            container.style.transform = `scale(${drawingScale})`;
-            container.style.transformOrigin = 'center center';
-        }
-
-        function resetDrawingZoom() {
-            drawingScale = 1;
-            const container = drawingCanvas.parentElement;
-            container.style.transform = 'scale(1)';
-        }
-
-        // Window management functions
-        function startDragWindow(e) {
-            isDraggingWindow = true;
-            currentDraggedWindow = drawingWindow;
-            
-            const rect = drawingWindow.getBoundingClientRect();
-            if (e.type === 'mousedown') {
-                dragOffsetX = e.clientX - rect.left;
-                dragOffsetY = e.clientY - rect.top;
-            } else {
-                dragOffsetX = e.touches[0].clientX - rect.left;
-                dragOffsetY = e.touches[0].clientY - rect.top;
-                e.preventDefault();
-            }
-            
-            document.addEventListener('mousemove', dragWindow);
-            document.addEventListener('touchmove', dragWindow, { passive: false });
-            document.addEventListener('mouseup', stopDragWindow);
-            document.addEventListener('touchend', stopDragWindow);
-        }
-
-        function dragWindow(e) {
-            if (!isDraggingWindow || !currentDraggedWindow) return;
-            
-            let clientX, clientY;
-            if (e.type === 'mousemove') {
-                clientX = e.clientX;
-                clientY = e.clientY;
-            } else {
-                clientX = e.touches[0].clientX;
-                clientY = e.touches[0].clientY;
-                e.preventDefault();
-            }
-            
-            const newX = clientX - dragOffsetX;
-            const newY = clientY - dragOffsetY;
-            
-            const maxX = window.innerWidth - currentDraggedWindow.offsetWidth;
-            const maxY = window.innerHeight - currentDraggedWindow.offsetHeight;
-            
-            currentDraggedWindow.style.left = Math.max(0, Math.min(newX, maxX)) + 'px';
-            currentDraggedWindow.style.top = Math.max(0, Math.min(newY, maxY)) + 'px';
-            currentDraggedWindow.style.transform = 'none';
-        }
-
-        function stopDragWindow() {
-            isDraggingWindow = false;
-            currentDraggedWindow = null;
-            document.removeEventListener('mousemove', dragWindow);
-            document.removeEventListener('touchmove', dragWindow);
-            document.removeEventListener('mouseup', stopDragWindow);
-            document.removeEventListener('touchend', stopDragWindow);
-        }
-
-        function startResize(e) {
-            isResizingWindow = true;
-            currentResizedWindow = drawingWindow;
-            
-            if (e.target.classList.contains('resize-handle-e')) {
-                resizeDirection = 'e';
-            } else if (e.target.classList.contains('resize-handle-s')) {
-                resizeDirection = 's';
-            } else if (e.target.classList.contains('resize-handle-se')) {
-                resizeDirection = 'se';
-            }
-            
-            const rect = drawingWindow.getBoundingClientRect();
-            startWidth = rect.width;
-            startHeight = rect.height;
-            startX = e.clientX || e.touches[0].clientX;
-            startY = e.clientY || e.touches[0].clientY;
-            
-            document.addEventListener('mousemove', resizeWindow);
-            document.addEventListener('touchmove', resizeWindow, { passive: false });
-            document.addEventListener('mouseup', stopResize);
-            document.addEventListener('touchend', stopResize);
-            
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
-        function resizeWindow(e) {
-            if (!isResizingWindow || !currentResizedWindow) return;
-            
-            let clientX, clientY;
-            if (e.type === 'mousemove') {
-                clientX = e.clientX;
-                clientY = e.clientY;
-            } else {
-                clientX = e.touches[0].clientX;
-                clientY = e.touches[0].clientY;
-                e.preventDefault();
-            }
-            
-            const deltaX = clientX - startX;
-            const deltaY = clientY - startY;
-            
-            let newWidth = startWidth;
-            let newHeight = startHeight;
-            
-            if (resizeDirection === 'e' || resizeDirection === 'se') {
-                newWidth = Math.max(400, startWidth + deltaX);
-            }
-            
-            if (resizeDirection === 's' || resizeDirection === 'se') {
-                newHeight = Math.max(300, startHeight + deltaY);
-            }
-            
-            currentResizedWindow.style.width = newWidth + 'px';
-            currentResizedWindow.style.height = newHeight + 'px';
-            
-            // Update canvas size
-            setTimeout(() => {
-                const container = drawingCanvas.parentElement;
-                drawingCanvas.width = container.clientWidth;
-                drawingCanvas.height = container.clientHeight;
-                redrawHistory();
-            }, 50);
-        }
-
-        function stopResize() {
-            isResizingWindow = false;
-            currentResizedWindow = null;
-            resizeDirection = '';
-            document.removeEventListener('mousemove', resizeWindow);
-            document.removeEventListener('touchmove', resizeWindow);
-            document.removeEventListener('mouseup', stopResize);
-            document.removeEventListener('touchend', stopResize);
-        }
-
-        function openDrawingWindow() {
-            drawingWindow.classList.add('active');
-            isDrawingWindowOpen = true;
-            drawingBtn.classList.add('active');
-            
-            // Ensure canvas is properly sized
-            setTimeout(() => {
-                const container = drawingCanvas.parentElement;
-                drawingCanvas.width = container.clientWidth;
-                drawingCanvas.height = container.clientHeight;
-                redrawHistory();
-            }, 100);
-            
-            showNotification('Доска для рисования открыта');
-        }
-
-        function closeDrawingWindow() {
-            drawingWindow.classList.remove('active');
-            isDrawingWindowOpen = false;
-            drawingBtn.classList.remove('active');
-            showNotification('Доска для рисования закрыта');
         }
 
         // Start activity monitoring
@@ -2133,22 +1262,6 @@
                 
                 conn.on('data', (data) => {
                     console.log('📦 Data from', remotePeerId, ':', data);
-                    try {
-                        const parsedData = JSON.parse(data);
-                        if (parsedData.type === 'user_info') {
-                            // Обновляем имя участника
-                            if (participants.has(remotePeerId)) {
-                                participants.get(remotePeerId).name = parsedData.user_name;
-                                participants.get(remotePeerId).originalUserId = parsedData.user_id;
-                                updateParticipantsList();
-                            }
-                        } else if (parsedData.type === 'drawing') {
-                            // Получаем данные рисования
-                            handleDrawingDataFromPeer(parsedData);
-                        }
-                    } catch (e) {
-                        console.log('Raw data:', data);
-                    }
                 });
                 
             } catch (error) {
@@ -2590,15 +1703,6 @@
         screenShareBtn.addEventListener('click', toggleScreenShare);
         stopScreenShareBtn.addEventListener('click', stopScreenShare);
         
-        // Drawing button
-        drawingBtn.addEventListener('click', () => {
-            if (isDrawingWindowOpen) {
-                closeDrawingWindow();
-            } else {
-                openDrawingWindow();
-            }
-        });
-        
         participantsBtn.addEventListener('click', () => {
             participantsPanel.classList.toggle('active');
             statsPanel.classList.remove('active');
@@ -2746,10 +1850,6 @@
                 stopScreenShare();
             }
             
-            if (isDrawingWindowOpen) {
-                closeDrawingWindow();
-            }
-            
             // Clear intervals
             if (pingInterval) {
                 clearInterval(pingInterval);
@@ -2815,10 +1915,6 @@
                 !statsPanel.contains(e.target) && !statsBtn.contains(e.target)) {
                 statsPanel.classList.remove('active');
             }
-            if (drawingWindow && drawingBtn && 
-                !drawingWindow.contains(e.target) && !drawingBtn.contains(e.target)) {
-                // Не закрываем окно рисования при клике вне его
-            }
         });
 
         // Handle keyboard shortcuts
@@ -2833,8 +1929,6 @@
             if (e.code === 'Escape') {
                 if (isFullscreen) {
                     exitFullscreenMode();
-                } else if (isDrawingWindowOpen) {
-                    closeDrawingWindow();
                 }
             }
             
@@ -2854,12 +1948,6 @@
             if (e.ctrlKey && e.code === 'KeyV') {
                 e.preventDefault();
                 toggleVideoBtn.click();
-            }
-            
-            // Ctrl+B for drawing board
-            if (e.ctrlKey && e.code === 'KeyB') {
-                e.preventDefault();
-                drawingBtn.click();
             }
         });
     </script>
