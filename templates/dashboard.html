@@ -881,6 +881,127 @@
             color: white;
         }
         
+        /* === НОВЫЕ СТИЛИ ДЛЯ БЭКАПОВ === */
+        .backup-container {
+            padding: 1rem;
+        }
+        
+        .upload-area-large {
+            border: 3px dashed #ccc;
+            border-radius: var(--rounded-lg);
+            padding: 3rem 2rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+        
+        .upload-area-large:hover {
+            border-color: var(--primary);
+            background: rgba(58, 90, 120, 0.05);
+        }
+        
+        .upload-area-large i {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+        
+        .upload-hint {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin-top: 0.5rem;
+        }
+        
+        .upload-progress {
+            margin-top: 1rem;
+            display: none;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text {
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+        
+        .backup-item {
+            display: flex;
+            align-items: center;
+            padding: 1.5rem;
+            background: var(--light);
+            border-radius: var(--rounded-lg);
+            margin-bottom: 1rem;
+            border: 1px solid rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+        
+        .backup-item:hover {
+            box-shadow: var(--shadow-sm);
+            transform: translateY(-2px);
+        }
+        
+        .backup-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: var(--rounded-md);
+            background: var(--gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            margin-right: 1.5rem;
+        }
+        
+        .backup-info {
+            flex-grow: 1;
+        }
+        
+        .backup-name {
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+            color: var(--darker);
+        }
+        
+        .backup-details {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+        
+        .backup-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .backup-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: var(--rounded-md);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .backup-warning i {
+            color: #ffc107;
+            margin-right: 0.5rem;
+        }
+        
         @media (max-width: 1200px) {
             .dashboard-container {
                 grid-template-columns: 250px 1fr;
@@ -940,6 +1061,23 @@
                 flex-direction: column;
                 align-items: center;
             }
+            
+            .backup-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .backup-icon {
+                margin-right: 0;
+                align-self: center;
+            }
+            
+            .backup-actions {
+                align-self: flex-end;
+                width: 100%;
+                justify-content: flex-end;
+            }
         }
         
         @media (max-width: 576px) {
@@ -979,6 +1117,10 @@
             .link-actions {
                 margin-left: 0;
                 align-self: flex-end;
+            }
+            
+            .upload-area-large {
+                padding: 2rem 1rem;
             }
         }
     </style>
@@ -1024,13 +1166,12 @@
                 {% else %}
                 <li><a href="#" data-section="assign-homework"><i class="fas fa-tasks"></i> Добавить задание</a></li>
                 <li><a href="#" data-section="view-homework"><i class="fas fa-list-check"></i> Задания учеников</a></li>
+                <li><a href="#" data-section="users"><i class="fas fa-users"></i> Ученики</a></li>
+                <li><a href="#" data-section="conference-links"><i class="fas fa-link"></i> Ссылки на конференции</a></li>
+                <li><a href="#" data-section="backup"><i class="fas fa-database"></i> Резервные копии</a></li>
                 {% endif %}
                 <li><a href="#" data-section="feedback"><i class="fas fa-comments"></i> Обратная связь</a></li>
                 <li><a href="#" data-section="profile"><i class="fas fa-user"></i> Профиль</a></li>
-                {% if user.role == 'teacher' %}
-                <li><a href="#" data-section="users"><i class="fas fa-users"></i> Ученики</a></li>
-                <li><a href="#" data-section="conference-links"><i class="fas fa-link"></i> Ссылки на конференции</a></li>
-                {% endif %}
                 <li><a href="#" data-section="resources"><i class="fas fa-book-open"></i> Ресурсы</a></li>
             </ul>
         </aside>
@@ -1249,6 +1390,7 @@
             {% endif %}
             
             <!-- Для учителя: Управление ссылками на конференции -->
+            {% if user.role == 'teacher' %}
             <section class="widget" id="conference-links-section" style="display: none;">
                 <div class="widget-header">
                     <h3 class="widget-title">Ссылки на конференции</h3>
@@ -1263,6 +1405,53 @@
                     <!-- Динамически загружаемые ссылки -->
                 </div>
             </section>
+            {% endif %}
+            
+            <!-- Для учителя: Управление бэкапами -->
+            {% if user.role == 'teacher' %}
+            <section class="widget backup-widget" id="backup-section" style="display: none;">
+                <div class="widget-header">
+                    <h3 class="widget-title">Управление резервными копиями</h3>
+                    <div class="widget-actions">
+                        <button class="btn btn-primary" id="createBackup">
+                            <i class="fas fa-plus"></i> Создать бэкап
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="backup-container">
+                    <div class="backup-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Внимание!</strong> Перед восстановлением рекомендуется создать резервную копию текущих данных.
+                    </div>
+                    
+                    <div class="backup-actions">
+                        <div class="form-group">
+                            <label>Восстановить из ZIP-архива</label>
+                            <div class="upload-area-large" id="restoreArea">
+                                <i class="fas fa-file-archive"></i>
+                                <p>Перетащите ZIP-архив сюда или кликните для выбора</p>
+                                <p class="upload-hint">Максимальный размер: 500MB</p>
+                                <input type="file" id="restoreFile" accept=".zip" style="display: none;">
+                                <div class="upload-progress">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill"></div>
+                                    </div>
+                                    <span class="progress-text">0%</span>
+                                </div>
+                            </div>
+                            <div id="filePreview"></div>
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin: 2rem 0 1rem;">Доступные резервные копии</h4>
+                    <div class="backups-list" id="backupsList">
+                        <!-- Динамически загружаемые бэкапы -->
+                        <div class="no-items">Загрузка списка бэкапов...</div>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
             
             <!-- Ресурсы -->
             <section class="widget resources-widget" id="resources-section" style="display: none;">
@@ -1660,6 +1849,8 @@
                         loadConferenceLinksManager();
                     } else if (sectionId === 'upload-homework-section') {
                         loadHomeworkForUpload();
+                    } else if (sectionId === 'backup-section') {
+                        loadBackups();
                     }
                 });
             });
@@ -1696,6 +1887,7 @@
             const addUserBtn = document.getElementById('addUser');
             const addFeedbackBtn = document.getElementById('addFeedback');
             const addConferenceLinkBtn = document.getElementById('addConferenceLink');
+            const createBackupBtn = document.getElementById('createBackup');
             
             const closeModalBtns = document.querySelectorAll('.close-modal');
             const avatarContainer = document.getElementById('avatarContainer');
@@ -1721,6 +1913,12 @@
             if (addConferenceLinkBtn) {
                 addConferenceLinkBtn.addEventListener('click', () => {
                     conferenceLinkModal.style.display = 'flex';
+                });
+            }
+            
+            if (createBackupBtn) {
+                createBackupBtn.addEventListener('click', () => {
+                    createBackup();
                 });
             }
             
@@ -2178,6 +2376,239 @@
                             container.innerHTML = '<div class="no-items">Ссылки не настроены</div>';
                         }
                     });
+            }
+
+            // === ФУНКЦИИ ДЛЯ УПРАВЛЕНИЯ БЭКАПАМИ ===
+            
+            // Загрузка списка бэкапов
+            function loadBackups() {
+                fetch('/api/backup')
+                    .then(response => response.json())
+                    .then(data => {
+                        const container = document.getElementById('backupsList');
+                        if (!container) return;
+                        
+                        container.innerHTML = '';
+                        
+                        if (data.success && data.backups && data.backups.length > 0) {
+                            data.backups.forEach(backup => {
+                                const backupItem = document.createElement('div');
+                                backupItem.className = 'backup-item';
+                                
+                                const createdDate = new Date(backup.created);
+                                const formattedDate = createdDate.toLocaleString('ru-RU');
+                                
+                                backupItem.innerHTML = `
+                                    <div class="backup-icon">
+                                        <i class="fas fa-database"></i>
+                                    </div>
+                                    <div class="backup-info">
+                                        <div class="backup-name">${backup.filename}</div>
+                                        <div class="backup-details">
+                                            Создан: ${formattedDate} | Размер: ${backup.size_mb} MB
+                                        </div>
+                                    </div>
+                                    <div class="backup-actions">
+                                        <a href="/api/backup/download/${backup.filename}" 
+                                           class="btn btn-secondary btn-sm" download>
+                                            <i class="fas fa-download"></i> Скачать
+                                        </a>
+                                        <button class="btn btn-danger btn-sm" onclick="deleteBackup('${backup.filename}')">
+                                            <i class="fas fa-trash"></i> Удалить
+                                        </button>
+                                    </div>
+                                `;
+                                container.appendChild(backupItem);
+                            });
+                        } else {
+                            container.innerHTML = '<div class="no-items">Резервные копии отсутствуют</div>';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading backups:', error);
+                        const container = document.getElementById('backupsList');
+                        if (container) {
+                            container.innerHTML = '<div class="no-items">Ошибка загрузки бэкапов</div>';
+                        }
+                    });
+            }
+            
+            // Создание бэкапа
+            function createBackup() {
+                if (confirm('Создать резервную копию всех данных? Рекомендуется делать это перед важными изменениями.')) {
+                    const createBackupBtn = document.getElementById('createBackup');
+                    if (createBackupBtn) {
+                        createBackupBtn.disabled = true;
+                        createBackupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Создание...';
+                    }
+                    
+                    fetch('/api/backup', {
+                        method: 'POST'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Резервная копия успешно создана! Ссылка для скачивания: ' + data.filename);
+                            loadBackups();
+                        } else {
+                            alert('Ошибка при создании бэкапа: ' + (data.error || ''));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Произошла ошибка при создании бэкапа');
+                    })
+                    .finally(() => {
+                        if (createBackupBtn) {
+                            createBackupBtn.disabled = false;
+                            createBackupBtn.innerHTML = '<i class="fas fa-plus"></i> Создать бэкап';
+                        }
+                    });
+                }
+            }
+            
+            // Инициализация drag & drop для восстановления
+            const restoreArea = document.getElementById('restoreArea');
+            const restoreFileInput = document.getElementById('restoreFile');
+            
+            if (restoreArea && restoreFileInput) {
+                restoreArea.addEventListener('click', () => restoreFileInput.click());
+                
+                restoreArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    restoreArea.style.borderColor = 'var(--primary)';
+                    restoreArea.style.backgroundColor = 'rgba(58, 90, 120, 0.1)';
+                });
+                
+                restoreArea.addEventListener('dragleave', () => {
+                    restoreArea.style.borderColor = '#ccc';
+                    restoreArea.style.backgroundColor = '#f8f9fa';
+                });
+                
+                restoreArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    restoreArea.style.borderColor = '#ccc';
+                    restoreArea.style.backgroundColor = '#f8f9fa';
+                    
+                    if (e.dataTransfer.files.length) {
+                        const file = e.dataTransfer.files[0];
+                        if (file.name.endsWith('.zip')) {
+                            restoreBackup(file);
+                        } else {
+                            alert('Пожалуйста, выберите ZIP архив');
+                        }
+                    }
+                });
+                
+                restoreFileInput.addEventListener('change', function() {
+                    if (this.files.length) {
+                        restoreBackup(this.files[0]);
+                    }
+                });
+            }
+            
+            // Восстановление из бэкапа
+            function restoreBackup(file) {
+                if (!confirm('ВНИМАНИЕ: Это действие перезапишет все текущие данные. Рекомендуется создать резервную копию перед восстановлением. Продолжить?')) {
+                    return;
+                }
+                
+                const restoreArea = document.getElementById('restoreArea');
+                const progressBar = restoreArea.querySelector('.progress-fill');
+                const progressText = restoreArea.querySelector('.progress-text');
+                const uploadProgress = restoreArea.querySelector('.upload-progress');
+                
+                // Показываем прогресс
+                uploadProgress.style.display = 'block';
+                progressBar.style.width = '0%';
+                progressText.textContent = '0%';
+                
+                // Для больших файлов используем chunked upload
+                const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB
+                const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+                const fileIdentifier = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                
+                let uploadedChunks = 0;
+                
+                function uploadChunk(chunkNumber) {
+                    const start = chunkNumber * CHUNK_SIZE;
+                    const end = Math.min(start + CHUNK_SIZE, file.size);
+                    const chunk = file.slice(start, end);
+                    
+                    const formData = new FormData();
+                    formData.append('chunk', chunk);
+                    formData.append('chunkNumber', chunkNumber);
+                    formData.append('totalChunks', totalChunks);
+                    formData.append('fileIdentifier', fileIdentifier);
+                    
+                    fetch('/api/backup/upload-chunk', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        uploadedChunks++;
+                        
+                        // Обновляем прогресс
+                        const progress = Math.round((uploadedChunks / totalChunks) * 100);
+                        progressBar.style.width = progress + '%';
+                        progressText.textContent = progress + '%';
+                        
+                        if (data.success) {
+                            if (uploadedChunks < totalChunks) {
+                                // Загружаем следующий chunk
+                                uploadChunk(chunkNumber + 1);
+                            } else {
+                                // Все chunks загружены
+                                if (data.message && data.message.includes('successfully')) {
+                                    alert('База данных успешно восстановлена! Страница будет перезагружена через 3 секунды.');
+                                    
+                                    // Перезагружаем страницу через 3 секунды
+                                    setTimeout(() => {
+                                        window.location.reload();
+                                    }, 3000);
+                                }
+                            }
+                        } else {
+                            alert('Ошибка при загрузке: ' + (data.error || ''));
+                            uploadProgress.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Upload error:', error);
+                        alert('Произошла ошибка при загрузке файла');
+                        uploadProgress.style.display = 'none';
+                    });
+                }
+                
+                // Начинаем загрузку первого chunk
+                uploadChunk(0);
+            }
+            
+            // Удаление бэкапа
+            function deleteBackup(filename) {
+                if (confirm(`Вы уверены, что хотите удалить резервную копию ${filename}?`)) {
+                    fetch('/api/backup', {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ filename: filename })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Резервная копия удалена');
+                            loadBackups();
+                        } else {
+                            alert('Ошибка при удалении: ' + (data.error || ''));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Произошла ошибка при удалении бэкапа');
+                    });
+                }
             }
 
             // --- Форма профиля ---
@@ -2675,6 +3106,10 @@
             }
         }
         
+        // Глобальные функции для работы с бэкапами
+        window.createBackup = createBackup;
+        window.deleteBackup = deleteBackup;
+        
         // Функции для загрузки данных (доступны глобально)
         function loadStudentHomeworks() {
             fetch('/api/homework')
@@ -2992,6 +3427,58 @@
                                 }
                             });
                         }
+                    }
+                });
+        }
+        
+        function loadBackups() {
+            fetch('/api/backup')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('backupsList');
+                    if (!container) return;
+                    
+                    container.innerHTML = '';
+                    
+                    if (data.success && data.backups && data.backups.length > 0) {
+                        data.backups.forEach(backup => {
+                            const backupItem = document.createElement('div');
+                            backupItem.className = 'backup-item';
+                            
+                            const createdDate = new Date(backup.created);
+                            const formattedDate = createdDate.toLocaleString('ru-RU');
+                            
+                            backupItem.innerHTML = `
+                                <div class="backup-icon">
+                                    <i class="fas fa-database"></i>
+                                </div>
+                                <div class="backup-info">
+                                    <div class="backup-name">${backup.filename}</div>
+                                    <div class="backup-details">
+                                        Создан: ${formattedDate} | Размер: ${backup.size_mb} MB
+                                    </div>
+                                </div>
+                                <div class="backup-actions">
+                                    <a href="/api/backup/download/${backup.filename}" 
+                                       class="btn btn-secondary btn-sm" download>
+                                        <i class="fas fa-download"></i> Скачать
+                                    </a>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteBackup('${backup.filename}')">
+                                        <i class="fas fa-trash"></i> Удалить
+                                    </button>
+                                </div>
+                            `;
+                            container.appendChild(backupItem);
+                        });
+                    } else {
+                        container.innerHTML = '<div class="no-items">Резервные копии отсутствуют</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading backups:', error);
+                    const container = document.getElementById('backupsList');
+                    if (container) {
+                        container.innerHTML = '<div class="no-items">Ошибка загрузки бэкапов</div>';
                     }
                 });
         }
