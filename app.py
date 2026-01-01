@@ -10,6 +10,14 @@ from collections import defaultdict
 import time
 import eventlet
 
+# Дополнительные импорты для бэкапов
+import zipfile
+import shutil
+import tempfile
+import uuid
+from pathlib import Path
+from werkzeug.datastructures import FileStorage
+
 # Используем eventlet для асинхронности
 eventlet.monkey_patch()
 
@@ -48,11 +56,18 @@ socketio = SocketIO(
 # Конфигурация приложения
 UPLOAD_FOLDER = 'uploads'
 DB_FOLDER = 'data'
+BACKUP_FOLDER = 'backups'
 os.makedirs(DB_FOLDER, exist_ok=True)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(BACKUP_FOLDER, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
+
+# Расширяем разрешенные файлы для загрузки
+ALLOWED_EXTENSIONS = {'zip'}
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -496,6 +511,153 @@ class DB:
         links = [l for l in links if l['id'] != link_id]
         DB._save_db('conference_links', links)
         return True
+
+    # === МЕТОДЫ ДЛЯ БЭКАПОВ ===
+    
+    @staticmethod
+    def create_backup():
+        """Создает резервную копию всех данных"""
+        try:
+            # Создаем уникальное имя файла
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_id = str(uuid.uuid4())[:8]
+            backup_filename = f'backup_{timestamp}_{backup_id}.zip'
+            backup_path = os.path.join(BACKUP_FOLDER, backup_filename)
+            
+            # Создаем временную директорию
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Копируем все JSON файлы базы данных
+                for db_file in ['users', 'lessons', 'homeworks', 'conferences', 
+                              'testimonials', 'feedbacks', 'conference_links']:
+                    source = f'{DB_FOLDER}/{db_file}.json'
+                    if os.path.exists(source):
+                        shutil.copy2(source, os.path.join(temp_dir, f'{db_file}.json'))
+                
+                # Копируем папку uploads (пользовательские файлы)
+                uploads_backup_dir = os.path.join(temp_dir, 'uploads')
+                if os.path.exists(UPLOAD_FOLDER):
+                    shutil.copytree(UPLOAD_FOLDER, uploads_backup_dir, dirs_exist_ok=True)
+                
+                # Создаем файл с метаинформацией
+                meta_info = {
+                    'created_at': datetime.now().isoformat(),
+                    'backup_id': backup_id,
+                    'files': os.listdir(temp_dir),
+                    'version': '1.0',
+                    'app': 'Zindaki Academy'
+                }
+                
+                with open(os.path.join(temp_dir, 'meta.json'), 'w') as f:
+                    json.dump(meta_info, f, indent=2)
+                
+                # Создаем ZIP архив
+                with zipfile.ZipFile(backup_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                    for root, dirs, files in os.walk(temp_dir):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            arcname = os.path.relpath(file_path, temp_dir)
+                            zipf.write(file_path, arcname)
+                
+                logger.info(f'Backup created: {backup_filename}')
+                return backup_path
+                
+        except Exception as e:
+            logger.error(f'Error creating backup: {e}')
+            return None
+
+    @staticmethod
+    def list_backups():
+        """Возвращает список доступных бэкапов"""
+        backups = []
+        if os.path.exists(BACKUP_FOLDER):
+            for file in os.listdir(BACKUP_FOLDER):
+                if file.endswith('.zip'):
+                    filepath = os.path.join(BACKUP_FOLDER, file)
+                    created = os.path.getctime(filepath)
+                    size = os.path.getsize(filepath)
+                    backups.append({
+                        'filename': file,
+                        'created': datetime.fromtimestamp(created).isoformat(),
+                        'size': size,
+                        'size_mb': round(size / (1024 * 1024), 2)
+                    })
+        
+        # Сортируем по дате создания (новые сначала)
+        backups.sort(key=lambda x: x['created'], reverse=True)
+        return backups
+
+    @staticmethod
+    def restore_backup(backup_file_path, create_reserve_copy=True):
+        """Восстанавливает базу данных из ZIP архива"""
+        try:
+            # Создаем резервную копию текущих данных перед восстановлением
+            if create_reserve_copy:
+                reserve_backup = DB.create_backup()
+                logger.info(f'Created reserve backup before restore: {reserve_backup}')
+            
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Распаковываем архив
+                with zipfile.ZipFile(backup_file_path, 'r') as zipf:
+                    zipf.extractall(temp_dir)
+                
+                # Проверяем наличие meta.json
+                meta_path = os.path.join(temp_dir, 'meta.json')
+                if os.path.exists(meta_path):
+                    with open(meta_path, 'r') as f:
+                        meta_info = json.load(f)
+                        logger.info(f'Restoring backup from: {meta_info.get("created_at")}')
+                
+                # Восстанавливаем JSON файлы базы данных
+                for db_file in ['users', 'lessons', 'homeworks', 'conferences', 
+                              'testimonials', 'feedbacks', 'conference_links']:
+                    backup_file = os.path.join(temp_dir, f'{db_file}.json')
+                    if os.path.exists(backup_file):
+                        shutil.copy2(backup_file, f'{DB_FOLDER}/{db_file}.json')
+                        logger.info(f'Restored {db_file}.json')
+                
+                # Восстанавливаем загруженные файлы
+                uploads_backup_dir = os.path.join(temp_dir, 'uploads')
+                if os.path.exists(uploads_backup_dir):
+                    # Очищаем текущую папку uploads
+                    shutil.rmtree(UPLOAD_FOLDER, ignore_errors=True)
+                    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+                    
+                    # Копируем файлы из бэкапа
+                    for root, dirs, files in os.walk(uploads_backup_dir):
+                        for file in files:
+                            src_path = os.path.join(root, file)
+                            rel_path = os.path.relpath(src_path, uploads_backup_dir)
+                            dst_path = os.path.join(UPLOAD_FOLDER, rel_path)
+                            os.makedirs(os.path.dirname(dst_path), exist_ok=True)
+                            shutil.copy2(src_path, dst_path)
+                    
+                    logger.info('Restored uploads folder')
+                
+                return True
+                
+        except Exception as e:
+            logger.error(f'Error restoring backup: {e}')
+            return False
+
+    @staticmethod
+    def delete_backup(filename):
+        """Удаляет бэкап"""
+        try:
+            filepath = os.path.join(BACKUP_FOLDER, filename)
+            if os.path.exists(filepath):
+                os.remove(filepath)
+                logger.info(f'Deleted backup: {filename}')
+                return True
+        except Exception as e:
+            logger.error(f'Error deleting backup: {e}')
+        
+        return False
+
+    @staticmethod
+    def get_backup_filepath(filename):
+        """Возвращает путь к файлу бэкапа"""
+        filepath = os.path.join(BACKUP_FOLDER, filename)
+        return filepath if os.path.exists(filepath) else None
 
 # Инициализация базы данных
 if not os.path.exists(f'{DB_FOLDER}/users.json'):
@@ -1006,6 +1168,177 @@ def video_debug():
     })
 
 # ===== КОНЕЦ КОДА ВИДЕОКОНФЕРЕНЦИЙ =====
+
+# ===== API ДЛЯ БЭКАПОВ =====
+
+@app.route('/api/backup', methods=['GET', 'POST', 'DELETE'])
+def api_backup():
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if request.method == 'GET':
+        # Получение списка бэкапов
+        backups = DB.list_backups()
+        return jsonify({'success': True, 'backups': backups})
+    
+    elif request.method == 'POST':
+        # Создание нового бэкапа
+        try:
+            backup_path = DB.create_backup()
+            if backup_path:
+                filename = os.path.basename(backup_path)
+                return jsonify({
+                    'success': True, 
+                    'message': 'Backup created successfully',
+                    'filename': filename,
+                    'download_url': f'/api/backup/download/{filename}'
+                })
+            else:
+                return jsonify({'error': 'Failed to create backup'}), 500
+        except Exception as e:
+            logger.error(f'API backup creation error: {e}')
+            return jsonify({'error': str(e)}), 500
+    
+    elif request.method == 'DELETE':
+        # Удаление бэкапа
+        data = request.json
+        if not data or 'filename' not in data:
+            return jsonify({'error': 'Filename required'}), 400
+        
+        if DB.delete_backup(data['filename']):
+            return jsonify({'success': True, 'message': 'Backup deleted'})
+        else:
+            return jsonify({'error': 'Failed to delete backup'}), 500
+
+@app.route('/api/backup/download/<filename>')
+def download_backup(filename):
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    filepath = DB.get_backup_filepath(filename)
+    if filepath:
+        return send_from_directory(
+            BACKUP_FOLDER, 
+            filename, 
+            as_attachment=True,
+            download_name=f'zindaki_backup_{datetime.now().strftime("%Y%m%d")}.zip'
+        )
+    else:
+        return jsonify({'error': 'Backup not found'}), 404
+
+@app.route('/api/backup/restore', methods=['POST'])
+def restore_backup():
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    # Проверяем, загружен ли файл
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    if not allowed_file(file.filename):
+        return jsonify({'error': 'Only ZIP files are allowed'}), 400
+    
+    try:
+        # Сохраняем временный файл
+        temp_dir = tempfile.mkdtemp()
+        temp_filepath = os.path.join(temp_dir, file.filename)
+        file.save(temp_filepath)
+        
+        # Восстанавливаем из бэкапа
+        if DB.restore_backup(temp_filepath):
+            # Очищаем временные файлы
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            
+            # Обновляем сессию пользователя
+            if 'user' in session:
+                username = session['user']['username']
+                user = DB.get_user(username)
+                if user:
+                    session['user'] = {
+                        'username': user['username'],
+                        'email': user['email'],
+                        'phone': user.get('phone', ''),
+                        'role': user['role'],
+                        'avatar': user['avatar']
+                    }
+            
+            return jsonify({
+                'success': True, 
+                'message': 'Database restored successfully! Page will reload in 3 seconds.'
+            })
+        else:
+            return jsonify({'error': 'Failed to restore backup'}), 500
+            
+    except Exception as e:
+        logger.error(f'API restore error: {e}')
+        return jsonify({'error': str(e)}), 500
+    finally:
+        # Очищаем временные файлы
+        if 'temp_dir' in locals():
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+@app.route('/api/backup/upload-chunk', methods=['POST'])
+def upload_backup_chunk():
+    """Загрузка больших файлов по частям (chunked upload)"""
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    try:
+        chunk = request.files.get('chunk')
+        chunk_number = int(request.form.get('chunkNumber', 0))
+        total_chunks = int(request.form.get('totalChunks', 1))
+        file_identifier = request.form.get('fileIdentifier')
+        
+        if not chunk or not file_identifier:
+            return jsonify({'error': 'Missing required data'}), 400
+        
+        # Создаем временную директорию для сборки файла
+        temp_dir = os.path.join(tempfile.gettempdir(), 'backup_uploads', file_identifier)
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        # Сохраняем chunk
+        chunk_filename = f'{chunk_number:05d}'
+        chunk.save(os.path.join(temp_dir, chunk_filename))
+        
+        # Если это последний chunk, собираем файл
+        if chunk_number == total_chunks - 1:
+            final_filename = f'upload_{file_identifier}.zip'
+            final_path = os.path.join(temp_dir, final_filename)
+            
+            with open(final_path, 'wb') as final_file:
+                for i in range(total_chunks):
+                    chunk_path = os.path.join(temp_dir, f'{i:05d}')
+                    with open(chunk_path, 'rb') as chunk_file:
+                        final_file.write(chunk_file.read())
+            
+            # Восстанавливаем из собранного файла
+            success = DB.restore_backup(final_path)
+            
+            # Очищаем временные файлы
+            shutil.rmtree(os.path.dirname(temp_dir), ignore_errors=True)
+            
+            if success:
+                return jsonify({
+                    'success': True,
+                    'message': 'Backup restored successfully!'
+                })
+            else:
+                return jsonify({'error': 'Failed to restore backup'}), 500
+        else:
+            return jsonify({
+                'success': True,
+                'message': f'Chunk {chunk_number + 1}/{total_chunks} uploaded'
+            })
+            
+    except Exception as e:
+        logger.error(f'Chunk upload error: {e}')
+        return jsonify({'error': str(e)}), 500
+
+# ===== КОНЕЦ API ДЛЯ БЭКАПОВ =====
 
 # Главная страница и все SPA-роуты
 @app.route('/')
@@ -1667,6 +2000,7 @@ if __name__ == '__main__':
     print("  - API Health: http://localhost:8000/api/video/health")
     print("  - Health Check: http://localhost:8000/health")
     print("  - API Debug: http://localhost:8000/api/video/debug")
+    print("  - Backup API: http://localhost:8000/api/backup")
     
     # Запуск с Socket.IO
     socketio.run(
