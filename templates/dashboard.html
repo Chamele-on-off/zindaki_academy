@@ -15,6 +15,9 @@
             --primary-dark: #2c4761;
             --secondary: #6d4c41;
             --accent: #c5a258;
+            --ai-primary: #7E76F9;
+            --ai-secondary: #6A61E5;
+            --ai-accent: #FF7B9C;
             --light: #f5f3f0;
             --lighter: #ffffff;
             --dark: #1a1a2e;
@@ -23,6 +26,7 @@
             --text-light: #6d6d6d;
             --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             --gradient-accent: linear-gradient(135deg, var(--accent) 0%, #d4b15f 100%);
+            --gradient-ai: linear-gradient(135deg, var(--ai-primary) 0%, var(--ai-secondary) 100%);
             --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
             --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
             --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
@@ -61,6 +65,7 @@
             color: inherit;
         }
         
+        /* Навигация */
         .navbar {
             position: fixed;
             top: 0;
@@ -153,6 +158,32 @@
             width: 100%;
         }
         
+        /* Специальная кнопка для блога */
+        .nav-blog-button {
+            background: linear-gradient(135deg, #7E76F9 0%, #6A61E5 100%);
+            color: white !important;
+            padding: 0.6rem 1.2rem !important;
+            border-radius: var(--rounded-full) !important;
+            margin-left: 0.5rem !important;
+            box-shadow: 0 4px 15px rgba(126, 118, 249, 0.3) !important;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .nav-blog-button:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(126, 118, 249, 0.4) !important;
+            color: white !important;
+        }
+        
+        .nav-blog-button i {
+            margin-right: 0.4rem;
+        }
+        
         .mobile-menu-btn {
             display: none;
             background: none;
@@ -167,6 +198,7 @@
             color: var(--accent);
         }
         
+        /* Основной контейнер */
         .dashboard-container {
             max-width: 1400px;
             margin: 100px auto 50px;
@@ -176,6 +208,19 @@
             gap: 30px;
         }
         
+        @media (max-width: 1200px) {
+            .dashboard-container {
+                grid-template-columns: 250px 1fr;
+            }
+        }
+        
+        @media (max-width: 992px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Боковая панель */
         .sidebar {
             background: var(--lighter);
             border-radius: var(--rounded-xl);
@@ -184,6 +229,12 @@
             height: fit-content;
             position: sticky;
             top: 100px;
+        }
+        
+        @media (max-width: 992px) {
+            .sidebar {
+                position: static;
+            }
         }
         
         .user-profile {
@@ -264,6 +315,7 @@
         .sidebar-menu a:hover, .sidebar-menu a.active {
             background: rgba(58, 90, 120, 0.1);
             color: var(--primary);
+            transform: translateX(5px);
         }
         
         .sidebar-menu i {
@@ -273,12 +325,14 @@
             color: var(--primary);
         }
         
+        /* Основной контент */
         .main-content {
             display: grid;
             grid-template-columns: 1fr;
             gap: 30px;
         }
         
+        /* Виджеты */
         .widget {
             background: var(--lighter);
             border-radius: var(--rounded-xl);
@@ -361,6 +415,17 @@
             box-shadow: var(--shadow-md);
         }
         
+        .btn-ai {
+            background: var(--gradient-ai);
+            color: white;
+            box-shadow: 0 4px 15px rgba(126, 118, 249, 0.3);
+        }
+        
+        .btn-ai:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(126, 118, 249, 0.4);
+        }
+        
         .btn-sm {
             padding: 0.4rem 0.8rem;
             font-size: 0.8rem;
@@ -375,6 +440,7 @@
             background-color: #c82333;
         }
         
+        /* Виджет видеоконференций */
         .conference-widget {
             grid-column: 1 / -1;
         }
@@ -396,6 +462,14 @@
             gap: 2rem;
             margin-top: 2rem;
             flex-wrap: wrap;
+        }
+        
+        @media (max-width: 768px) {
+            .conference-features {
+                flex-direction: column;
+                align-items: center;
+                gap: 1rem;
+            }
         }
         
         .feature {
@@ -420,6 +494,7 @@
             text-align: center;
         }
         
+        /* Домашние задания */
         .homework-list {
             display: grid;
             gap: 1rem;
@@ -438,6 +513,14 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 0.5rem;
+        }
+        
+        @media (max-width: 576px) {
+            .homework-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
         }
         
         .homework-title {
@@ -478,6 +561,12 @@
             border-radius: var(--rounded-md);
             font-size: 0.9rem;
             gap: 0.5rem;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        .file-item:hover {
+            background: rgba(58, 90, 120, 0.2);
         }
         
         .file-item i {
@@ -495,6 +584,13 @@
             gap: 0.8rem;
         }
         
+        @media (max-width: 576px) {
+            .homework-actions {
+                flex-direction: column;
+            }
+        }
+        
+        /* Формы */
         .form-group {
             margin-bottom: 1.5rem;
         }
@@ -533,6 +629,13 @@
             gap: 1.5rem;
         }
         
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Альтернативные конференции */
         .alternative-conferences {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -547,6 +650,7 @@
             border-radius: var(--rounded-md);
             transition: all 0.3s ease;
             gap: 1rem;
+            text-decoration: none;
         }
         
         .conference-link:hover {
@@ -577,6 +681,7 @@
             color: var(--text-light);
         }
         
+        /* Список пользователей */
         .users-list {
             display: grid;
             gap: 1rem;
@@ -591,11 +696,19 @@
             gap: 1rem;
         }
         
+        @media (max-width: 576px) {
+            .user-card {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+        
         .user-avatar-sm {
             width: 50px;
             height: 50px;
             border-radius: 50%;
             overflow: hidden;
+            flex-shrink: 0;
         }
         
         .user-avatar-sm img {
@@ -627,6 +740,14 @@
             gap: 0.5rem;
         }
         
+        @media (max-width: 576px) {
+            .user-actions {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+        
+        /* Модальные окна */
         .modal {
             display: none;
             position: fixed;
@@ -659,6 +780,8 @@
             font-size: 1.5rem;
             cursor: pointer;
             color: var(--text-light);
+            background: none;
+            border: none;
         }
         
         .modal-title {
@@ -671,6 +794,12 @@
             grid-template-columns: repeat(2, 1fr);
             gap: 10px;
             margin-bottom: 1.5rem;
+        }
+        
+        @media (max-width: 576px) {
+            .subject-select {
+                grid-template-columns: 1fr;
+            }
         }
         
         .subject-option {
@@ -692,6 +821,7 @@
             border-color: var(--primary);
         }
         
+        /* Загрузка аватара */
         .avatar-preview {
             width: 150px;
             height: 150px;
@@ -707,6 +837,7 @@
             object-fit: cover;
         }
         
+        /* Отправленные работы */
         .submission-files {
             margin-top: 1rem;
             padding: 1rem;
@@ -744,7 +875,7 @@
             color: var(--primary-dark);
         }
         
-        /* Новые стили для обратной связи */
+        /* Обратная связь */
         .feedback-item {
             background: #f8f9fa;
             border-radius: var(--rounded-md);
@@ -757,6 +888,13 @@
             display: flex;
             justify-content: space-between;
             margin-bottom: 0.5rem;
+        }
+        
+        @media (max-width: 576px) {
+            .feedback-header {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
         }
         
         .feedback-teacher {
@@ -779,6 +917,7 @@
             color: #ffc107;
         }
         
+        /* Загрузка файлов */
         .upload-files-area {
             border: 2px dashed #ccc;
             border-radius: var(--rounded-md);
@@ -816,7 +955,7 @@
             cursor: pointer;
         }
         
-        /* Стили для управления ссылками */
+        /* Ссылки на конференции */
         .link-item {
             display: flex;
             align-items: center;
@@ -826,10 +965,24 @@
             margin-bottom: 0.5rem;
         }
         
+        @media (max-width: 768px) {
+            .link-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+        }
+        
         .link-platform {
             font-weight: 600;
             min-width: 200px;
             color: var(--primary);
+        }
+        
+        @media (max-width: 768px) {
+            .link-platform {
+                min-width: auto;
+            }
         }
         
         .link-url {
@@ -843,6 +996,14 @@
             margin-left: 1rem;
         }
         
+        @media (max-width: 768px) {
+            .link-actions {
+                margin-left: 0;
+                align-self: flex-end;
+            }
+        }
+        
+        /* Состояние пустых списков */
         .no-items {
             text-align: center;
             padding: 2rem;
@@ -850,6 +1011,7 @@
             font-style: italic;
         }
         
+        /* Бейджи */
         .stars {
             color: #ffc107;
         }
@@ -881,7 +1043,7 @@
             color: white;
         }
         
-        /* === НОВЫЕ СТИЛИ ДЛЯ БЭКАПОВ === */
+        /* Стили для управления бэкапами */
         .backup-container {
             padding: 1rem;
         }
@@ -956,6 +1118,14 @@
             transform: translateY(-2px);
         }
         
+        @media (max-width: 768px) {
+            .backup-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+        }
+        
         .backup-icon {
             width: 60px;
             height: 60px;
@@ -967,6 +1137,13 @@
             color: white;
             font-size: 1.5rem;
             margin-right: 1.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            .backup-icon {
+                margin-right: 0;
+                align-self: center;
+            }
         }
         
         .backup-info {
@@ -989,6 +1166,14 @@
             gap: 0.5rem;
         }
         
+        @media (max-width: 768px) {
+            .backup-actions {
+                align-self: flex-end;
+                width: 100%;
+                justify-content: flex-end;
+            }
+        }
+        
         .backup-warning {
             background: #fff3cd;
             border: 1px solid #ffeaa7;
@@ -1002,30 +1187,27 @@
             margin-right: 0.5rem;
         }
         
-        @media (max-width: 1200px) {
-            .dashboard-container {
-                grid-template-columns: 250px 1fr;
-            }
+        /* Кнопка блога в сайдбаре */
+        .blog-sidebar-btn {
+            background: linear-gradient(135deg, #7E76F9 0%, #6A61E5 100%);
+            color: white !important;
+            margin-top: 1rem;
+            text-align: center;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(126, 118, 249, 0.3);
         }
         
-        @media (max-width: 992px) {
-            .dashboard-container {
-                grid-template-columns: 1fr;
-            }
-            
-            .sidebar {
-                position: static;
-            }
-            
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-            
-            .subject-select {
-                grid-template-columns: 1fr;
-            }
+        .blog-sidebar-btn:hover {
+            background: linear-gradient(135deg, #6A61E5 0%, #5a52d1 100%);
+            transform: translateX(5px);
+            box-shadow: 0 6px 20px rgba(126, 118, 249, 0.4);
         }
         
+        .blog-sidebar-btn:after {
+            display: none !important;
+        }
+        
+        /* Мобильное меню */
         @media (max-width: 768px) {
             .navbar {
                 padding: 1rem;
@@ -1055,42 +1237,11 @@
             
             .dashboard-container {
                 margin-top: 80px;
+                padding: 0 15px;
             }
             
-            .conference-features {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .backup-item {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 1rem;
-            }
-            
-            .backup-icon {
-                margin-right: 0;
-                align-self: center;
-            }
-            
-            .backup-actions {
-                align-self: flex-end;
-                width: 100%;
-                justify-content: flex-end;
-            }
-        }
-        
-        @media (max-width: 576px) {
             .widget {
                 padding: 1.5rem;
-            }
-            
-            .homework-actions {
-                flex-direction: column;
-            }
-            
-            .btn {
-                width: 100%;
             }
             
             .widget-header {
@@ -1104,21 +1255,12 @@
                 justify-content: flex-start;
             }
             
-            .link-item {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 0.5rem;
+            .btn {
+                width: 100%;
             }
-            
-            .link-platform {
-                min-width: auto;
-            }
-            
-            .link-actions {
-                margin-left: 0;
-                align-self: flex-end;
-            }
-            
+        }
+        
+        @media (max-width: 576px) {
             .upload-area-large {
                 padding: 2rem 1rem;
             }
@@ -1126,6 +1268,7 @@
     </style>
 </head>
 <body>
+    <!-- Навигация -->
     <nav class="navbar">
         <a href="/" class="logo">
             <div class="logo-icon">
@@ -1140,6 +1283,9 @@
             <a href="/#programs">Программы</a>
             <a href="/#testimonials">Отзывы</a>
             <a href="/#contact">Контакты</a>
+            <a href="/blog" class="nav-blog-button">
+                <i class="fas fa-newspaper"></i> Блог
+            </a>
             <a href="#" id="logoutBtn">Выйти</a>
         </div>
         <button class="mobile-menu-btn">
@@ -1147,7 +1293,9 @@
         </button>
     </nav>
 
+    <!-- Основной контейнер -->
     <div class="dashboard-container">
+        <!-- Боковая панель -->
         <aside class="sidebar">
             <div class="user-profile">
                 <div class="user-avatar" id="avatarContainer">
@@ -1173,9 +1321,22 @@
                 <li><a href="#" data-section="feedback"><i class="fas fa-comments"></i> Обратная связь</a></li>
                 <li><a href="#" data-section="profile"><i class="fas fa-user"></i> Профиль</a></li>
                 <li><a href="#" data-section="resources"><i class="fas fa-book-open"></i> Ресурсы</a></li>
+                
+                <!-- Кнопка блога в сайдбаре -->
+                <li><a href="/blog" class="blog-sidebar-btn" data-section="blog">
+                    <i class="fas fa-newspaper"></i> Блог
+                </a></li>
+                
+                <!-- Для учителей: ссылка на редактор блога -->
+                {% if user.role == 'teacher' %}
+                <li><a href="/blog/editor" class="blog-sidebar-btn" style="background: linear-gradient(135deg, #FF7B9C 0%, #FF6B8B 100%);">
+                    <i class="fas fa-edit"></i> Редактор статей
+                </a></li>
+                {% endif %}
             </ul>
         </aside>
         
+        <!-- Основной контент -->
         <main class="main-content">
             <!-- Видеоконференции -->
             <section class="widget conference-widget" id="conference-section">
@@ -1246,6 +1407,7 @@
                 </div>
                 <div class="homework-list" id="myHomeworkList">
                     <!-- Динамически загружаемые задания -->
+                    <div class="no-items">Загрузка заданий...</div>
                 </div>
             </section>
             
@@ -1296,6 +1458,7 @@
                 
                 <div class="homework-list" id="assignedHomeworkList">
                     <!-- Динамически загружаемые задания -->
+                    <div class="no-items">Загрузка заданий...</div>
                 </div>
             </section>
             
@@ -1306,6 +1469,7 @@
                 </div>
                 <div id="studentsHomeworkList">
                     <!-- Динамически загружаемые работы -->
+                    <div class="no-items">Загрузка работ...</div>
                 </div>
             </section>
             
@@ -1324,6 +1488,7 @@
                 
                 <div id="feedbackList">
                     <!-- Динамически загружаемые отзывы -->
+                    <div class="no-items">Загрузка обратной связи...</div>
                 </div>
             </section>
             
@@ -1385,6 +1550,7 @@
                 
                 <div class="users-list" id="usersList">
                     <!-- Динамически загружаемые пользователи -->
+                    <div class="no-items">Загрузка учеников...</div>
                 </div>
             </section>
             {% endif %}
@@ -1403,6 +1569,7 @@
                 
                 <div id="conferenceLinksManager">
                     <!-- Динамически загружаемые ссылки -->
+                    <div class="no-items">Загрузка ссылок...</div>
                 </div>
             </section>
             {% endif %}
@@ -1544,7 +1711,7 @@
     <!-- Модальное окно для добавления домашнего задания -->
     <div class="modal" id="homeworkModal">
         <div class="modal-content">
-            <span class="close-modal">&times;</span>
+            <button class="close-modal">&times;</button>
             <h3 class="modal-title">Добавить домашнее задание</h3>
             
             <form id="addHomeworkForm" enctype="multipart/form-data">
@@ -1613,7 +1780,7 @@
     <!-- Модальное окно для добавления пользователя -->
     <div class="modal" id="userModal">
         <div class="modal-content">
-            <span class="close-modal">&times;</span>
+            <button class="close-modal">&times;</button>
             <h3 class="modal-title">Добавить ученика</h3>
             
             <form id="addUserForm">
@@ -1647,7 +1814,7 @@
     <!-- Модальное окно для редактирования пользователя -->
     <div class="modal" id="editUserModal">
         <div class="modal-content">
-            <span class="close-modal">&times;</span>
+            <button class="close-modal">&times;</button>
             <h3 class="modal-title" id="editUserTitle">Редактирование ученика</h3>
             
             <form id="editUserForm">
@@ -1685,7 +1852,7 @@
     <!-- Модальное окно для отправки домашнего задания -->
     <div class="modal" id="submitHomeworkModal">
         <div class="modal-content">
-            <span class="close-modal">&times;</span>
+            <button class="close-modal">&times;</button>
             <h3 class="modal-title">Отправить домашнее задание</h3>
             
             <form id="submitHomeworkForm" enctype="multipart/form-data">
@@ -1711,7 +1878,7 @@
     <!-- Модальное окно для изменения аватара -->
     <div class="modal" id="avatarModal">
         <div class="modal-content">
-            <span class="close-modal">&times;</span>
+            <button class="close-modal">&times;</button>
             <h3 class="modal-title">Изменить аватар</h3>
             
             <form id="avatarForm" enctype="multipart/form-data">
@@ -1734,7 +1901,7 @@
     <!-- Модальное окно для обратной связи -->
     <div class="modal" id="feedbackModal">
         <div class="modal-content">
-            <span class="close-modal">&times;</span>
+            <button class="close-modal">&times;</button>
             <h3 class="modal-title">Добавить обратную связь</h3>
             
             <form id="addFeedbackForm">
@@ -1785,7 +1952,7 @@
     <!-- Модальное окно для добавления ссылки на конференцию -->
     <div class="modal" id="conferenceLinkModal">
         <div class="modal-content">
-            <span class="close-modal">&times;</span>
+            <button class="close-modal">&times;</button>
             <h3 class="modal-title">Добавить ссылку на конференцию</h3>
             
             <form id="addConferenceLinkForm">
@@ -1808,49 +1975,68 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            console.log("DOM fully loaded and parsed");
+            console.log("Dashboard loaded");
 
-            // --- Основные элементы интерфейса ---
+            // --- Мобильное меню ---
             const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
             const navLinks = document.querySelector('.nav-links');
             
-            mobileMenuBtn.addEventListener('click', () => {
-                navLinks.classList.toggle('active');
-                mobileMenuBtn.innerHTML = navLinks.classList.contains('active') ? 
-                    '<i class="fas fa-times"></i>' : '<i class="fas fa-bars"></i>';
-            });
+            if (mobileMenuBtn && navLinks) {
+                mobileMenuBtn.addEventListener('click', () => {
+                    navLinks.classList.toggle('active');
+                    mobileMenuBtn.innerHTML = navLinks.classList.contains('active') ? 
+                        '<i class="fas fa-times"></i>' : '<i class="fas fa-bars"></i>';
+                });
+            }
             
+            // --- Навигация по боковому меню ---
             const sidebarLinks = document.querySelectorAll('.sidebar-menu a');
             const sections = document.querySelectorAll('.widget');
             
             sidebarLinks.forEach(link => {
                 link.addEventListener('click', function(e) {
+                    if (this.getAttribute('href') && this.getAttribute('href') !== '#') {
+                        // Если у ссылки есть реальный href (не #), разрешаем переход
+                        return;
+                    }
+                    
                     e.preventDefault();
+                    
+                    // Убираем активный класс у всех ссылок
                     sidebarLinks.forEach(l => l.classList.remove('active'));
+                    
+                    // Добавляем активный класс текущей ссылке
                     this.classList.add('active');
+                    
+                    // Скрываем все секции
                     sections.forEach(section => {
                         section.style.display = 'none';
                     });
-                    const sectionId = this.getAttribute('data-section') + '-section';
-                    document.getElementById(sectionId).style.display = 'block';
                     
-                    // Загружаем данные для активной секции
-                    if (sectionId === 'my-homework-section') {
-                        loadStudentHomeworks();
-                    } else if (sectionId === 'assign-homework-section') {
-                        loadAssignedHomeworks();
-                    } else if (sectionId === 'view-homework-section') {
-                        loadStudentsHomework();
-                    } else if (sectionId === 'feedback-section') {
-                        loadFeedback();
-                    } else if (sectionId === 'users-section') {
-                        loadUsers();
-                    } else if (sectionId === 'conference-links-section') {
-                        loadConferenceLinksManager();
-                    } else if (sectionId === 'upload-homework-section') {
-                        loadHomeworkForUpload();
-                    } else if (sectionId === 'backup-section') {
-                        loadBackups();
+                    // Показываем выбранную секцию
+                    const sectionId = this.getAttribute('data-section') + '-section';
+                    const targetSection = document.getElementById(sectionId);
+                    if (targetSection) {
+                        targetSection.style.display = 'block';
+                        
+                        // Загружаем данные для активной секции
+                        if (sectionId === 'my-homework-section') {
+                            loadStudentHomeworks();
+                        } else if (sectionId === 'assign-homework-section') {
+                            loadAssignedHomeworks();
+                        } else if (sectionId === 'view-homework-section') {
+                            loadStudentsHomework();
+                        } else if (sectionId === 'feedback-section') {
+                            loadFeedback();
+                        } else if (sectionId === 'users-section') {
+                            loadUsers();
+                        } else if (sectionId === 'conference-links-section') {
+                            loadConferenceLinksManager();
+                        } else if (sectionId === 'upload-homework-section') {
+                            loadHomeworkForUpload();
+                        } else if (sectionId === 'backup-section') {
+                            loadBackups();
+                        }
                     }
                 });
             });
@@ -1859,19 +2045,23 @@
             const startVideoConferenceBtn = document.getElementById('startVideoConference');
             const scheduleLessonBtn = document.getElementById('scheduleLesson');
             
-            startVideoConferenceBtn.addEventListener('click', function() {
-                window.open('/video-conference?room={{ user.username }}', '_blank', 
-                    'width=1200,height=800,location=no,menubar=no,toolbar=no');
-            });
+            if (startVideoConferenceBtn) {
+                startVideoConferenceBtn.addEventListener('click', function() {
+                    window.open('/video-conference?room={{ user.username }}', '_blank', 
+                        'width=1200,height=800,location=no,menubar=no,toolbar=no');
+                });
+            }
             
             {% if user.role == 'teacher' %}
-            scheduleLessonBtn.addEventListener('click', function() {
-                const studentUsername = prompt('Введите логин ученика для создания комнаты:');
-                if (studentUsername) {
-                    window.open(`/video-conference?room=${studentUsername}`, '_blank', 
-                        'width=1200,height=800,location=no,menubar=no,toolbar=no');
-                }
-            });
+            if (scheduleLessonBtn) {
+                scheduleLessonBtn.addEventListener('click', function() {
+                    const studentUsername = prompt('Введите логин ученика для создания комнаты:');
+                    if (studentUsername) {
+                        window.open(`/video-conference?room=${studentUsername}`, '_blank', 
+                            'width=1200,height=800,location=no,menubar=no,toolbar=no');
+                    }
+                });
+            }
             {% endif %}
 
             // --- Модальные окна ---
@@ -1892,27 +2082,28 @@
             const closeModalBtns = document.querySelectorAll('.close-modal');
             const avatarContainer = document.getElementById('avatarContainer');
             
+            // Открытие модальных окон
             if (addHomeworkBtn) {
                 addHomeworkBtn.addEventListener('click', () => {
-                    homeworkModal.style.display = 'flex';
+                    if (homeworkModal) homeworkModal.style.display = 'flex';
                 });
             }
             
             if (addUserBtn) {
                 addUserBtn.addEventListener('click', () => {
-                    userModal.style.display = 'flex';
+                    if (userModal) userModal.style.display = 'flex';
                 });
             }
             
             if (addFeedbackBtn) {
                 addFeedbackBtn.addEventListener('click', () => {
-                    feedbackModal.style.display = 'flex';
+                    if (feedbackModal) feedbackModal.style.display = 'flex';
                 });
             }
             
             if (addConferenceLinkBtn) {
                 addConferenceLinkBtn.addEventListener('click', () => {
-                    conferenceLinkModal.style.display = 'flex';
+                    if (conferenceLinkModal) conferenceLinkModal.style.display = 'flex';
                 });
             }
             
@@ -1924,16 +2115,19 @@
             
             if (avatarContainer) {
                 avatarContainer.addEventListener('click', () => {
-                    avatarModal.style.display = 'flex';
+                    if (avatarModal) avatarModal.style.display = 'flex';
                 });
             }
             
+            // Закрытие модальных окон
             closeModalBtns.forEach(btn => {
                 btn.addEventListener('click', function() {
-                    this.closest('.modal').style.display = 'none';
+                    const modal = this.closest('.modal');
+                    if (modal) modal.style.display = 'none';
                 });
             });
             
+            // Закрытие при клике вне модального окна
             window.addEventListener('click', (e) => {
                 if (e.target.classList.contains('modal')) {
                     e.target.style.display = 'none';
@@ -1944,76 +2138,88 @@
             const subjectOptions = document.querySelectorAll('.subject-option');
             const hwSubjectInput = document.getElementById('hwSubject');
             
-            subjectOptions.forEach(option => {
-                option.addEventListener('click', function() {
-                    subjectOptions.forEach(opt => opt.classList.remove('selected'));
-                    this.classList.add('selected');
-                    hwSubjectInput.value = this.getAttribute('data-value');
+            if (subjectOptions.length > 0 && hwSubjectInput) {
+                subjectOptions.forEach(option => {
+                    option.addEventListener('click', function() {
+                        subjectOptions.forEach(opt => opt.classList.remove('selected'));
+                        this.classList.add('selected');
+                        hwSubjectInput.value = this.getAttribute('data-value');
+                    });
                 });
-            });
+                
+                // Выбираем первый предмет по умолчанию
+                if (subjectOptions[0]) {
+                    subjectOptions[0].click();
+                }
+            }
 
             // --- Просмотр выбранных файлов для домашнего задания ---
             const hwFilesInput = document.getElementById('hwFiles');
             const selectedFilesDiv = document.getElementById('selectedFiles');
             
-            hwFilesInput.addEventListener('change', function() {
-                selectedFilesDiv.innerHTML = '';
-                if (this.files.length > 0) {
-                    const filesList = document.createElement('div');
-                    filesList.style.marginTop = '10px';
-                    
-                    Array.from(this.files).forEach((file, index) => {
-                        const fileItem = document.createElement('div');
-                        fileItem.style.display = 'flex';
-                        fileItem.style.alignItems = 'center';
-                        fileItem.style.marginBottom = '5px';
+            if (hwFilesInput && selectedFilesDiv) {
+                hwFilesInput.addEventListener('change', function() {
+                    selectedFilesDiv.innerHTML = '';
+                    if (this.files.length > 0) {
+                        const filesList = document.createElement('div');
+                        filesList.style.marginTop = '10px';
                         
-                        const fileName = document.createElement('span');
-                        fileName.textContent = file.name;
-                        fileName.style.flexGrow = '1';
-                        
-                        const deleteBtn = document.createElement('span');
-                        deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
-                        deleteBtn.style.cursor = 'pointer';
-                        deleteBtn.style.color = '#dc3545';
-                        deleteBtn.style.marginLeft = '10px';
-                        deleteBtn.addEventListener('click', () => {
-                            const newFiles = new DataTransfer();
-                            Array.from(hwFilesInput.files).forEach((f, i) => {
-                                if (i !== index) {
-                                    newFiles.items.add(f);
-                                }
+                        Array.from(this.files).forEach((file, index) => {
+                            const fileItem = document.createElement('div');
+                            fileItem.style.display = 'flex';
+                            fileItem.style.alignItems = 'center';
+                            fileItem.style.marginBottom = '5px';
+                            
+                            const fileName = document.createElement('span');
+                            fileName.textContent = file.name;
+                            fileName.style.flexGrow = '1';
+                            
+                            const deleteBtn = document.createElement('span');
+                            deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
+                            deleteBtn.style.cursor = 'pointer';
+                            deleteBtn.style.color = '#dc3545';
+                            deleteBtn.style.marginLeft = '10px';
+                            deleteBtn.addEventListener('click', () => {
+                                const newFiles = new DataTransfer();
+                                Array.from(hwFilesInput.files).forEach((f, i) => {
+                                    if (i !== index) {
+                                        newFiles.items.add(f);
+                                    }
+                                });
+                                
+                                hwFilesInput.files = newFiles.files;
+                                hwFilesInput.dispatchEvent(new Event('change'));
                             });
                             
-                            hwFilesInput.files = newFiles.files;
-                            hwFilesInput.dispatchEvent(new Event('change'));
+                            fileItem.appendChild(fileName);
+                            fileItem.appendChild(deleteBtn);
+                            filesList.appendChild(fileItem);
                         });
                         
-                        fileItem.appendChild(fileName);
-                        fileItem.appendChild(deleteBtn);
-                        filesList.appendChild(fileItem);
-                    });
-                    
-                    selectedFilesDiv.appendChild(filesList);
-                }
-            });
+                        selectedFilesDiv.appendChild(filesList);
+                    }
+                });
+            }
 
-            // --- Инициализация загрузки файлов для отправки домашнего задания ---
+            // --- Загрузка файлов для отправки домашнего задания ---
             const uploadArea = document.getElementById('uploadArea');
             const uploadFiles = document.getElementById('uploadFiles');
             const filesPreview = document.getElementById('filesPreview');
             
-            if (uploadArea && uploadFiles) {
+            if (uploadArea && uploadFiles && filesPreview) {
                 uploadArea.addEventListener('click', () => uploadFiles.click());
+                
                 uploadArea.addEventListener('dragover', (e) => {
                     e.preventDefault();
                     uploadArea.style.borderColor = 'var(--primary)';
                     uploadArea.style.backgroundColor = 'rgba(58, 90, 120, 0.1)';
                 });
+                
                 uploadArea.addEventListener('dragleave', () => {
                     uploadArea.style.borderColor = '#ccc';
                     uploadArea.style.backgroundColor = 'transparent';
                 });
+                
                 uploadArea.addEventListener('drop', (e) => {
                     e.preventDefault();
                     uploadArea.style.borderColor = '#ccc';
@@ -2029,8 +2235,10 @@
             }
             
             function updateFilesPreview() {
+                if (!filesPreview) return;
+                
                 filesPreview.innerHTML = '';
-                if (uploadFiles.files.length > 0) {
+                if (uploadFiles && uploadFiles.files.length > 0) {
                     Array.from(uploadFiles.files).forEach((file, index) => {
                         const filePreview = document.createElement('div');
                         filePreview.className = 'file-preview';
@@ -2063,9 +2271,14 @@
             // --- Загрузка домашних заданий для ученика ---
             function loadStudentHomeworks() {
                 fetch('/api/homework')
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.json();
+                    })
                     .then(data => {
                         const container = document.getElementById('myHomeworkList');
+                        if (!container) return;
+                        
                         container.innerHTML = '';
                         
                         if (data.homeworks && data.homeworks.length > 0) {
@@ -2125,7 +2338,10 @@
                     })
                     .catch(error => {
                         console.error('Error loading homeworks:', error);
-                        document.getElementById('myHomeworkList').innerHTML = '<div class="no-items">Ошибка загрузки заданий</div>';
+                        const container = document.getElementById('myHomeworkList');
+                        if (container) {
+                            container.innerHTML = '<div class="no-items">Ошибка загрузки заданий</div>';
+                        }
                     });
             }
             
@@ -2151,6 +2367,9 @@
                                 });
                             }
                         }
+                    })
+                    .catch(error => {
+                        console.error('Error loading homework for upload:', error);
                     });
             }
 
@@ -2160,6 +2379,8 @@
                     .then(response => response.json())
                     .then(data => {
                         const container = document.getElementById('assignedHomeworkList');
+                        if (!container) return;
+                        
                         container.innerHTML = '';
                         
                         if (data.homeworks && data.homeworks.length > 0) {
@@ -2195,6 +2416,13 @@
                         } else {
                             container.innerHTML = '<div class="no-items">Нет назначенных заданий</div>';
                         }
+                    })
+                    .catch(error => {
+                        console.error('Error loading assigned homeworks:', error);
+                        const container = document.getElementById('assignedHomeworkList');
+                        if (container) {
+                            container.innerHTML = '<div class="no-items">Ошибка загрузки заданий</div>';
+                        }
                     });
             }
 
@@ -2204,6 +2432,8 @@
                     .then(response => response.json())
                     .then(data => {
                         const container = document.getElementById('studentsHomeworkList');
+                        if (!container) return;
+                        
                         container.innerHTML = '';
                         
                         if (data.homeworks && data.homeworks.length > 0) {
@@ -2252,6 +2482,13 @@
                         } else {
                             container.innerHTML = '<div class="no-items">Нет назначенных заданий</div>';
                         }
+                    })
+                    .catch(error => {
+                        console.error('Error loading students homework:', error);
+                        const container = document.getElementById('studentsHomeworkList');
+                        if (container) {
+                            container.innerHTML = '<div class="no-items">Ошибка загрузки работ</div>';
+                        }
                     });
             }
 
@@ -2261,6 +2498,8 @@
                     .then(response => response.json())
                     .then(data => {
                         const container = document.getElementById('feedbackList');
+                        if (!container) return;
+                        
                         container.innerHTML = '';
                         
                         if (data.feedbacks && data.feedbacks.length > 0) {
@@ -2303,6 +2542,13 @@
                         } else {
                             container.innerHTML = '<div class="no-items">Обратная связь отсутствует</div>';
                         }
+                    })
+                    .catch(error => {
+                        console.error('Error loading feedback:', error);
+                        const container = document.getElementById('feedbackList');
+                        if (container) {
+                            container.innerHTML = '<div class="no-items">Ошибка загрузки обратной связи</div>';
+                        }
                     });
             }
 
@@ -2312,6 +2558,8 @@
                     .then(response => response.json())
                     .then(data => {
                         const container = document.getElementById('usersList');
+                        if (!container) return;
+                        
                         container.innerHTML = '';
                         
                         if (data.users && data.users.length > 0) {
@@ -2346,6 +2594,13 @@
                         } else {
                             container.innerHTML = '<div class="no-items">Нет учеников</div>';
                         }
+                    })
+                    .catch(error => {
+                        console.error('Error loading users:', error);
+                        const container = document.getElementById('usersList');
+                        if (container) {
+                            container.innerHTML = '<div class="no-items">Ошибка загрузки учеников</div>';
+                        }
                     });
             }
 
@@ -2355,6 +2610,8 @@
                     .then(response => response.json())
                     .then(data => {
                         const container = document.getElementById('conferenceLinksManager');
+                        if (!container) return;
+                        
                         container.innerHTML = '';
                         
                         if (data.links && data.links.length > 0) {
@@ -2374,6 +2631,13 @@
                             });
                         } else {
                             container.innerHTML = '<div class="no-items">Ссылки не настроены</div>';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading conference links:', error);
+                        const container = document.getElementById('conferenceLinksManager');
+                        if (container) {
+                            container.innerHTML = '<div class="no-items">Ошибка загрузки ссылок</div>';
                         }
                     });
             }
@@ -2514,14 +2778,16 @@
                 }
                 
                 const restoreArea = document.getElementById('restoreArea');
+                if (!restoreArea) return;
+                
                 const progressBar = restoreArea.querySelector('.progress-fill');
                 const progressText = restoreArea.querySelector('.progress-text');
                 const uploadProgress = restoreArea.querySelector('.upload-progress');
                 
                 // Показываем прогресс
-                uploadProgress.style.display = 'block';
-                progressBar.style.width = '0%';
-                progressText.textContent = '0%';
+                if (uploadProgress) uploadProgress.style.display = 'block';
+                if (progressBar) progressBar.style.width = '0%';
+                if (progressText) progressText.textContent = '0%';
                 
                 // Для больших файлов используем chunked upload
                 const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB
@@ -2551,8 +2817,8 @@
                         
                         // Обновляем прогресс
                         const progress = Math.round((uploadedChunks / totalChunks) * 100);
-                        progressBar.style.width = progress + '%';
-                        progressText.textContent = progress + '%';
+                        if (progressBar) progressBar.style.width = progress + '%';
+                        if (progressText) progressText.textContent = progress + '%';
                         
                         if (data.success) {
                             if (uploadedChunks < totalChunks) {
@@ -2571,13 +2837,13 @@
                             }
                         } else {
                             alert('Ошибка при загрузке: ' + (data.error || ''));
-                            uploadProgress.style.display = 'none';
+                            if (uploadProgress) uploadProgress.style.display = 'none';
                         }
                     })
                     .catch(error => {
                         console.error('Upload error:', error);
                         alert('Произошла ошибка при загрузке файла');
-                        uploadProgress.style.display = 'none';
+                        if (uploadProgress) uploadProgress.style.display = 'none';
                     });
                 }
                 
@@ -2666,7 +2932,7 @@
                 addHomeworkForm.addEventListener('submit', function(e) {
                     e.preventDefault();
                     
-                    if (!hwSubjectInput.value) {
+                    if (!hwSubjectInput || !hwSubjectInput.value) {
                         alert('Пожалуйста, выберите предмет');
                         return;
                     }
@@ -2695,7 +2961,7 @@
                     .then(data => {
                         if (data.success) {
                             alert('Домашнее задание успешно добавлено!');
-                            homeworkModal.style.display = 'none';
+                            if (homeworkModal) homeworkModal.style.display = 'none';
                             addHomeworkForm.reset();
                             loadAssignedHomeworks();
                         } else {
@@ -2734,7 +3000,7 @@
                     .then(data => {
                         if (data.success) {
                             alert('Ученик успешно добавлен!');
-                            userModal.style.display = 'none';
+                            if (userModal) userModal.style.display = 'none';
                             addUserForm.reset();
                             loadUsers();
                         } else {
@@ -2777,7 +3043,7 @@
                     .then(data => {
                         if (data.success) {
                             alert('Ученик успешно обновлен!');
-                            editUserModal.style.display = 'none';
+                            if (editUserModal) editUserModal.style.display = 'none';
                             loadUsers();
                         } else {
                             alert('Ошибка при обновлении ученика: ' + (data.error || ''));
@@ -2808,7 +3074,7 @@
                     formData.append('homework_id', homeworkId);
                     formData.append('comment', comment);
                     
-                    if (uploadFiles.files.length > 0) {
+                    if (uploadFiles && uploadFiles.files.length > 0) {
                         Array.from(uploadFiles.files).forEach(file => {
                             formData.append('files', file);
                         });
@@ -2823,8 +3089,8 @@
                         if (data.success) {
                             alert('Работа успешно отправлена!');
                             uploadHomeworkForm.reset();
-                            filesPreview.innerHTML = '';
-                            uploadFiles.value = '';
+                            if (filesPreview) filesPreview.innerHTML = '';
+                            if (uploadFiles) uploadFiles.value = '';
                             loadStudentHomeworks();
                             loadHomeworkForUpload();
                         } else {
@@ -2862,7 +3128,7 @@
                     .then(data => {
                         if (data.success) {
                             alert('Обратная связь успешно добавлена!');
-                            feedbackModal.style.display = 'none';
+                            if (feedbackModal) feedbackModal.style.display = 'none';
                             addFeedbackForm.reset();
                             loadFeedback();
                         } else {
@@ -2898,7 +3164,7 @@
                     .then(data => {
                         if (data.success) {
                             alert('Ссылка успешно добавлена!');
-                            conferenceLinkModal.style.display = 'none';
+                            if (conferenceLinkModal) conferenceLinkModal.style.display = 'none';
                             addConferenceLinkForm.reset();
                             loadConferenceLinksManager();
                             location.reload(); // Перезагружаем страницу для обновления ссылок в основной секции
@@ -2918,7 +3184,7 @@
             const avatarFileInput = document.getElementById('avatarFile');
             const avatarPreview = document.getElementById('avatarPreview');
             
-            if (avatarFileInput) {
+            if (avatarFileInput && avatarPreview) {
                 avatarFileInput.addEventListener('change', function() {
                     const file = this.files[0];
                     if (file) {
@@ -2936,7 +3202,7 @@
                     e.preventDefault();
                     
                     const formData = new FormData();
-                    if (avatarFileInput.files.length > 0) {
+                    if (avatarFileInput && avatarFileInput.files.length > 0) {
                         formData.append('avatar', avatarFileInput.files[0]);
                     } else {
                         alert('Пожалуйста, выберите файл');
@@ -2951,8 +3217,9 @@
                     .then(data => {
                         if (data.success) {
                             alert('Аватар успешно обновлен!');
-                            document.getElementById('userAvatarImg').src = data.avatar;
-                            avatarModal.style.display = 'none';
+                            const userAvatarImg = document.getElementById('userAvatarImg');
+                            if (userAvatarImg) userAvatarImg.src = data.avatar;
+                            if (avatarModal) avatarModal.style.display = 'none';
                             
                             if (sessionStorage.getItem('user')) {
                                 const user = JSON.parse(sessionStorage.getItem('user'));
@@ -2989,10 +3256,20 @@
             }
 
             // Активируем первую вкладку при загрузке
-            document.querySelector('.sidebar-menu a.active').click();
+            const activeLink = document.querySelector('.sidebar-menu a.active');
+            if (activeLink) {
+                activeLink.click();
+            } else {
+                // Если нет активной ссылки, активируем первую
+                const firstLink = document.querySelector('.sidebar-menu a');
+                if (firstLink) firstLink.click();
+            }
             
             // Заполняем телефон в профиле, если есть
-            document.getElementById('profilePhone').value = '{{ user.phone or "" }}';
+            const profilePhone = document.getElementById('profilePhone');
+            if (profilePhone) {
+                profilePhone.value = '{{ user.phone or "" }}';
+            }
         });
 
         // Глобальные функции для работы с домашними заданиями и пользователями
@@ -3024,14 +3301,22 @@
                 .then(data => {
                     if (data.user) {
                         const user = data.user;
-                        document.getElementById('editUserTitle').textContent = `Редактирование ученика: ${username}`;
-                        document.getElementById('editUsername').value = username;
-                        document.getElementById('editEmail').value = user.email;
-                        document.getElementById('editPhone').value = user.phone || '';
-                        document.getElementById('editIsActive').value = user.is_active ? 'true' : 'false';
-                        document.getElementById('editPassword').value = '';
+                        const editUserTitle = document.getElementById('editUserTitle');
+                        const editUsername = document.getElementById('editUsername');
+                        const editEmail = document.getElementById('editEmail');
+                        const editPhone = document.getElementById('editPhone');
+                        const editIsActive = document.getElementById('editIsActive');
+                        const editPassword = document.getElementById('editPassword');
                         
-                        document.getElementById('editUserModal').style.display = 'flex';
+                        if (editUserTitle) editUserTitle.textContent = `Редактирование ученика: ${username}`;
+                        if (editUsername) editUsername.value = username;
+                        if (editEmail) editEmail.value = user.email;
+                        if (editPhone) editPhone.value = user.phone || '';
+                        if (editIsActive) editIsActive.value = user.is_active ? 'true' : 'false';
+                        if (editPassword) editPassword.value = '';
+                        
+                        const editUserModal = document.getElementById('editUserModal');
+                        if (editUserModal) editUserModal.style.display = 'flex';
                     } else {
                         alert('Ученик не найден');
                     }
@@ -3109,379 +3394,21 @@
         // Глобальные функции для работы с бэкапами
         window.createBackup = createBackup;
         window.deleteBackup = deleteBackup;
+        window.deleteHomework = deleteHomework;
+        window.editUser = editUser;
+        window.deleteUser = deleteUser;
+        window.deleteFeedback = deleteFeedback;
+        window.deleteConferenceLink = deleteConferenceLink;
         
-        // Функции для загрузки данных (доступны глобально)
-        function loadStudentHomeworks() {
-            fetch('/api/homework')
-                .then(response => response.json())
-                .then(data => {
-                    const container = document.getElementById('myHomeworkList');
-                    if (container) {
-                        container.innerHTML = '';
-                        
-                        if (data.homeworks && data.homeworks.length > 0) {
-                            data.homeworks.forEach(hw => {
-                                const deadline = new Date(hw.deadline);
-                                const homeworkItem = document.createElement('div');
-                                homeworkItem.className = 'homework-item';
-                                
-                                const deadlineStr = deadline.toLocaleDateString('ru-RU');
-                                const isSubmitted = hw.submissions && hw.submissions['{{ user.username }}'];
-                                const statusBadge = isSubmitted ? 
-                                    '<span class="badge badge-success" style="margin-left: 10px;">Отправлено</span>' : 
-                                    '<span class="badge badge-warning" style="margin-left: 10px;">Не отправлено</span>';
-                                
-                                homeworkItem.innerHTML = `
-                                    <div class="homework-header">
-                                        <h4 class="homework-title">${hw.title} ${statusBadge}</h4>
-                                        <div class="homework-deadline">
-                                            <i class="fas fa-calendar"></i> Срок: ${deadlineStr}
-                                        </div>
-                                    </div>
-                                    <div class="homework-description">${hw.description}</div>
-                                    ${hw.subject ? `<div><strong>Предмет:</strong> ${hw.subject}</div>` : ''}
-                                    ${hw.files && hw.files.length > 0 ? `
-                                    <div class="homework-files">
-                                        ${hw.files.map(file => `
-                                        <a href="/uploads/${file.name}" target="_blank" class="file-item">
-                                            <i class="fas fa-file"></i> ${file.name}
-                                        </a>
-                                        `).join('')}
-                                    </div>
-                                    ` : ''}
-                                    ${isSubmitted ? `
-                                    <div class="submission-files">
-                                        <div class="submission-header">Ваша отправка:</div>
-                                        ${hw.submissions['{{ user.username }}'].comment ? 
-                                            `<div class="submission-comment">${hw.submissions['{{ user.username }}'].comment}</div>` : ''}
-                                        ${hw.submissions['{{ user.username }}'].files && hw.submissions['{{ user.username }}'].files.length > 0 ? `
-                                        <div class="homework-files">
-                                            ${hw.submissions['{{ user.username }}'].files.map(file => `
-                                            <a href="/uploads/${file.name}" target="_blank" class="file-item">
-                                                <i class="fas fa-file"></i> ${file.name}
-                                            </a>
-                                            `).join('')}
-                                        </div>
-                                        ` : ''}
-                                    </div>
-                                    ` : ''}
-                                `;
-                                container.appendChild(homeworkItem);
-                            });
-                        } else {
-                            container.innerHTML = '<div class="no-items">Нет домашних заданий</div>';
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading homeworks:', error);
-                    const container = document.getElementById('myHomeworkList');
-                    if (container) {
-                        container.innerHTML = '<div class="no-items">Ошибка загрузки заданий</div>';
-                    }
-                });
-        }
-        
-        function loadAssignedHomeworks() {
-            fetch('/api/homework')
-                .then(response => response.json())
-                .then(data => {
-                    const container = document.getElementById('assignedHomeworkList');
-                    if (container) {
-                        container.innerHTML = '';
-                        
-                        if (data.homeworks && data.homeworks.length > 0) {
-                            data.homeworks.forEach(hw => {
-                                const deadline = new Date(hw.deadline);
-                                const homeworkItem = document.createElement('div');
-                                homeworkItem.className = 'homework-item';
-                                
-                                const submittedCount = hw.submissions ? Object.keys(hw.submissions).length : 0;
-                                const totalStudents = hw.students ? hw.students.length : 0;
-                                
-                                homeworkItem.innerHTML = `
-                                    <div class="homework-header">
-                                        <h4 class="homework-title">${hw.title}</h4>
-                                        <div class="homework-deadline">
-                                            <i class="fas fa-calendar"></i> Срок: ${deadline.toLocaleDateString('ru-RU')}
-                                            <span class="badge ${submittedCount === totalStudents ? 'badge-success' : 'badge-warning'}" style="margin-left: 10px;">
-                                                ${submittedCount}/${totalStudents} отправлено
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div class="homework-description">${hw.description}</div>
-                                    ${hw.subject ? `<div><strong>Предмет:</strong> ${hw.subject}</div>` : ''}
-                                    <div class="homework-actions">
-                                        <button class="btn btn-danger" onclick="deleteHomework(${hw.id})">
-                                            <i class="fas fa-trash"></i> Удалить
-                                        </button>
-                                    </div>
-                                `;
-                                container.appendChild(homeworkItem);
-                            });
-                        } else {
-                            container.innerHTML = '<div class="no-items">Нет назначенных заданий</div>';
-                        }
-                    }
-                });
-        }
-        
-        function loadStudentsHomework() {
-            fetch('/api/homework')
-                .then(response => response.json())
-                .then(data => {
-                    const container = document.getElementById('studentsHomeworkList');
-                    if (container) {
-                        container.innerHTML = '';
-                        
-                        if (data.homeworks && data.homeworks.length > 0) {
-                            data.homeworks.forEach(hw => {
-                                const homeworkCard = document.createElement('div');
-                                homeworkCard.className = 'homework-item';
-                                
-                                let submissionsHtml = '';
-                                if (hw.submissions && Object.keys(hw.submissions).length > 0) {
-                                    submissionsHtml = '<div class="student-submissions">';
-                                    submissionsHtml += `<div class="submission-header">${hw.title}</div>`;
-                                    Object.entries(hw.submissions).forEach(([student, submission]) => {
-                                        const submittedDate = new Date(submission.submitted_at);
-                                        submissionsHtml += `
-                                            <div class="student-submission">
-                                                <div class="student-name">${student}</div>
-                                                ${submission.comment ? `<div class="submission-comment">${submission.comment}</div>` : ''}
-                                                ${submission.files && submission.files.length > 0 ? `
-                                                <div class="homework-files">
-                                                    ${submission.files.map(file => `
-                                                    <a href="/uploads/${file.name}" target="_blank" class="file-item">
-                                                        <i class="fas fa-file"></i> ${file.name}
-                                                    </a>
-                                                    `).join('')}
-                                                </div>
-                                                ` : ''}
-                                                <div class="submission-date">
-                                                    <small>Отправлено: ${submittedDate.toLocaleString('ru-RU')}</small>
-                                                </div>
-                                            </div>
-                                        `;
-                                    });
-                                    submissionsHtml += '</div>';
-                                } else {
-                                    submissionsHtml = '<div class="no-items">Работы еще не отправлены</div>';
-                                }
-                                
-                                homeworkCard.innerHTML = `
-                                    <div class="homework-header">
-                                        <h4 class="homework-title">${hw.title}</h4>
-                                    </div>
-                                    ${submissionsHtml}
-                                `;
-                                container.appendChild(homeworkCard);
-                            });
-                        } else {
-                            container.innerHTML = '<div class="no-items">Нет назначенных заданий</div>';
-                        }
-                    }
-                });
-        }
-        
-        function loadFeedback() {
-            fetch('/api/feedbacks')
-                .then(response => response.json())
-                .then(data => {
-                    const container = document.getElementById('feedbackList');
-                    if (container) {
-                        container.innerHTML = '';
-                        
-                        if (data.feedbacks && data.feedbacks.length > 0) {
-                            data.feedbacks.forEach(fb => {
-                                const date = new Date(fb.created_at);
-                                const feedbackItem = document.createElement('div');
-                                feedbackItem.className = 'feedback-item';
-                                
-                                let ratingStars = '';
-                                if (fb.rating) {
-                                    ratingStars = '<div class="feedback-rating">';
-                                    for (let i = 0; i < fb.rating; i++) {
-                                        ratingStars += '⭐';
-                                    }
-                                    ratingStars += '</div>';
-                                }
-                                
-                                const personName = '{{ user.role }}' === 'teacher' ? 
-                                    `Ученик: ${fb.student_username}` : 
-                                    `Учитель: ${fb.teacher_username}`;
-                                
-                                feedbackItem.innerHTML = `
-                                    <div class="feedback-header">
-                                        <span class="feedback-teacher">${personName}</span>
-                                        <span class="feedback-date">${date.toLocaleDateString('ru-RU')}</span>
-                                    </div>
-                                    <div class="feedback-comment">${fb.comment}</div>
-                                    ${ratingStars}
-                                    {% if user.role == 'teacher' %}
-                                    <div class="homework-actions" style="margin-top: 1rem;">
-                                        <button class="btn btn-danger btn-sm" onclick="deleteFeedback(${fb.id})">
-                                            <i class="fas fa-trash"></i> Удалить
-                                        </button>
-                                    </div>
-                                    {% endif %}
-                                `;
-                                container.appendChild(feedbackItem);
-                            });
-                        } else {
-                            container.innerHTML = '<div class="no-items">Обратная связь отсутствует</div>';
-                        }
-                    }
-                });
-        }
-        
-        function loadUsers() {
-            fetch('/api/users')
-                .then(response => response.json())
-                .then(data => {
-                    const container = document.getElementById('usersList');
-                    if (container) {
-                        container.innerHTML = '';
-                        
-                        if (data.users && data.users.length > 0) {
-                            data.users.forEach(user => {
-                                if (user.role === 'student') {
-                                    const userCard = document.createElement('div');
-                                    userCard.className = 'user-card';
-                                    userCard.innerHTML = `
-                                        <div class="user-avatar-sm">
-                                            <img src="${user.avatar || 'https://i.pravatar.cc/150?u=' + user.username}" alt="Аватар">
-                                        </div>
-                                        <div class="user-details">
-                                            <div class="user-name-sm">${user.username}</div>
-                                            <span class="user-role-sm">Студент</span>
-                                            <div style="font-size: 0.8rem; color: ${user.is_active ? 'green' : 'red'}">
-                                                ${user.is_active ? 'Активен' : 'Неактивен'}
-                                            </div>
-                                        </div>
-                                        <div class="user-actions">
-                                            <button class="btn btn-secondary btn-sm" onclick="editUser('${user.username}')">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="btn btn-danger btn-sm" onclick="deleteUser('${user.username}')">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    `;
-                                    container.appendChild(userCard);
-                                }
-                            });
-                        } else {
-                            container.innerHTML = '<div class="no-items">Нет учеников</div>';
-                        }
-                    }
-                });
-        }
-        
-        function loadConferenceLinksManager() {
-            fetch('/api/conference-links?teacher_username={{ user.username }}')
-                .then(response => response.json())
-                .then(data => {
-                    const container = document.getElementById('conferenceLinksManager');
-                    if (container) {
-                        container.innerHTML = '';
-                        
-                        if (data.links && data.links.length > 0) {
-                            data.links.forEach(link => {
-                                const linkItem = document.createElement('div');
-                                linkItem.className = 'link-item';
-                                linkItem.innerHTML = `
-                                    <div class="link-platform">${link.platform}</div>
-                                    <div class="link-url">${link.link}</div>
-                                    <div class="link-actions">
-                                        <button class="btn btn-danger btn-sm" onclick="deleteConferenceLink(${link.id})">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                `;
-                                container.appendChild(linkItem);
-                            });
-                        } else {
-                            container.innerHTML = '<div class="no-items">Ссылки не настроены</div>';
-                        }
-                    }
-                });
-        }
-        
-        function loadHomeworkForUpload() {
-            fetch('/api/homework')
-                .then(response => response.json())
-                .then(data => {
-                    const select = document.getElementById('selectHomework');
-                    if (select) {
-                        select.innerHTML = '<option value="">-- Выберите задание --</option>';
-                        if (data.homeworks && data.homeworks.length > 0) {
-                            data.homeworks.forEach(hw => {
-                                const isSubmitted = hw.submissions && hw.submissions['{{ user.username }}'];
-                                if (!isSubmitted) {
-                                    const deadline = new Date(hw.deadline);
-                                    const option = document.createElement('option');
-                                    option.value = hw.id;
-                                    option.textContent = `${hw.title} (до ${deadline.toLocaleDateString('ru-RU')})`;
-                                    select.appendChild(option);
-                                }
-                            });
-                        }
-                    }
-                });
-        }
-        
-        function loadBackups() {
-            fetch('/api/backup')
-                .then(response => response.json())
-                .then(data => {
-                    const container = document.getElementById('backupsList');
-                    if (!container) return;
-                    
-                    container.innerHTML = '';
-                    
-                    if (data.success && data.backups && data.backups.length > 0) {
-                        data.backups.forEach(backup => {
-                            const backupItem = document.createElement('div');
-                            backupItem.className = 'backup-item';
-                            
-                            const createdDate = new Date(backup.created);
-                            const formattedDate = createdDate.toLocaleString('ru-RU');
-                            
-                            backupItem.innerHTML = `
-                                <div class="backup-icon">
-                                    <i class="fas fa-database"></i>
-                                </div>
-                                <div class="backup-info">
-                                    <div class="backup-name">${backup.filename}</div>
-                                    <div class="backup-details">
-                                        Создан: ${formattedDate} | Размер: ${backup.size_mb} MB
-                                    </div>
-                                </div>
-                                <div class="backup-actions">
-                                    <a href="/api/backup/download/${backup.filename}" 
-                                       class="btn btn-secondary btn-sm" download>
-                                        <i class="fas fa-download"></i> Скачать
-                                    </a>
-                                    <button class="btn btn-danger btn-sm" onclick="deleteBackup('${backup.filename}')">
-                                        <i class="fas fa-trash"></i> Удалить
-                                    </button>
-                                </div>
-                            `;
-                            container.appendChild(backupItem);
-                        });
-                    } else {
-                        container.innerHTML = '<div class="no-items">Резервные копии отсутствуют</div>';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading backups:', error);
-                    const container = document.getElementById('backupsList');
-                    if (container) {
-                        container.innerHTML = '<div class="no-items">Ошибка загрузки бэкапов</div>';
-                    }
-                });
-        }
+        // Функции для загрузки данных
+        window.loadStudentHomeworks = loadStudentHomeworks;
+        window.loadAssignedHomeworks = loadAssignedHomeworks;
+        window.loadStudentsHomework = loadStudentsHomework;
+        window.loadFeedback = loadFeedback;
+        window.loadUsers = loadUsers;
+        window.loadConferenceLinksManager = loadConferenceLinksManager;
+        window.loadHomeworkForUpload = loadHomeworkForUpload;
+        window.loadBackups = loadBackups;
     </script>
 </body>
 </html>
