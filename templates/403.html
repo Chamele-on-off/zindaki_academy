@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Доступ запрещен (403) | Zindaki Academy</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3a5a78;
+            --primary-light: #4d7ca7;
+            --primary-dark: #2c4761;
+            --secondary: #6d4c41;
+            --accent: #c5a258;
+            --ai-primary: #7E76F9;
+            --ai-secondary: #6A61E5;
+            --ai-accent: #FF7B9C;
+            --light: #f5f3f0;
+            --lighter: #ffffff;
+            --dark: #1a1a2e;
+            --darker: #0a0a0a;
+            --text: #2a2a2a;
+            --text-light: #6d6d6d;
+            --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            --gradient-accent: linear-gradient(135deg, var(--accent) 0%, #d4b15f 100%);
+            --gradient-ai: linear-gradient(135deg, var(--ai-primary) 0%, var(--ai-secondary) 100%);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+            --shadow-xl: 0 20px 50px rgba(0,0,0,0.15);
+            --rounded-sm: 8px;
+            --rounded-md: 12px;
+            --rounded-lg: 16px;
+            --rounded-xl: 24px;
+            --rounded-full: 9999px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        body {
+            background-color: var(--light);
+            color: var(--text);
+            overflow-x: hidden;
+            line-height: 1.6;
+            font-weight: 400;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 600;
+            line-height: 1.2;
+            color: var(--darker);
+        }
+        
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        /* Навигация */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: 'Cormorant Garamond', serif;
+        }
+        
+        .logo-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: var(--gradient);
+            color: white;
+            border-radius: var(--rounded-md);
+            font-size: 1.2rem;
+        }
+        
+        /* Основной контент */
+        .error-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 120px 2rem 4rem;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .error-code {
+            font-size: 8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            line-height: 1;
+            margin-bottom: 1.5rem;
+            font-family: 'Cormorant Garamond', serif;
+        }
+        
+        .error-title {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--darker);
+        }
+        
+        .error-message {
+            font-size: 1.2rem;
+            color: var(--text-light);
+            margin-bottom: 2rem;
+            max-width: 600px;
+            line-height: 1.8;
+        }
+        
+        .error-details {
+            background: rgba(255, 107, 107, 0.1);
+            border-radius: var(--rounded-lg);
+            padding: 1.5rem;
+            margin: 2rem 0;
+            text-align: left;
+            max-width: 600px;
+            border-left: 4px solid #ff6b6b;
+        }
+        
+        .error-details h3 {
+            color: #ff6b6b;
+            margin-bottom: 0.8rem;
+            font-size: 1.2rem;
+        }
+        
+        .error-details ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .error-details li {
+            margin-bottom: 0.5rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+        
+        .error-details li:before {
+            content: "•";
+            color: #ff6b6b;
+            position: absolute;
+            left: 0;
+        }
+        
+        .error-actions {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+        
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: var(--rounded-full);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            font-size: 1rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+        
+        .btn-secondary:hover {
+            background-color: rgba(58, 90, 120, 0.1);
+            transform: translateY(-3px);
+        }
+        
+        .btn-accent {
+            background: var(--gradient-accent);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .btn-accent:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+            opacity: 0.9;
+        }
+        
+        .lock-icon {
+            font-size: 6rem;
+            color: #ff6b6b;
+            margin-bottom: 2rem;
+            opacity: 0.7;
+        }
+        
+        .permission-required {
+            background: white;
+            border-radius: var(--rounded-xl);
+            padding: 2rem;
+            box-shadow: var(--shadow-lg);
+            margin: 2rem 0;
+            max-width: 500px;
+            text-align: left;
+        }
+        
+        .permission-required h3 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .permission-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .permission-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.8rem;
+            border-radius: var(--rounded-md);
+            background: rgba(0,0,0,0.02);
+        }
+        
+        .permission-item i {
+            width: 24px;
+            text-align: center;
+            color: var(--primary);
+        }
+        
+        /* Подвал */
+        .error-footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-light);
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(0,0,0,0.05);
+            margin-top: 3rem;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @media (max-width: 768px) {
+            .error-code {
+                font-size: 6rem;
+            }
+            
+            .error-title {
+                font-size: 2rem;
+            }
+            
+            .error-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+            
+            .permission-required {
+                padding: 1.5rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .error-code {
+                font-size: 4rem;
+            }
+            
+            .error-title {
+                font-size: 1.5rem;
+            }
+            
+            .error-message {
+                font-size: 1rem;
+            }
+            
+            .lock-icon {
+                font-size: 4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar">
+        <a href="/" class="logo">
+            <div class="logo-icon">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <span>Zindaki Academy</span>
+        </a>
+        <div>
+            <a href="/" class="btn btn-secondary">На главную</a>
+        </div>
+    </nav>
+
+    <!-- Основной контент -->
+    <main class="error-container">
+        <div class="lock-icon">
+            <i class="fas fa-lock"></i>
+        </div>
+        
+        <div class="error-code">403</div>
+        <h1 class="error-title">Доступ запрещен</h1>
+        
+        <p class="error-message">
+            У вас недостаточно прав для просмотра этой страницы. 
+            Возможно, требуется авторизация или у вас нет необходимых разрешений.
+        </p>
+        
+        <div class="error-details">
+            <h3><i class="fas fa-exclamation-triangle"></i> Возможные причины:</h3>
+            <ul>
+                <li>Вы не авторизованы в системе</li>
+                <li>У вашей учетной записи недостаточно прав</li>
+                <li>Страница доступна только преподавателям</li>
+                <li>Контент еще не опубликован</li>
+                <li>Истек срок действия вашей сессии</li>
+            </ul>
+        </div>
+        
+        {% if not user %}
+        <div class="permission-required">
+            <h3><i class="fas fa-user-shield"></i> Требуется авторизация</h3>
+            <div class="permission-list">
+                <div class="permission-item">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                    <div>
+                        <strong>Для преподавателей:</strong> доступ к редактированию контента, управлению учениками
+                    </div>
+                </div>
+                <div class="permission-item">
+                    <i class="fas fa-user-graduate"></i>
+                    <div>
+                        <strong>Для учеников:</strong> доступ к личному кабинету, домашним заданиям
+                    </div>
+                </div>
+                <div class="permission-item">
+                    <i class="fas fa-users"></i>
+                    <div>
+                        <strong>Для гостей:</strong> доступ к открытым материалам и блогу
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="error-actions">
+            <a href="/" class="btn btn-primary">
+                <i class="fas fa-home"></i> На главную
+            </a>
+            
+            {% if not user %}
+            <a href="#" onclick="document.getElementById('loginModal').style.display='block'" class="btn btn-accent">
+                <i class="fas fa-sign-in-alt"></i> Войти в систему
+            </a>
+            {% else %}
+            <a href="/dashboard" class="btn btn-accent">
+                <i class="fas fa-user"></i> Личный кабинет
+            </a>
+            {% endif %}
+            
+            <a href="/contact" class="btn btn-secondary">
+                <i class="fas fa-question-circle"></i> Помощь
+            </a>
+        </div>
+    </main>
+
+    <!-- Подвал -->
+    <footer class="error-footer">
+        <p>© 2024 Zindaki Academy. Все права защищены.</p>
+        <p>Если вы считаете, что получили это сообщение по ошибке, <a href="mailto:support@zindakiacademy.ru" style="color: var(--primary);">свяжитесь с поддержкой</a>.</p>
+    </footer>
+
+    <!-- Модальное окно входа -->
+    <div id="loginModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 400px;">
+            <h3>Вход в систему</h3>
+            <form id="loginForm403">
+                <input type="text" placeholder="Логин" required style="width: 100%; margin: 10px 0; padding: 10px;">
+                <input type="password" placeholder="Пароль" required style="width: 100%; margin: 10px 0; padding: 10px;">
+                <button type="submit" style="width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: var(--rounded-md); margin-top: 10px;">
+                    Войти
+                </button>
+            </form>
+            <button onclick="document.getElementById('loginModal').style.display='none'" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 20px; cursor: pointer;">×</button>
+        </div>
+    </div>
+
+    <script>
+        // Плавное появление контента
+        document.addEventListener('DOMContentLoaded', function() {
+            const elements = document.querySelectorAll('.lock-icon, .error-code, .error-title, .error-message, .error-details, .permission-required, .error-actions');
+            
+            elements.forEach((el, index) => {
+                if (el.style.display !== 'none') {
+                    el.style.opacity = '0';
+                    el.style.transform = 'translateY(20px)';
+                    el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    
+                    setTimeout(() => {
+                        el.style.opacity = '1';
+                        el.style.transform = 'translateY(0)';
+                    }, 100 * index);
+                }
+            });
+            
+            // Анимация иконки замка
+            const lockIcon = document.querySelector('.lock-icon');
+            setTimeout(() => {
+                lockIcon.classList.add('shake');
+            }, 500);
+            
+            // Модальное окно
+            window.onclick = function(event) {
+                const modal = document.getElementById('loginModal');
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
+            
+            // Форма входа
+            document.getElementById('loginForm403').addEventListener('submit', function(e) {
+                e.preventDefault();
+                // Здесь будет логика входа
+                alert('Функция входа будет реализована позже');
+                document.getElementById('loginModal').style.display = 'none';
+            });
+        });
+    </script>
+</body>
+</html>
