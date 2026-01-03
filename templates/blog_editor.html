@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Редактор статей | Zindaki Academy</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+    <style>
+        /* Стили из dashboard.html */
+        :root {
+            --primary: #3a5a78;
+            --primary-light: #4d7ca7;
+            --primary-dark: #2c4761;
+            --secondary: #6d4c41;
+            --accent: #c5a258;
+            --light: #f5f3f0;
+            --lighter: #ffffff;
+            --dark: #1a1a2e;
+            --darker: #0a0a0a;
+            --text: #2a2a2a;
+            --text-light: #6d6d6d;
+            --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+            --rounded-sm: 8px;
+            --rounded-md: 12px;
+            --rounded-lg: 16px;
+            --rounded-xl: 24px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+        }
+        
+        body {
+            background-color: var(--light);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 1rem 2rem;
+            background: var(--lighter);
+            box-shadow: var(--shadow-sm);
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .editor-container {
+            max-width: 1200px;
+            margin: 80px auto 30px;
+            padding: 0 20px;
+        }
+        
+        .editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--primary-light);
+        }
+        
+        .editor-actions {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border-radius: var(--rounded-md);
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: var(--lighter);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(58, 90, 120, 0.1);
+        }
+        
+        .editor-main {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 2rem;
+        }
+        
+        @media (max-width: 992px) {
+            .editor-main {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .editor-content {
+            background: var(--lighter);
+            border-radius: var(--rounded-xl);
+            padding: 2rem;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .editor-sidebar {
+            background: var(--lighter);
+            border-radius: var(--rounded-xl);
+            padding: 2rem;
+            box-shadow: var(--shadow-md);
+            height: fit-content;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--darker);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid #e0e0e0;
+            border-radius: var(--rounded-md);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(58, 90, 120, 0.1);
+        }
+        
+        .ql-editor {
+            min-height: 400px;
+            font-size: 1.1rem;
+            line-height: 1.8;
+        }
+        
+        .category-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .category-tag {
+            padding: 0.4rem 0.8rem;
+            background: var(--light);
+            border-radius: var(--rounded-full);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .category-tag:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .category-tag.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .image-upload {
+            border: 2px dashed #ccc;
+            border-radius: var(--rounded-md);
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .image-upload:hover {
+            border-color: var(--primary);
+            background: rgba(58, 90, 120, 0.05);
+        }
+        
+        .image-preview {
+            margin-top: 1rem;
+            max-width: 100%;
+            border-radius: var(--rounded-md);
+            display: none;
+        }
+        
+        .video-url {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .video-url input {
+            flex-grow: 1;
+        }
+        
+        .tags-input {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border: 1px solid #e0e0e0;
+            border-radius: var(--rounded-md);
+            min-height: 50px;
+            align-items: center;
+        }
+        
+        .tag {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.3rem 0.6rem;
+            background: var(--light);
+            border-radius: var(--rounded-full);
+            font-size: 0.9rem;
+        }
+        
+        .tag-remove {
+            cursor: pointer;
+            color: #dc3545;
+        }
+        
+        .tag-input {
+            border: none;
+            outline: none;
+            flex-grow: 1;
+            min-width: 100px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: var(--lighter);
+            border-radius: var(--rounded-xl);
+            padding: 2rem;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .posts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .post-card {
+            background: var(--lighter);
+            border-radius: var(--rounded-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+        }
+        
+        .post-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .post-image {
+            height: 150px;
+            overflow: hidden;
+        }
+        
+        .post-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .post-content {
+            padding: 1.5rem;
+        }
+        
+        .post-title {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: var(--darker);
+        }
+        
+        .post-meta {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+        
+        .post-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/dashboard" class="logo">
+            <i class="fas fa-arrow-left"></i>
+            <span>Zindaki Academy - Редактор блога</span>
+        </a>
+        <div class="editor-actions">
+            <button class="btn btn-secondary" id="managePosts">
+                <i class="fas fa-list"></i> Все статьи
+            </button>
+            <button class="btn btn-primary" id="savePost">
+                <i class="fas fa-save"></i> Опубликовать
+            </button>
+        </div>
+    </nav>
+    
+    <div class="editor-container">
+        <div class="editor-main">
+            <div class="editor-content">
+                <div class="form-group">
+                    <label for="postTitle">Заголовок статьи</label>
+                    <input type="text" id="postTitle" class="form-control" placeholder="Введите заголовок статьи" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="postExcerpt">Краткое описание</label>
+                    <textarea id="postExcerpt" class="form-control" rows="3" 
+                              placeholder="Краткое описание статьи, которое будет показано в списке"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Содержание статьи</label>
+                    <div id="editor" style="height: 400px;"></div>
+                </div>
+            </div>
+            
+            <div class="editor-sidebar">
+                <div class="form-group">
+                    <label>Категория</label>
+                    <div class="category-tags" id="categoryTags">
+                        <span class="category-tag active" data-category="Общее">Общее</span>
+                        <span class="category-tag" data-category="Новости">Новости</span>
+                        <span class="category-tag" data-category="Обучение">Обучение</span>
+                        <span class="category-tag" data-category="Советы">Советы</span>
+                        <span class="category-tag" data-category="События">События</span>
+                        <span class="category-tag" data-category="Интервью">Интервью</span>
+                    </div>
+                    <input type="hidden" id="postCategory" value="Общее">
+                </div>
+                
+                <div class="form-group">
+                    <label>Обложка статьи</label>
+                    <div class="image-upload" id="imageUpload">
+                        <i class="fas fa-cloud-upload-alt" style="font-size: 2rem; color: var(--primary); margin-bottom: 1rem;"></i>
+                        <p>Перетащите изображение или кликните для выбора</p>
+                        <input type="file" id="coverImage" accept="image/*" style="display: none;">
+                    </div>
+                    <img id="imagePreview" class="image-preview" alt="Предпросмотр">
+                </div>
+                
+                <div class="form-group">
+                    <label for="videoUrl">Видео (YouTube URL, опционально)</label>
+                    <div class="video-url">
+                        <input type="url" id="videoUrl" class="form-control" placeholder="https://youtube.com/...">
+                        <button type="button" class="btn btn-secondary" id="testVideo">
+                            <i class="fas fa-play"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Теги</label>
+                    <div class="tags-input" id="tagsContainer">
+                        <input type="text" id="tagInput" class="tag-input" placeholder="Введите тег и нажмите Enter">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="metaDescription">Мета-описание (для SEO)</label>
+                    <textarea id="metaDescription" class="form-control" rows="3" 
+                              placeholder="Краткое описание для поисковых систем"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 1rem;">
+                        <span>Опубликовать сразу</span>
+                        <label class="switch">
+                            <input type="checkbox" id="isPublished" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно для управления статьями -->
+    <div class="modal" id="postsModal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 style="color: var(--darker);">Управление статьями</h2>
+                <button class="btn btn-primary" id="newPost">
+                    <i class="fas fa-plus"></i> Новая статья
+                </button>
+            </div>
+            
+            <div class="posts-grid" id="postsList">
+                <!-- Статьи будут загружены динамически -->
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+    <script>
+        // Инициализация редактора Quill
+        const quill = new Quill('#editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['link', 'image', 'video'],
+                    ['clean']
+                ]
+            },
+            placeholder: 'Начните писать статью...'
+        });
+        
+        // Получаем данные поста из шаблона, если они есть
+        const postData = {% if post %}{
+            id: {{ post.id }},
+            title: `{{ post.title|safe }}`,
+            excerpt: `{{ post.excerpt|safe }}`,
+            content: `{{ post.content|safe }}`,
+            category: `{{ post.category|safe }}`,
+            cover_image: `{{ post.cover_image|safe if post.cover_image else '' }}`,
+            video_url: `{{ post.video_url|safe if post.video_url else '' }}`,
+            tags: {{ post.tags|tojson if post.tags else '[]' }},
+            meta_description: `{{ post.meta_description|safe if post.meta_description else '' }}`,
+            is_published: {{ 'true' if post.is_published else 'false' }}
+        }{% else %}null{% endif %};
+        
+        // Заполняем форму данными поста, если они есть
+        if (postData) {
+            document.getElementById('postTitle').value = postData.title;
+            document.getElementById('postExcerpt').value = postData.excerpt;
+            quill.root.innerHTML = postData.content;
+            document.getElementById('postCategory').value = postData.category;
+            document.getElementById('videoUrl').value = postData.video_url || '';
+            document.getElementById('metaDescription').value = postData.meta_description || '';
+            document.getElementById('isPublished').checked = postData.is_published;
+            
+            // Устанавливаем активную категорию
+            document.querySelectorAll('.category-tag').forEach(tag => {
+                tag.classList.remove('active');
+                if (tag.dataset.category === postData.category) {
+                    tag.classList.add('active');
+                }
+            });
+            
+            // Загружаем теги
+            if (postData.tags && Array.isArray(postData.tags)) {
+                postData.tags.forEach(tag => addTag(tag));
+            }
+            
+            // Показываем превью обложки
+            if (postData.cover_image) {
+                document.getElementById('imagePreview').src = postData.cover_image;
+                document.getElementById('imagePreview').style.display = 'block';
+            }
+            
+            // Меняем текст кнопки
+            document.getElementById('savePost').innerHTML = '<i class="fas fa-save"></i> Обновить';
+        }
+        
+        // Управление категориями
+        document.querySelectorAll('.category-tag').forEach(tag => {
+            tag.addEventListener('click', function() {
+                document.querySelectorAll('.category-tag').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                document.getElementById('postCategory').value = this.dataset.category;
+            });
+        });
+        
+        // Загрузка изображения
+        const imageUpload = document.getElementById('imageUpload');
+        const coverImage = document.getElementById('coverImage');
+        const imagePreview = document.getElementById('imagePreview');
+        
+        imageUpload.addEventListener('click', () => coverImage.click());
+        imageUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            imageUpload.style.borderColor = 'var(--primary)';
+            imageUpload.style.backgroundColor = 'rgba(58, 90, 120, 0.1)';
+        });
+        imageUpload.addEventListener('dragleave', () => {
+            imageUpload.style.borderColor = '#ccc';
+            imageUpload.style.backgroundColor = 'transparent';
+        });
+        imageUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            imageUpload.style.borderColor = '#ccc';
+            imageUpload.style.backgroundColor = 'transparent';
+            
+            if (e.dataTransfer.files.length) {
+                coverImage.files = e.dataTransfer.files;
+                updateImagePreview();
+            }
+        });
+        
+        coverImage.addEventListener('change', updateImagePreview);
+        
+        function updateImagePreview() {
+            if (coverImage.files && coverImage.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                }
+                reader.readAsDataURL(coverImage.files[0]);
+            }
+        }
+        
+        // Управление тегами
+        const tagsContainer = document.getElementById('tagsContainer');
+        const tagInput = document.getElementById('tagInput');
+        const tags = new Set(postData ? postData.tags : []);
+        
+        function renderTags() {
+            // Удаляем все теги кроме input
+            Array.from(tagsContainer.children).forEach(child => {
+                if (!child.classList.contains('tag-input')) {
+                    child.remove();
+                }
+            });
+            
+            // Добавляем теги
+            tags.forEach(tag => {
+                const tagElement = document.createElement('div');
+                tagElement.className = 'tag';
+                tagElement.innerHTML = `
+                    ${tag}
+                    <span class="tag-remove" data-tag="${tag}">
+                        <i class="fas fa-times"></i>
+                    </span>
+                `;
+                tagsContainer.insertBefore(tagElement, tagInput);
+            });
+        }
+        
+        function addTag(tag) {
+            const trimmedTag = tag.trim();
+            if (trimmedTag && !tags.has(trimmedTag)) {
+                tags.add(trimmedTag);
+                renderTags();
+            }
+        }
+        
+        function removeTag(tag) {
+            tags.delete(tag);
+            renderTags();
+        }
+        
+        tagInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addTag(tagInput.value);
+                tagInput.value = '';
+            }
+        });
+        
+        tagsContainer.addEventListener('click', (e) => {
+            if (e.target.closest('.tag-remove')) {
+                const tag = e.target.closest('.tag-remove').dataset.tag;
+                removeTag(tag);
+            }
+        });
+        
+        // Тест видео
+        document.getElementById('testVideo').addEventListener('click', () => {
+            const url = document.getElementById('videoUrl').value;
+            if (url) {
+                window.open(url, '_blank');
+            }
+        });
+        
+        // Сохранение поста
+        document.getElementById('savePost').addEventListener('click', async () => {
+            const title = document.getElementById('postTitle').value.trim();
+            const excerpt = document.getElementById('postExcerpt').value.trim();
+            const content = quill.root.innerHTML;
+            const category = document.getElementById('postCategory').value;
+            const videoUrl = document.getElementById('videoUrl').value.trim();
+            const metaDescription = document.getElementById('metaDescription').value.trim();
+            const isPublished = document.getElementById('isPublished').checked;
+            
+            if (!title) {
+                alert('Пожалуйста, введите заголовок статьи');
+                return;
+            }
+            
+            if (!content || content === '<p><br></p>') {
+                alert('Пожалуйста, добавьте содержание статьи');
+                return;
+            }
+            
+            // Собираем данные
+            const postData = {
+                title: title,
+                content: content,
+                category: category,
+                excerpt: excerpt,
+                video_url: videoUrl || null,
+                tags: Array.from(tags),
+                meta_description: metaDescription || excerpt.substring(0, 150) + '...',
+                is_published: isPublished
+            };
+            
+            try {
+                let response;
+                
+                if (window.location.pathname.includes('/edit/')) {
+                    // Обновление существующего поста
+                    const postId = window.location.pathname.split('/').pop();
+                    response = await fetch(`/api/blog/posts/${postId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(postData)
+                    });
+                } else {
+                    // Создание нового поста
+                    response = await fetch('/api/blog/posts', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(postData)
+                    });
+                }
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    if (coverImage.files && coverImage.files[0]) {
+                        // Если есть изображение, загружаем его
+                        await uploadCoverImage(data.post.id);
+                    }
+                    
+                    alert('Статья успешно сохранена!');
+                    window.location.href = `/blog/post/${data.post.id}`;
+                } else {
+                    throw new Error(data.error || 'Ошибка сохранения');
+                }
+            } catch (error) {
+                console.error('Error saving post:', error);
+                alert('Ошибка сохранения статьи: ' + error.message);
+            }
+        });
+        
+        async function uploadCoverImage(postId) {
+            const formData = new FormData();
+            formData.append('cover_image', coverImage.files[0]);
+            
+            try {
+                const response = await fetch(`/api/blog/posts/${postId}/cover`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    console.error('Error uploading cover image');
+                }
+            } catch (error) {
+                console.error('Error uploading cover image:', error);
+            }
+        }
+        
+        // Управление статьями
+        document.getElementById('managePosts').addEventListener('click', () => {
+            document.getElementById('postsModal').style.display = 'flex';
+            loadPosts();
+        });
+        
+        document.getElementById('newPost').addEventListener('click', () => {
+            window.location.href = '/blog/new';
+        });
+        
+        async function loadPosts() {
+            try {
+                const response = await fetch('/api/blog/posts');
+                const data = await response.json();
+                
+                const postsList = document.getElementById('postsList');
+                postsList.innerHTML = '';
+                
+                if (data.posts && data.posts.length > 0) {
+                    data.posts.forEach(post => {
+                        const postCard = document.createElement('div');
+                        postCard.className = 'post-card';
+                        
+                        const date = new Date(post.published_at);
+                        const formattedDate = date.toLocaleDateString('ru-RU');
+                        
+                        postCard.innerHTML = `
+                            ${post.cover_image ? `
+                            <div class="post-image">
+                                <img src="${post.cover_image}" alt="${post.title}">
+                            </div>
+                            ` : ''}
+                            <div class="post-content">
+                                <h3 class="post-title">${post.title}</h3>
+                                <div class="post-meta">
+                                    <span>${formattedDate} • ${post.category}</span>
+                                    <span style="color: ${post.is_published ? 'green' : 'orange'};">
+                                        ${post.is_published ? 'Опубликовано' : 'Черновик'}
+                                    </span>
+                                </div>
+                                <p style="font-size: 0.9rem; color: var(--text-light); margin: 1rem 0;">
+                                    ${post.excerpt.substring(0, 100)}...
+                                </p>
+                                <div class="post-actions">
+                                    <a href="/blog/edit/${post.id}" class="btn btn-secondary" style="padding: 0.4rem 0.8rem;">
+                                        <i class="fas fa-edit"></i> Редактировать
+                                    </a>
+                                    <button class="btn btn-danger" style="padding: 0.4rem 0.8rem;" onclick="deletePost(${post.id})">
+                                        <i class="fas fa-trash"></i> Удалить
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        postsList.appendChild(postCard);
+                    });
+                } else {
+                    postsList.innerHTML = '<p>Нет статей</p>';
+                }
+            } catch (error) {
+                console.error('Error loading posts:', error);
+                document.getElementById('postsList').innerHTML = '<p>Ошибка загрузки статей</p>';
+            }
+        }
+        
+        function deletePost(postId) {
+            if (confirm('Вы уверены, что хотите удалить эту статью?')) {
+                fetch(`/api/blog/posts/${postId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Статья удалена');
+                        loadPosts();
+                    } else {
+                        alert('Ошибка удаления: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting post:', error);
+                    alert('Ошибка удаления статьи');
+                });
+            }
+        }
+        
+        // Закрытие модального окна
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
