@@ -512,6 +512,200 @@ class DB:
         DB._save_db('conference_links', links)
         return True
 
+    # === МЕТОДЫ ДЛЯ БЛОГА ===
+    
+    @staticmethod
+    def get_blog_posts(category=None, limit=None, search=None):
+        """Получение постов блога с фильтрацией"""
+        posts = DB._get_db('blog_posts')
+        
+        # Фильтрация по категории
+        if category:
+            posts = [p for p in posts if p.get('category') == category]
+        
+        # Поиск
+        if search:
+            search_lower = search.lower()
+            posts = [p for p in posts if 
+                    search_lower in p.get('title', '').lower() or 
+                    search_lower in p.get('content', '').lower() or
+                    search_lower in p.get('excerpt', '').lower()]
+        
+        # Сортируем по дате (новые сначала)
+        posts.sort(key=lambda x: x.get('published_at', ''), reverse=True)
+        
+        # Ограничение количества
+        if limit:
+            posts = posts[:limit]
+        
+        return posts
+
+    @staticmethod
+    def get_blog_post(post_id):
+        """Получение конкретного поста"""
+        posts = DB.get_blog_posts()
+        return next((p for p in posts if p['id'] == post_id), None)
+
+    @staticmethod
+    def save_blog_post(title, content, author, category='Общее', 
+                       excerpt=None, cover_image=None, 
+                       is_published=True, video_url=None, 
+                       tags=None, meta_description=None):
+        """Создание/обновление поста блога"""
+        posts = DB.get_blog_posts()
+        
+        if excerpt is None:
+            excerpt = content[:150] + '...' if len(content) > 150 else content
+        
+        if tags is None:
+            tags = []
+        
+        post_id = max([p['id'] for p in posts], default=0) + 1
+        
+        post = {
+            'id': post_id,
+            'title': title,
+            'content': content,
+            'excerpt': excerpt,
+            'author': author,
+            'category': category,
+            'cover_image': cover_image,
+            'video_url': video_url,
+            'tags': tags,
+            'is_published': is_published,
+            'views': 0,
+            'likes': 0,
+            'comments_count': 0,
+            'meta_description': meta_description or excerpt,
+            'slug': f"{post_id}-{title.lower().replace(' ', '-').replace('/', '-')[:50]}",
+            'created_at': datetime.now().isoformat(),
+            'published_at': datetime.now().isoformat() if is_published else None,
+            'updated_at': datetime.now().isoformat()
+        }
+        
+        posts.append(post)
+        DB._save_db('blog_posts', posts)
+        return post
+
+    @staticmethod
+    def update_blog_post(post_id, data):
+        """Обновление поста блога"""
+        posts = DB.get_blog_posts()
+        for i, post in enumerate(posts):
+            if post['id'] == post_id:
+                for key, value in data.items():
+                    if key in post:
+                        posts[i][key] = value
+                posts[i]['updated_at'] = datetime.now().isoformat()
+                
+                # Генерируем slug если изменился заголовок
+                if 'title' in data:
+                    posts[i]['slug'] = f"{post_id}-{data['title'].lower().replace(' ', '-').replace('/', '-')[:50]}"
+                
+                DB._save_db('blog_posts', posts)
+                return True
+        return False
+
+    @staticmethod
+    def delete_blog_post(post_id):
+        """Удаление поста блога"""
+        posts = DB.get_blog_posts()
+        posts = [p for p in posts if p['id'] != post_id]
+        DB._save_db('blog_posts', posts)
+        return True
+
+    @staticmethod
+    def increment_views(post_id):
+        """Увеличение счетчика просмотров"""
+        posts = DB.get_blog_posts()
+        for i, post in enumerate(posts):
+            if post['id'] == post_id:
+                posts[i]['views'] = posts[i].get('views', 0) + 1
+                DB._save_db('blog_posts', posts)
+                return True
+        return False
+
+    @staticmethod
+    def get_categories():
+        """Получение всех категорий блога"""
+        posts = DB.get_blog_posts()
+        categories = {}
+        for post in posts:
+            if post.get('is_published'):
+                category = post.get('category', 'Без категории')
+                categories[category] = categories.get(category, 0) + 1
+        return categories
+
+    @staticmethod
+    def get_popular_posts(limit=5):
+        """Получение популярных постов"""
+        posts = [p for p in DB.get_blog_posts() if p.get('is_published')]
+        posts.sort(key=lambda x: x.get('views', 0), reverse=True)
+        return posts[:limit]
+
+    @staticmethod
+    def get_recent_posts(limit=5):
+        """Получение последних постов"""
+        return DB.get_blog_posts(limit=limit)
+
+    # Комментарии для блога
+    @staticmethod
+    def get_comments(post_id=None):
+        """Получение комментариев"""
+        comments = DB._get_db('blog_comments')
+        if post_id:
+            return [c for c in comments if c['post_id'] == post_id]
+        return comments
+
+    @staticmethod
+    def save_comment(post_id, author, content, parent_id=None, author_email=None):
+        """Сохранение комментария"""
+        comments = DB.get_comments()
+        comment_id = max([c['id'] for c in comments], default=0) + 1
+        
+        comment = {
+            'id': comment_id,
+            'post_id': post_id,
+            'author': author,
+            'content': content,
+            'parent_id': parent_id,
+            'author_email': author_email,
+            'is_approved': True,
+            'created_at': datetime.now().isoformat()
+        }
+        
+        # Обновляем счетчик комментариев в посте
+        posts = DB.get_blog_posts()
+        for i, post in enumerate(posts):
+            if post['id'] == post_id:
+                posts[i]['comments_count'] = posts[i].get('comments_count', 0) + 1
+                DB._save_db('blog_posts', posts)
+                break
+        
+        comments.append(comment)
+        DB._save_db('blog_comments', comments)
+        return comment
+
+    @staticmethod
+    def delete_comment(comment_id):
+        """Удаление комментария"""
+        comments = DB.get_comments()
+        comment = next((c for c in comments if c['id'] == comment_id), None)
+        
+        if comment:
+            # Уменьшаем счетчик комментариев в посте
+            posts = DB.get_blog_posts()
+            for i, post in enumerate(posts):
+                if post['id'] == comment['post_id']:
+                    posts[i]['comments_count'] = max(posts[i].get('comments_count', 0) - 1, 0)
+                    DB._save_db('blog_posts', posts)
+                    break
+            
+            comments = [c for c in comments if c['id'] != comment_id]
+            DB._save_db('blog_comments', comments)
+            return True
+        return False
+
     # === МЕТОДЫ ДЛЯ БЭКАПОВ ===
     
     @staticmethod
@@ -528,7 +722,7 @@ class DB:
             with tempfile.TemporaryDirectory() as temp_dir:
                 # Копируем все JSON файлы базы данных
                 for db_file in ['users', 'lessons', 'homeworks', 'conferences', 
-                              'testimonials', 'feedbacks', 'conference_links']:
+                              'testimonials', 'feedbacks', 'conference_links', 'blog_posts', 'blog_comments']:
                     source = f'{DB_FOLDER}/{db_file}.json'
                     if os.path.exists(source):
                         shutil.copy2(source, os.path.join(temp_dir, f'{db_file}.json'))
@@ -609,7 +803,7 @@ class DB:
                 
                 # Восстанавливаем JSON файлы базы данных
                 for db_file in ['users', 'lessons', 'homeworks', 'conferences', 
-                              'testimonials', 'feedbacks', 'conference_links']:
+                              'testimonials', 'feedbacks', 'conference_links', 'blog_posts', 'blog_comments']:
                     backup_file = os.path.join(temp_dir, f'{db_file}.json')
                     if os.path.exists(backup_file):
                         shutil.copy2(backup_file, f'{DB_FOLDER}/{db_file}.json')
@@ -770,6 +964,13 @@ if not os.path.exists(f'{DB_FOLDER}/conference_links.json'):
         }
     ]
     DB._save_db('conference_links', initial_links)
+
+# Инициализация таблиц для блога
+if not os.path.exists(f'{DB_FOLDER}/blog_posts.json'):
+    DB._save_db('blog_posts', [])
+    
+if not os.path.exists(f'{DB_FOLDER}/blog_comments.json'):
+    DB._save_db('blog_comments', [])
 
 # Middleware для обработки безопасности
 @app.after_request
@@ -1169,6 +1370,159 @@ def video_debug():
 
 # ===== КОНЕЦ КОДА ВИДЕОКОНФЕРЕНЦИЙ =====
 
+# ===== API ДЛЯ БЛОГА =====
+
+@app.route('/api/blog/posts', methods=['GET'])
+def api_blog_posts():
+    """Получение постов блога с фильтрацией"""
+    category = request.args.get('category')
+    limit = request.args.get('limit', type=int)
+    search = request.args.get('search')
+    popular = request.args.get('popular', type=bool)
+    
+    if popular:
+        posts = DB.get_popular_posts(limit or 5)
+    else:
+        posts = DB.get_blog_posts(category=category, limit=limit, search=search)
+    
+    # Фильтруем только опубликованные для обычных пользователей
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        posts = [p for p in posts if p.get('is_published', False)]
+    
+    return jsonify({'posts': posts})
+
+@app.route('/api/blog/posts/<int:post_id>', methods=['GET'])
+def api_blog_post(post_id):
+    """Получение конкретного поста"""
+    post = DB.get_blog_post(post_id)
+    
+    if not post:
+        return jsonify({'error': 'Post not found'}), 404
+    
+    # Проверка доступа для неопубликованных постов
+    if not post.get('is_published', False) and ('user' not in session or session['user']['role'] != 'teacher'):
+        return jsonify({'error': 'Access denied'}), 403
+    
+    # Увеличиваем счетчик просмотров
+    DB.increment_views(post_id)
+    
+    return jsonify({'post': post})
+
+@app.route('/api/blog/posts', methods=['POST'])
+def api_create_blog_post():
+    """Создание нового поста"""
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json
+    required_fields = ['title', 'content']
+    
+    if not all(field in data for field in required_fields):
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    # Загрузка изображения, если есть
+    cover_image = data.get('cover_image')
+    
+    post = DB.save_blog_post(
+        title=data['title'],
+        content=data['content'],
+        author=session['user']['username'],
+        category=data.get('category', 'Общее'),
+        excerpt=data.get('excerpt'),
+        cover_image=cover_image,
+        is_published=data.get('is_published', True),
+        video_url=data.get('video_url'),
+        tags=data.get('tags', []),
+        meta_description=data.get('meta_description')
+    )
+    
+    return jsonify({'success': True, 'post': post})
+
+@app.route('/api/blog/posts/<int:post_id>', methods=['PUT'])
+def api_update_blog_post(post_id):
+    """Обновление поста"""
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    post = DB.get_blog_post(post_id)
+    if not post:
+        return jsonify({'error': 'Post not found'}), 404
+    
+    data = request.json
+    update_data = {}
+    
+    allowed_fields = ['title', 'content', 'category', 'excerpt', 
+                     'cover_image', 'is_published', 'video_url', 
+                     'tags', 'meta_description']
+    
+    for field in allowed_fields:
+        if field in data:
+            update_data[field] = data[field]
+    
+    if DB.update_blog_post(post_id, update_data):
+        return jsonify({'success': True})
+    else:
+        return jsonify({'error': 'Update failed'}), 500
+
+@app.route('/api/blog/posts/<int:post_id>', methods=['DELETE'])
+def api_delete_blog_post(post_id):
+    """Удаление поста"""
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if DB.delete_blog_post(post_id):
+        return jsonify({'success': True})
+    else:
+        return jsonify({'error': 'Delete failed'}), 500
+
+@app.route('/api/blog/categories', methods=['GET'])
+def api_blog_categories():
+    """Получение категорий блога"""
+    categories = DB.get_categories()
+    return jsonify({'categories': categories})
+
+@app.route('/api/blog/posts/<int:post_id>/comments', methods=['GET', 'POST'])
+def api_blog_comments(post_id):
+    """Управление комментариями"""
+    if request.method == 'GET':
+        comments = DB.get_comments(post_id)
+        return jsonify({'comments': comments})
+    
+    elif request.method == 'POST':
+        data = request.json
+        required_fields = ['author', 'content']
+        
+        if not all(field in data for field in required_fields):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        # Проверяем существование поста
+        post = DB.get_blog_post(post_id)
+        if not post or (not post.get('is_published') and ('user' not in session or session['user']['role'] != 'teacher')):
+            return jsonify({'error': 'Post not found or not published'}), 404
+        
+        comment = DB.save_comment(
+            post_id=post_id,
+            author=data['author'],
+            content=data['content'],
+            parent_id=data.get('parent_id'),
+            author_email=data.get('author_email')
+        )
+        
+        return jsonify({'success': True, 'comment': comment})
+
+@app.route('/api/blog/comments/<int:comment_id>', methods=['DELETE'])
+def api_delete_blog_comment(comment_id):
+    """Удаление комментария"""
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if DB.delete_comment(comment_id):
+        return jsonify({'success': True})
+    else:
+        return jsonify({'error': 'Delete failed'}), 500
+
+# ===== КОНЕЦ API ДЛЯ БЛОГА =====
+
 # ===== API ДЛЯ БЭКАПОВ =====
 
 @app.route('/api/backup', methods=['GET', 'POST', 'DELETE'])
@@ -1339,6 +1693,79 @@ def upload_backup_chunk():
         return jsonify({'error': str(e)}), 500
 
 # ===== КОНЕЦ API ДЛЯ БЭКАПОВ =====
+
+# ===== РОУТЫ ДЛЯ БЛОГА =====
+
+@app.route('/blog')
+def blog():
+    """Главная страница блога"""
+    return render_template('blog.html', user=session.get('user'))
+
+@app.route('/blog/post/<path:slug>')
+def blog_post(slug):
+    """Страница отдельного поста"""
+    try:
+        # Пытаемся найти пост по ID или slug
+        post_id = int(slug.split('-')[0]) if '-' in slug and slug.split('-')[0].isdigit() else None
+        
+        if post_id:
+            post = DB.get_blog_post(post_id)
+        else:
+            # Если не нашли по ID, ищем по slug
+            posts = DB.get_blog_posts()
+            post = next((p for p in posts if p.get('slug') == slug), None)
+        
+        if not post:
+            return render_template('404.html'), 404
+        
+        # Проверка доступа для неопубликованных постов
+        if not post.get('is_published') and ('user' not in session or session['user']['role'] != 'teacher'):
+            return render_template('403.html'), 403
+        
+        # Увеличиваем счетчик просмотров
+        DB.increment_views(post['id'])
+        
+        # Получаем автора
+        author = DB.get_user(post['author'])
+        author_avatar = author['avatar'] if author else None
+        
+        # Получаем похожие посты
+        similar_posts = [p for p in DB.get_blog_posts() 
+                        if p.get('is_published') and 
+                        p['id'] != post['id'] and 
+                        p.get('category') == post.get('category')][:3]
+        
+        return render_template('blog_post.html', 
+                             post=post,
+                             author_avatar=author_avatar,
+                             similar_posts=similar_posts,
+                             user=session.get('user'))
+    
+    except Exception as e:
+        logger.error(f'Error loading blog post: {e}')
+        return render_template('500.html'), 500
+
+@app.route('/blog/new', methods=['GET'])
+def new_blog_post():
+    """Создание нового поста (только для учителей)"""
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return redirect('/blog')
+    
+    return render_template('blog_editor.html', user=session.get('user'))
+
+@app.route('/blog/edit/<int:post_id>')
+def edit_blog_post(post_id):
+    """Редактирование поста (только для учителей)"""
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return redirect('/blog')
+    
+    post = DB.get_blog_post(post_id)
+    if not post:
+        return redirect('/blog')
+    
+    return render_template('blog_editor.html', post=post, user=session.get('user'))
+
+# ===== КОНЕЦ РОУТОВ ДЛЯ БЛОГА =====
 
 # Главная страница и все SPA-роуты
 @app.route('/')
@@ -1977,11 +2404,11 @@ def api_contact():
 # Обработчики ошибок
 @app.errorhandler(404)
 def not_found(error):
-    return jsonify({'error': 'Not found'}), 404
+    return render_template('404.html'), 404
 
 @app.errorhandler(500)
 def internal_error(error):
-    return jsonify({'error': 'Internal server error'}), 500
+    return render_template('500.html'), 500
 
 @app.errorhandler(400)
 def bad_request(error):
@@ -1989,18 +2416,20 @@ def bad_request(error):
 
 @app.errorhandler(403)
 def forbidden(error):
-    return jsonify({'error': 'Forbidden'}), 403
+    return render_template('403.html'), 403
 
 if __name__ == '__main__':  
     print("Starting Zindaki Academy server with enhanced SSL support...")
     print("Available routes:")
     print("  - Main site: http://localhost:8000")
     print("  - Dashboard: http://localhost:8000/dashboard") 
+    print("  - Blog: http://localhost:8000/blog")
     print("  - Video Conference: http://localhost:8000/video-conference")
     print("  - API Health: http://localhost:8000/api/video/health")
     print("  - Health Check: http://localhost:8000/health")
     print("  - API Debug: http://localhost:8000/api/video/debug")
     print("  - Backup API: http://localhost:8000/api/backup")
+    print("  - Blog API: http://localhost:8000/api/blog/posts")
     
     # Запуск с Socket.IO
     socketio.run(
