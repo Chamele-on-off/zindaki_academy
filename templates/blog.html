@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Блог | Zindaki Academy</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3a5a78;
+            --primary-light: #4d7ca7;
+            --primary-dark: #2c4761;
+            --secondary: #6d4c41;
+            --accent: #c5a258;
+            --light: #f5f3f0;
+            --lighter: #ffffff;
+            --dark: #1a1a2e;
+            --darker: #0a0a0a;
+            --text: #2a2a2a;
+            --text-light: #6d6d6d;
+            --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            --gradient-accent: linear-gradient(135deg, var(--accent) 0%, #d4b15f 100%);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+            --shadow-xl: 0 20px 50px rgba(0,0,0,0.15);
+            --rounded-sm: 8px;
+            --rounded-md: 12px;
+            --rounded-lg: 16px;
+            --rounded-xl: 24px;
+            --rounded-full: 9999px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        body {
+            background-color: var(--light);
+            color: var(--text);
+            overflow-x: hidden;
+            line-height: 1.6;
+            font-weight: 400;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 600;
+            line-height: 1.2;
+            color: var(--darker);
+        }
+        
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+        }
+        
+        .navbar.scrolled {
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow-md);
+            background-color: rgba(26, 26, 46, 0.95);
+        }
+        
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: 'Cormorant Garamond', serif;
+        }
+        
+        .navbar.scrolled .logo {
+            color: var(--accent);
+        }
+        
+        .logo-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: var(--gradient);
+            color: white;
+            border-radius: var(--rounded-md);
+            font-size: 1.2rem;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+        
+        .nav-links a {
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            color: var(--text);
+            padding: 0.5rem 0;
+        }
+        
+        .navbar.scrolled .nav-links a {
+            color: var(--light);
+        }
+        
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+        
+        .navbar.scrolled .nav-links a:hover {
+            color: var(--accent);
+        }
+        
+        .nav-links a:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--primary);
+            transition: width 0.3s ease;
+        }
+        
+        .navbar.scrolled .nav-links a:after {
+            background-color: var(--accent);
+        }
+        
+        .nav-links a:hover:after {
+            width: 100%;
+        }
+        
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--primary);
+            cursor: pointer;
+            z-index: 1001;
+        }
+        
+        .navbar.scrolled .mobile-menu-btn {
+            color: var(--accent);
+        }
+        
+        .blog-header {
+            margin-top: 100px;
+            padding: 4rem 2rem;
+            text-align: center;
+            background: var(--gradient);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .blog-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==');
+            opacity: 0.3;
+        }
+        
+        .blog-header-content {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .blog-header h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: white;
+        }
+        
+        .blog-header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+        }
+        
+        .search-box {
+            max-width: 500px;
+            margin: 2rem auto;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            border-radius: var(--rounded-full);
+            border: none;
+            font-size: 1rem;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .search-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+        }
+        
+        .blog-container {
+            max-width: 1400px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 3rem;
+        }
+        
+        @media (max-width: 992px) {
+            .blog-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .posts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+        
+        .post-card {
+            background: var(--lighter);
+            border-radius: var(--rounded-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .post-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .post-image {
+            height: 200px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .post-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+        
+        .post-card:hover .post-image img {
+            transform: scale(1.05);
+        }
+        
+        .video-indicator {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 0.3rem 0.6rem;
+            border-radius: var(--rounded-sm);
+            font-size: 0.8rem;
+        }
+        
+        .post-content {
+            padding: 1.5rem;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .post-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+        
+        .post-category {
+            background: var(--gradient);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: var(--rounded-full);
+            font-size: 0.8rem;
+        }
+        
+        .post-title {
+            font-size: 1.3rem;
+            margin-bottom: 0.8rem;
+            line-height: 1.3;
+        }
+        
+        .post-excerpt {
+            color: var(--text);
+            margin-bottom: 1.5rem;
+            flex-grow: 1;
+        }
+        
+        .post-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .post-stats {
+            display: flex;
+            gap: 1rem;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .post-stats i {
+            margin-right: 0.3rem;
+        }
+        
+        .read-more {
+            color: var(--primary);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .read-more:hover {
+            color: var(--primary-dark);
+        }
+        
+        .sidebar {
+            position: sticky;
+            top: 100px;
+            height: fit-content;
+        }
+        
+        .sidebar-widget {
+            background: var(--lighter);
+            border-radius: var(--rounded-xl);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .widget-title {
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.8rem;
+            border-bottom: 2px solid var(--primary-light);
+        }
+        
+        .categories-list {
+            list-style: none;
+        }
+        
+        .categories-list li {
+            margin-bottom: 0.8rem;
+        }
+        
+        .categories-list a {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            transition: all 0.3s ease;
+        }
+        
+        .categories-list a:hover {
+            color: var(--primary);
+            transform: translateX(5px);
+        }
+        
+        .category-count {
+            background: var(--light);
+            padding: 0.2rem 0.6rem;
+            border-radius: var(--rounded-full);
+            font-size: 0.8rem;
+        }
+        
+        .popular-posts {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .popular-post {
+            display: flex;
+            gap: 1rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .popular-post:last-child {
+            border-bottom: none;
+        }
+        
+        .popular-post-image {
+            width: 60px;
+            height: 60px;
+            border-radius: var(--rounded-md);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        
+        .popular-post-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .popular-post-content h4 {
+            font-size: 0.9rem;
+            line-height: 1.3;
+            margin-bottom: 0.3rem;
+        }
+        
+        .popular-post-content .post-meta {
+            font-size: 0.8rem;
+            margin-bottom: 0;
+        }
+        
+        .tags-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .tag {
+            background: var(--light);
+            padding: 0.3rem 0.8rem;
+            border-radius: var(--rounded-full);
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .tag:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .blog-footer {
+            background: var(--darker);
+            color: white;
+            padding: 4rem 2rem;
+            margin-top: 4rem;
+            text-align: center;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 3rem;
+        }
+        
+        .page-number, .page-prev, .page-next {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--rounded-md);
+            background: var(--lighter);
+            color: var(--text);
+            transition: all 0.3s ease;
+        }
+        
+        .page-number.active, .page-number:hover, .page-prev:hover, .page-next:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-light);
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--primary-light);
+        }
+        
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 1rem;
+            }
+            
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            .nav-links {
+                position: fixed;
+                top: 80px;
+                left: 0;
+                width: 100%;
+                background: var(--darker);
+                flex-direction: column;
+                align-items: center;
+                padding: 2rem;
+                gap: 1.5rem;
+                transform: translateY(-150%);
+                transition: transform 0.3s ease;
+            }
+            
+            .nav-links.active {
+                transform: translateY(0);
+            }
+            
+            .blog-header {
+                padding: 3rem 1rem;
+                margin-top: 80px;
+            }
+            
+            .blog-header h1 {
+                font-size: 2.2rem;
+            }
+            
+            .blog-container {
+                padding: 0 1rem;
+            }
+            
+            .posts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Стили для отдельных постов */
+        .post-page {
+            max-width: 800px;
+            margin: 100px auto 3rem;
+            padding: 0 2rem;
+        }
+        
+        .post-header {
+            margin-bottom: 2rem;
+        }
+        
+        .post-header-image {
+            width: 100%;
+            height: 400px;
+            border-radius: var(--rounded-xl);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+        
+        .post-header-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .post-header-content {
+            text-align: center;
+        }
+        
+        .post-date {
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+        
+        .post-title-large {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .post-author {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        .author-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+        
+        .author-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+            margin: 2rem 0;
+            border-radius: var(--rounded-lg);
+        }
+        
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+        
+        .post-content {
+            font-size: 1.1rem;
+            line-height: 1.8;
+        }
+        
+        .post-content h2 {
+            margin: 2rem 0 1rem;
+            color: var(--primary-dark);
+        }
+        
+        .post-content p {
+            margin-bottom: 1.5rem;
+        }
+        
+        .post-content img {
+            max-width: 100%;
+            border-radius: var(--rounded-lg);
+            margin: 2rem 0;
+        }
+        
+        .post-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 3rem 0;
+            padding: 1.5rem;
+            background: var(--light);
+            border-radius: var(--rounded-lg);
+        }
+        
+        .share-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .share-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .share-button.vk { background: #4C75A3; }
+        .share-button.telegram { background: #0088cc; }
+        .share-button.facebook { background: #3b5998; }
+        .share-button.twitter { background: #1DA1F2; }
+        
+        .share-button:hover {
+            transform: translateY(-3px);
+        }
+        
+        .like-button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: white;
+            border-radius: var(--rounded-full);
+            border: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .like-button:hover {
+            border-color: var(--primary);
+        }
+        
+        .like-button.liked {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .comments-section {
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+        
+        .comments-title {
+            margin-bottom: 2rem;
+        }
+        
+        .comment-form {
+            background: var(--light);
+            padding: 1.5rem;
+            border-radius: var(--rounded-lg);
+            margin-bottom: 2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 1px solid #e0e0e0;
+            border-radius: var(--rounded-md);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(58, 90, 120, 0.1);
+        }
+        
+        textarea.form-control {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border-radius: var(--rounded-md);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            font-size: 1rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .comments-list {
+            display: grid;
+            gap: 1.5rem;
+        }
+        
+        .comment {
+            padding: 1.5rem;
+            background: var(--lighter);
+            border-radius: var(--rounded-lg);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        
+        .comment-author {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .comment-date {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .comment-content {
+            color: var(--text);
+            line-height: 1.6;
+        }
+        
+        @media (max-width: 576px) {
+            .post-page {
+                padding: 0 1rem;
+            }
+            
+            .post-header-image {
+                height: 250px;
+            }
+            
+            .post-title-large {
+                font-size: 2rem;
+            }
+            
+            .post-actions {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar">
+        <a href="/" class="logo">
+            <div class="logo-icon">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <span>Zindaki Academy</span>
+        </a>
+        <div class="nav-links">
+            <a href="/">Главная</a>
+            <a href="/blog">Блог</a>
+            <a href="/#about">О нас</a>
+            <a href="/#teachers">Преподаватели</a>
+            <a href="/#programs">Программы</a>
+            <a href="/#testimonials">Отзывы</a>
+            {% if user %}
+            <a href="/dashboard">Личный кабинет</a>
+            {% else %}
+            <a href="/#login">Вход</a>
+            {% endif %}
+        </div>
+        <button class="mobile-menu-btn">
+            <i class="fas fa-bars"></i>
+        </button>
+    </nav>
+
+    <!-- Шапка блога -->
+    <header class="blog-header">
+        <div class="blog-header-content">
+            <h1>Блог Zindaki Academy</h1>
+            <p>Полезные статьи, советы по обучению, новости образования и многое другое</p>
+            <div class="search-box">
+                <input type="text" class="search-input" placeholder="Поиск статей..." id="searchInput">
+            </div>
+        </div>
+    </header>
+
+    <!-- Основное содержимое -->
+    <div class="blog-container">
+        <main class="posts-content">
+            <div id="postsGrid" class="posts-grid">
+                <!-- Посты будут загружаться динамически -->
+                <div class="empty-state">
+                    <i class="fas fa-newspaper"></i>
+                    <h3>Загрузка статей...</h3>
+                </div>
+            </div>
+            
+            <div class="pagination" id="pagination">
+                <!-- Пагинация будет загружаться динамически -->
+            </div>
+        </main>
+
+        <!-- Сайдбар -->
+        <aside class="sidebar">
+            <div class="sidebar-widget">
+                <h3 class="widget-title">Категории</h3>
+                <ul class="categories-list" id="categoriesList">
+                    <!-- Категории будут загружаться динамически -->
+                </ul>
+            </div>
+
+            <div class="sidebar-widget">
+                <h3 class="widget-title">Популярные статьи</h3>
+                <div class="popular-posts" id="popularPosts">
+                    <!-- Популярные посты будут загружаться динамически -->
+                </div>
+            </div>
+
+            <div class="sidebar-widget">
+                <h3 class="widget-title">Теги</h3>
+                <div class="tags-cloud" id="tagsCloud">
+                    <!-- Теги будут загружаться динамически -->
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Подвал -->
+    <footer class="blog-footer">
+        <p>© 2024 Zindaki Academy. Все права защищены.</p>
+        <p>Блог об образовании, языках и современных методиках обучения</p>
+    </footer>
+
+    <script>
+        // Мобильное меню
+        const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+        const navLinks = document.querySelector('.nav-links');
+        
+        mobileMenuBtn.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            mobileMenuBtn.innerHTML = navLinks.classList.contains('active') ? 
+                '<i class="fas fa-times"></i>' : '<i class="fas fa-bars"></i>';
+        });
+
+        // Изменение навбара при скролле
+        window.addEventListener('scroll', () => {
+            const navbar = document.querySelector('.navbar');
+            if (navbar) {
+                if (window.scrollY > 50) {
+                    navbar.classList.add('scrolled');
+                } else {
+                    navbar.classList.remove('scrolled');
+                }
+            }
+        });
+
+        // Загрузка постов блога
+        async function loadBlogPosts(search = '', category = '') {
+            const postsGrid = document.getElementById('postsGrid');
+            postsGrid.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h3>Загрузка статей...</h3></div>';
+            
+            try {
+                let url = '/api/blog/posts';
+                const params = new URLSearchParams();
+                
+                if (search) params.append('search', search);
+                if (category) params.append('category', category);
+                
+                if (params.toString()) {
+                    url += '?' + params.toString();
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.posts && data.posts.length > 0) {
+                    postsGrid.innerHTML = '';
+                    
+                    data.posts.forEach(post => {
+                        const postCard = createPostCard(post);
+                        postsGrid.appendChild(postCard);
+                    });
+                } else {
+                    postsGrid.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-newspaper"></i>
+                            <h3>Статьи не найдены</h3>
+                            <p>Попробуйте изменить поисковый запрос или выбрать другую категорию</p>
+                        </div>
+                    `;
+                }
+                
+                // Загружаем категории, популярные посты и теги
+                loadCategories();
+                loadPopularPosts();
+                loadTags();
+                
+            } catch (error) {
+                console.error('Error loading blog posts:', error);
+                postsGrid.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Ошибка загрузки статей</h3></div>';
+            }
+        }
+
+        // Создание карточки поста
+        function createPostCard(post) {
+            const postCard = document.createElement('article');
+            postCard.className = 'post-card';
+            postCard.dataset.id = post.id;
+            
+            const date = new Date(post.published_at);
+            const formattedDate = date.toLocaleDateString('ru-RU');
+            
+            let imageHtml = '';
+            if (post.cover_image) {
+                imageHtml = `<img src="${post.cover_image}" alt="${post.title}">`;
+            } else if (post.video_url) {
+                imageHtml = `<img src="https://img.youtube.com/vi/${extractYouTubeId(post.video_url)}/hqdefault.jpg" alt="${post.title}">`;
+            } else {
+                imageHtml = `<img src="/static/blog-placeholder.jpg" alt="${post.title}">`;
+            }
+            
+            let videoIndicator = '';
+            if (post.video_url) {
+                videoIndicator = '<div class="video-indicator"><i class="fas fa-play"></i> Видео</div>';
+            }
+            
+            postCard.innerHTML = `
+                <div class="post-image">
+                    ${imageHtml}
+                    ${videoIndicator}
+                </div>
+                <div class="post-content">
+                    <div class="post-meta">
+                        <span class="post-date">${formattedDate}</span>
+                        <span class="post-category">${post.category || 'Общее'}</span>
+                    </div>
+                    <h3 class="post-title">${post.title}</h3>
+                    <p class="post-excerpt">${post.excerpt || post.content.substring(0, 150) + '...'}</p>
+                    <div class="post-footer">
+                        <div class="post-stats">
+                            <span><i class="fas fa-eye"></i> ${post.views || 0}</span>
+                            <span><i class="fas fa-comment"></i> ${post.comments_count || 0}</span>
+                        </div>
+                        <a href="/blog/post/${post.slug || post.id}" class="read-more">
+                            Читать <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            `;
+            
+            postCard.addEventListener('click', (e) => {
+                if (!e.target.closest('.read-more')) {
+                    window.location.href = `/blog/post/${post.slug || post.id}`;
+                }
+            });
+            
+            return postCard;
+        }
+
+        // Извлечение ID YouTube видео
+        function extractYouTubeId(url) {
+            if (!url) return '';
+            const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+            return match ? match[1] : '';
+        }
+
+        // Загрузка категорий
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/blog/categories');
+                const data = await response.json();
+                
+                const categoriesList = document.getElementById('categoriesList');
+                if (categoriesList && data.categories) {
+                    categoriesList.innerHTML = '';
+                    
+                    // Добавляем "Все категории"
+                    const allItem = document.createElement('li');
+                    allItem.innerHTML = `
+                        <a href="#" class="category-link" data-category="">
+                            Все категории
+                            <span class="category-count">${Object.values(data.categories).reduce((a, b) => a + b, 0)}</span>
+                        </a>
+                    `;
+                    categoriesList.appendChild(allItem);
+                    
+                    // Добавляем остальные категории
+                    Object.entries(data.categories).forEach(([category, count]) => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            <a href="#" class="category-link" data-category="${category}">
+                                ${category}
+                                <span class="category-count">${count}</span>
+                            </a>
+                        `;
+                        categoriesList.appendChild(li);
+                    });
+                    
+                    // Добавляем обработчики кликов
+                    document.querySelectorAll('.category-link').forEach(link => {
+                        link.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            const category = this.dataset.category;
+                            loadBlogPosts('', category);
+                        });
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+
+        // Загрузка популярных постов
+        async function loadPopularPosts() {
+            try {
+                const response = await fetch('/api/blog/posts?popular=true&limit=5');
+                const data = await response.json();
+                
+                const popularPostsContainer = document.getElementById('popularPosts');
+                if (popularPostsContainer && data.posts) {
+                    popularPostsContainer.innerHTML = '';
+                    
+                    data.posts.forEach(post => {
+                        const popularPost = document.createElement('div');
+                        popularPost.className = 'popular-post';
+                        
+                        let imageHtml = '';
+                        if (post.cover_image) {
+                            imageHtml = `<img src="${post.cover_image}" alt="${post.title}">`;
+                        } else {
+                            imageHtml = '<img src="/static/blog-placeholder-small.jpg" alt="' + post.title + '">';
+                        }
+                        
+                        const date = new Date(post.published_at);
+                        const formattedDate = date.toLocaleDateString('ru-RU');
+                        
+                        popularPost.innerHTML = `
+                            <div class="popular-post-image">
+                                ${imageHtml}
+                            </div>
+                            <div class="popular-post-content">
+                                <h4><a href="/blog/post/${post.slug || post.id}">${post.title}</a></h4>
+                                <div class="post-meta">
+                                    <span>${formattedDate}</span>
+                                </div>
+                            </div>
+                        `;
+                        
+                        popularPostsContainer.appendChild(popularPost);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading popular posts:', error);
+            }
+        }
+
+        // Загрузка тегов (упрощенная версия)
+        async function loadTags() {
+            try {
+                const response = await fetch('/api/blog/posts');
+                const data = await response.json();
+                
+                const tagsCloud = document.getElementById('tagsCloud');
+                if (tagsCloud && data.posts) {
+                    const tags = new Set();
+                    
+                    data.posts.forEach(post => {
+                        if (post.tags && Array.isArray(post.tags)) {
+                            post.tags.forEach(tag => tags.add(tag));
+                        }
+                    });
+                    
+                    tagsCloud.innerHTML = '';
+                    
+                    Array.from(tags).slice(0, 15).forEach(tag => {
+                        const tagElement = document.createElement('a');
+                        tagElement.className = 'tag';
+                        tagElement.href = '#';
+                        tagElement.textContent = tag;
+                        
+                        tagElement.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            document.getElementById('searchInput').value = tag;
+                            loadBlogPosts(tag, '');
+                        });
+                        
+                        tagsCloud.appendChild(tagElement);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading tags:', error);
+            }
+        }
+
+        // Поиск по блогу
+        const searchInput = document.getElementById('searchInput');
+        let searchTimeout;
+        
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadBlogPosts(this.value, '');
+            }, 500);
+        });
+
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBlogPosts();
+            
+            // Обработка параметров URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const category = urlParams.get('category');
+            const search = urlParams.get('search');
+            
+            if (category) {
+                loadBlogPosts('', category);
+            } else if (search) {
+                searchInput.value = search;
+                loadBlogPosts(search, '');
+            }
+        });
+    </script>
+</body>
+</html>
