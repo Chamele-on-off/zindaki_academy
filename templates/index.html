@@ -161,6 +161,34 @@
             width: 100%;
         }
         
+        /* Специальная кнопка для блога в навигации */
+        .nav-blog-button {
+            background: linear-gradient(135deg, #7E76F9 0%, #6A61E5 100%);
+            color: white !important;
+            padding: 0.6rem 1.2rem !important;
+            border-radius: var(--rounded-full) !important;
+            margin-left: 0.5rem !important;
+            box-shadow: 0 4px 15px rgba(126, 118, 249, 0.3) !important;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            white-space: nowrap;
+            text-decoration: none !important;
+            display: inline-block;
+        }
+        
+        .nav-blog-button:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(126, 118, 249, 0.4) !important;
+            color: white !important;
+        }
+        
+        .nav-blog-button i {
+            margin-right: 0.4rem;
+        }
+        
         /* Специальная кнопка для AI-учителя в навигации */
         .nav-ai-button {
             background: var(--gradient-ai);
@@ -559,7 +587,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==');
+            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3cy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==');
             opacity: 0.3;
         }
         
@@ -1395,7 +1423,8 @@
                 font-size: 0.85rem;
             }
             
-            .nav-ai-button {
+            .nav-ai-button,
+            .nav-blog-button {
                 padding: 0.5rem 1rem;
                 font-size: 0.8rem;
             }
@@ -1469,7 +1498,8 @@
                 margin-bottom: 30px;
             }
             
-            .nav-ai-button {
+            .nav-ai-button,
+            .nav-blog-button {
                 margin: 0;
                 width: 100%;
                 text-align: center;
@@ -1553,6 +1583,10 @@
             <a href="#testimonials">Отзывы</a>
             <a href="#success">Успехи</a>
             <a href="#contact">Контакты</a>
+            <!-- КНОПКА БЛОГА -->
+            <a href="/blog" class="nav-blog-button">
+                <i class="fas fa-newspaper"></i> Блог
+            </a>
             <button class="nav-ai-button" id="navAiButton" title="Перейти на сайт AI-учителя">
                 <i class="fas fa-robot"></i> AI-учитель
             </button>
@@ -1582,6 +1616,7 @@
             <li><a href="#" id="loginLink"><i class="fas fa-sign-in-alt"></i> Войти</a></li>
             <li><a href="/dashboard" id="dashboardLink" style="display: none;"><i class="fas fa-user"></i> Личный кабинет</a></li>
             <li><a href="#" id="logoutLink" style="display: none;"><i class="fas fa-sign-out-alt"></i> Выйти</a></li>
+            <li><a href="/blog" id="blogLink"><i class="fas fa-newspaper"></i> Блог</a></li>
             <li><a href="#" id="openAiTeacherSite"><i class="fas fa-robot"></i> AI-репетитор</a></li>
         </ul>
     </div>
@@ -2088,6 +2123,7 @@
                         <li><a href="mailto:info@zindakiacademy.ru">info@zindakiacademy.ru</a></li>
                         <li><a href="https://ai.zindaki-edu.ru" target="_blank">AI-репетитор</a></li>
                         <li><a href="https://t.me/zindakiequipe">Telegram-канал</a></li>
+                        <li><a href="/blog">Блог</a></li>
                         <li><a href="#contact">Форма обратной связи</a></li>
                     </ul>
                 </div>
@@ -2630,6 +2666,15 @@
                 }
             }
         });
+
+        // Добавляем ссылку на блог в панели пользователя
+        const blogLink = document.getElementById('blogLink');
+        if (blogLink) {
+            blogLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = '/blog';
+            });
+        }
     </script>
 </body>
 </html>
