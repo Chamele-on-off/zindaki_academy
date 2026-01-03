@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ post.title }} | Zindaki Academy Блог</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Используйте стили из blog.html, добавьте немного специфичных */
+        .post-content {
+            font-size: 1.1rem;
+            line-height: 1.8;
+        }
+        
+        .post-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: var(--rounded-lg);
+            margin: 1.5rem 0;
+        }
+        
+        .post-content iframe {
+            max-width: 100%;
+            margin: 1.5rem 0;
+        }
+        
+        .edit-post-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--primary);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            box-shadow: var(--shadow-lg);
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация и шапка как в blog.html -->
+    
+    <main class="post-page">
+        {% if user and user.role == 'teacher' %}
+        <a href="/blog/edit/{{ post.id }}" class="edit-post-btn" title="Редактировать">
+            <i class="fas fa-edit"></i>
+        </a>
+        {% endif %}
+        
+        <article class="post-article">
+            <!-- Заголовок, метаданные, изображение, содержание -->
+        </article>
+        
+        <!-- Комментарии и похожие статьи -->
+    </main>
+</body>
+</html>
