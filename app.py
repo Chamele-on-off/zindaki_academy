@@ -873,7 +873,7 @@ if not os.path.exists(f'{DB_FOLDER}/users.json'):
             'role': 'student',
             'is_active': True,
             'phone': '+9876543210',
-            'created_name': datetime.now().isoformat(),
+            'created_at': datetime.now().isoformat(),
             'avatar': 'https://i.pravatar.cc/150?u=student1'
         }
     ]
@@ -1420,16 +1420,13 @@ def api_create_blog_post():
     if not all(field in data for field in required_fields):
         return jsonify({'error': 'Missing required fields'}), 400
     
-    # Загрузка изображения, если есть
-    cover_image = data.get('cover_image')
-    
     post = DB.save_blog_post(
         title=data['title'],
         content=data['content'],
         author=session['user']['username'],
         category=data.get('category', 'Общее'),
         excerpt=data.get('excerpt'),
-        cover_image=cover_image,
+        cover_image=data.get('cover_image'),
         is_published=data.get('is_published', True),
         video_url=data.get('video_url'),
         tags=data.get('tags', []),
@@ -1474,6 +1471,38 @@ def api_delete_blog_post(post_id):
         return jsonify({'success': True})
     else:
         return jsonify({'error': 'Delete failed'}), 500
+
+@app.route('/api/blog/posts/<int:post_id>/cover', methods=['POST'])
+def api_upload_cover(post_id):
+    """Загрузка обложки для поста"""
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    post = DB.get_blog_post(post_id)
+    if not post:
+        return jsonify({'error': 'Post not found'}), 404
+    
+    if 'cover_image' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    
+    file = request.files['cover_image']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    
+    if file:
+        # Создаем уникальное имя файла
+        filename = secure_filename(f"cover_{post_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}")
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        # Формируем URL для доступа к файлу
+        cover_url = url_for('uploaded_file', filename=filename, _external=True)
+        
+        # Обновляем пост
+        if DB.update_blog_post(post_id, {'cover_image': cover_url}):
+            return jsonify({'success': True, 'cover_url': cover_url})
+    
+    return jsonify({'error': 'Failed to upload cover image'}), 500
 
 @app.route('/api/blog/categories', methods=['GET'])
 def api_blog_categories():
@@ -1522,6 +1551,79 @@ def api_delete_blog_comment(comment_id):
         return jsonify({'error': 'Delete failed'}), 500
 
 # ===== КОНЕЦ API ДЛЯ БЛОГА =====
+
+# ===== РОУТЫ ДЛЯ БЛОГА =====
+
+@app.route('/blog')
+def blog():
+    """Главная страница блога"""
+    return render_template('blog.html', user=session.get('user'))
+
+@app.route('/blog/post/<path:slug>')
+def blog_post(slug):
+    """Страница отдельного поста"""
+    try:
+        # Пытаемся найти пост по ID или slug
+        post_id = int(slug.split('-')[0]) if '-' in slug and slug.split('-')[0].isdigit() else None
+        
+        if post_id:
+            post = DB.get_blog_post(post_id)
+        else:
+            # Если не нашли по ID, ищем по slug
+            posts = DB.get_blog_posts()
+            post = next((p for p in posts if p.get('slug') == slug), None)
+        
+        if not post:
+            return render_template('404.html'), 404
+        
+        # Проверка доступа для неопубликованных постов
+        if not post.get('is_published') and ('user' not in session or session['user']['role'] != 'teacher'):
+            return render_template('403.html'), 403
+        
+        # Увеличиваем счетчик просмотров
+        DB.increment_views(post['id'])
+        
+        # Получаем автора
+        author = DB.get_user(post['author'])
+        author_avatar = author['avatar'] if author else None
+        
+        # Получаем похожие посты
+        similar_posts = [p for p in DB.get_blog_posts() 
+                        if p.get('is_published') and 
+                        p['id'] != post['id'] and 
+                        p.get('category') == post.get('category')][:3]
+        
+        return render_template('blog_post.html', 
+                             post=post,
+                             author_avatar=author_avatar,
+                             similar_posts=similar_posts,
+                             user=session.get('user'))
+    
+    except Exception as e:
+        logger.error(f'Error loading blog post: {e}')
+        return render_template('500.html'), 500
+
+@app.route('/blog/new', methods=['GET'])
+def new_blog_post():
+    """Создание нового поста (только для учителей)"""
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return redirect('/blog')
+    
+    return render_template('blog_editor.html', user=session.get('user'))
+
+@app.route('/blog/edit/<int:post_id>', methods=['GET'])
+def edit_blog_post(post_id):
+    """Редактирование поста (только для учителей)"""
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return redirect('/blog')
+    
+    post = DB.get_blog_post(post_id)
+    if not post:
+        return redirect('/blog')
+    
+    return render_template('blog_editor.html', post=post, user=session.get('user'))
+
+# ===== КОНЕЦ РОУТОВ ДЛЯ БЛОГА =====
 
 # ===== API ДЛЯ БЭКАПОВ =====
 
@@ -1693,79 +1795,6 @@ def upload_backup_chunk():
         return jsonify({'error': str(e)}), 500
 
 # ===== КОНЕЦ API ДЛЯ БЭКАПОВ =====
-
-# ===== РОУТЫ ДЛЯ БЛОГА =====
-
-@app.route('/blog')
-def blog():
-    """Главная страница блога"""
-    return render_template('blog.html', user=session.get('user'))
-
-@app.route('/blog/post/<path:slug>')
-def blog_post(slug):
-    """Страница отдельного поста"""
-    try:
-        # Пытаемся найти пост по ID или slug
-        post_id = int(slug.split('-')[0]) if '-' in slug and slug.split('-')[0].isdigit() else None
-        
-        if post_id:
-            post = DB.get_blog_post(post_id)
-        else:
-            # Если не нашли по ID, ищем по slug
-            posts = DB.get_blog_posts()
-            post = next((p for p in posts if p.get('slug') == slug), None)
-        
-        if not post:
-            return render_template('404.html'), 404
-        
-        # Проверка доступа для неопубликованных постов
-        if not post.get('is_published') and ('user' not in session or session['user']['role'] != 'teacher'):
-            return render_template('403.html'), 403
-        
-        # Увеличиваем счетчик просмотров
-        DB.increment_views(post['id'])
-        
-        # Получаем автора
-        author = DB.get_user(post['author'])
-        author_avatar = author['avatar'] if author else None
-        
-        # Получаем похожие посты
-        similar_posts = [p for p in DB.get_blog_posts() 
-                        if p.get('is_published') and 
-                        p['id'] != post['id'] and 
-                        p.get('category') == post.get('category')][:3]
-        
-        return render_template('blog_post.html', 
-                             post=post,
-                             author_avatar=author_avatar,
-                             similar_posts=similar_posts,
-                             user=session.get('user'))
-    
-    except Exception as e:
-        logger.error(f'Error loading blog post: {e}')
-        return render_template('500.html'), 500
-
-@app.route('/blog/new', methods=['GET'])
-def new_blog_post():
-    """Создание нового поста (только для учителей)"""
-    if 'user' not in session or session['user']['role'] != 'teacher':
-        return redirect('/blog')
-    
-    return render_template('blog_editor.html', user=session.get('user'))
-
-@app.route('/blog/edit/<int:post_id>')
-def edit_blog_post(post_id):
-    """Редактирование поста (только для учителей)"""
-    if 'user' not in session or session['user']['role'] != 'teacher':
-        return redirect('/blog')
-    
-    post = DB.get_blog_post(post_id)
-    if not post:
-        return redirect('/blog')
-    
-    return render_template('blog_editor.html', post=post, user=session.get('user'))
-
-# ===== КОНЕЦ РОУТОВ ДЛЯ БЛОГА =====
 
 # Главная страница и все SPA-роуты
 @app.route('/')
@@ -2436,7 +2465,7 @@ if __name__ == '__main__':
         app,
         host='0.0.0.0',
         port=8000,
-        debug=False,
-        log_output=True,
-        use_reloader=False
+        debug=True,
+        use_reloader=False,
+        log_output=False
     )
