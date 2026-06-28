@@ -112,6 +112,7 @@
         .nav-links {
             display: flex;
             gap: 1.5rem;
+            align-items: center;
         }
         
         .nav-links a {
@@ -151,6 +152,32 @@
         
         .nav-links a:hover:after {
             width: 100%;
+        }
+        
+        /* Кнопка "Разместить статью" в навигации для учителей */
+        .nav-new-post-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white !important;
+            padding: 0.6rem 1.2rem !important;
+            border-radius: var(--rounded-full) !important;
+            margin-left: 0.5rem !important;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3) !important;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .nav-new-post-btn:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4) !important;
+            color: white !important;
+        }
+        
+        .nav-new-post-btn i {
+            margin-right: 0.4rem;
         }
         
         .mobile-menu-btn {
@@ -207,6 +234,84 @@
             margin-bottom: 2rem;
         }
         
+        /* Админ-панель для учителей */
+        .admin-bar {
+            max-width: 1200px;
+            margin: 0 auto 2rem;
+            padding: 1rem 1.5rem;
+            background: var(--lighter);
+            border-radius: var(--rounded-lg);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .admin-bar-title {
+            font-weight: 600;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .admin-bar-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: var(--rounded-md);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            font-size: 0.9rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        }
+        
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+        
+        .btn-secondary:hover {
+            background-color: rgba(58, 90, 120, 0.1);
+            transform: translateY(-2px);
+        }
+        
         .search-box {
             max-width: 500px;
             margin: 2rem auto;
@@ -256,6 +361,7 @@
             height: 100%;
             display: flex;
             flex-direction: column;
+            cursor: pointer;
         }
         
         .post-card:hover {
@@ -356,6 +462,25 @@
         
         .read-more:hover {
             color: var(--primary-dark);
+        }
+        
+        .post-status-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: var(--rounded-full);
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+        
+        .post-status-badge.draft {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .post-status-badge.published {
+            background: #d4edda;
+            color: #155724;
         }
         
         .sidebar {
@@ -460,6 +585,7 @@
             border-radius: var(--rounded-full);
             font-size: 0.9rem;
             transition: all 0.3s ease;
+            cursor: pointer;
         }
         
         .tag:hover {
@@ -539,6 +665,20 @@
                 transform: translateY(0);
             }
             
+            .nav-links a {
+                color: var(--light) !important;
+            }
+            
+            .nav-links a:hover {
+                color: var(--accent) !important;
+            }
+            
+            .nav-new-post-btn {
+                margin: 0 !important;
+                width: 100%;
+                text-align: center;
+            }
+            
             .blog-header {
                 padding: 3rem 1rem;
                 margin-top: 80px;
@@ -555,286 +695,21 @@
             .posts-grid {
                 grid-template-columns: 1fr;
             }
-        }
-        
-        /* Стили для отдельных постов */
-        .post-page {
-            max-width: 800px;
-            margin: 100px auto 3rem;
-            padding: 0 2rem;
-        }
-        
-        .post-header {
-            margin-bottom: 2rem;
-        }
-        
-        .post-header-image {
-            width: 100%;
-            height: 400px;
-            border-radius: var(--rounded-xl);
-            overflow: hidden;
-            margin-bottom: 2rem;
-        }
-        
-        .post-header-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .post-header-content {
-            text-align: center;
-        }
-        
-        .post-date {
-            color: var(--text-light);
-            margin-bottom: 1rem;
-        }
-        
-        .post-title-large {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        .post-author {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 1rem;
-            margin-top: 2rem;
-        }
-        
-        .author-avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            overflow: hidden;
-        }
-        
-        .author-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .video-container {
-            position: relative;
-            padding-bottom: 56.25%;
-            height: 0;
-            overflow: hidden;
-            margin: 2rem 0;
-            border-radius: var(--rounded-lg);
-        }
-        
-        .video-container iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: 0;
-        }
-        
-        .post-content {
-            font-size: 1.1rem;
-            line-height: 1.8;
-        }
-        
-        .post-content h2 {
-            margin: 2rem 0 1rem;
-            color: var(--primary-dark);
-        }
-        
-        .post-content p {
-            margin-bottom: 1.5rem;
-        }
-        
-        .post-content img {
-            max-width: 100%;
-            border-radius: var(--rounded-lg);
-            margin: 2rem 0;
-        }
-        
-        .post-actions {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 3rem 0;
-            padding: 1.5rem;
-            background: var(--light);
-            border-radius: var(--rounded-lg);
-        }
-        
-        .share-buttons {
-            display: flex;
-            gap: 1rem;
-        }
-        
-        .share-button {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            transition: all 0.3s ease;
-        }
-        
-        .share-button.vk { background: #4C75A3; }
-        .share-button.telegram { background: #0088cc; }
-        .share-button.facebook { background: #3b5998; }
-        .share-button.twitter { background: #1DA1F2; }
-        
-        .share-button:hover {
-            transform: translateY(-3px);
-        }
-        
-        .like-button {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: white;
-            border-radius: var(--rounded-full);
-            border: 1px solid #e0e0e0;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .like-button:hover {
-            border-color: var(--primary);
-        }
-        
-        .like-button.liked {
-            background: var(--primary);
-            color: white;
-        }
-        
-        .comments-section {
-            margin-top: 4rem;
-            padding-top: 2rem;
-            border-top: 1px solid rgba(0,0,0,0.1);
-        }
-        
-        .comments-title {
-            margin-bottom: 2rem;
-        }
-        
-        .comment-form {
-            background: var(--light);
-            padding: 1.5rem;
-            border-radius: var(--rounded-lg);
-            margin-bottom: 2rem;
-        }
-        
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-        }
-        
-        .form-control {
-            width: 100%;
-            padding: 0.8rem 1rem;
-            border: 1px solid #e0e0e0;
-            border-radius: var(--rounded-md);
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-        
-        .form-control:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(58, 90, 120, 0.1);
-        }
-        
-        textarea.form-control {
-            min-height: 120px;
-            resize: vertical;
-        }
-        
-        .btn {
-            padding: 0.8rem 1.5rem;
-            border-radius: var(--rounded-md);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: none;
-            font-size: 1rem;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-        }
-        
-        .btn-primary {
-            background-color: var(--primary);
-            color: white;
-            box-shadow: var(--shadow-sm);
-        }
-        
-        .btn-primary:hover {
-            background-color: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-        }
-        
-        .comments-list {
-            display: grid;
-            gap: 1.5rem;
-        }
-        
-        .comment {
-            padding: 1.5rem;
-            background: var(--lighter);
-            border-radius: var(--rounded-lg);
-            border: 1px solid rgba(0,0,0,0.05);
-        }
-        
-        .comment-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 1rem;
-        }
-        
-        .comment-author {
-            font-weight: 600;
-            color: var(--primary);
-        }
-        
-        .comment-date {
-            color: var(--text-light);
-            font-size: 0.9rem;
-        }
-        
-        .comment-content {
-            color: var(--text);
-            line-height: 1.6;
+            
+            .admin-bar {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+            }
+            
+            .admin-bar-actions {
+                justify-content: center;
+            }
         }
         
         @media (max-width: 576px) {
-            .post-page {
-                padding: 0 1rem;
-            }
-            
-            .post-header-image {
-                height: 250px;
-            }
-            
-            .post-title-large {
-                font-size: 2rem;
-            }
-            
-            .post-actions {
-                flex-direction: column;
-                gap: 1rem;
-                align-items: flex-start;
+            .admin-bar-actions .btn {
+                width: 100%;
             }
         }
     </style>
@@ -856,9 +731,15 @@
             <a href="/#programs">Программы</a>
             <a href="/#testimonials">Отзывы</a>
             {% if user %}
-            <a href="/dashboard">Личный кабинет</a>
+                <a href="/dashboard">Личный кабинет</a>
+                {% if user.role == 'teacher' %}
+                <a href="/blog/new" class="nav-new-post-btn">
+                    <i class="fas fa-plus-circle"></i> Разместить статью
+                </a>
+                {% endif %}
+                <a href="#" id="logoutBtn">Выйти</a>
             {% else %}
-            <a href="/#login">Вход</a>
+                <a href="/#login">Вход</a>
             {% endif %}
         </div>
         <button class="mobile-menu-btn">
@@ -880,6 +761,23 @@
     <!-- Основное содержимое -->
     <div class="blog-container">
         <main class="posts-content">
+            <!-- Админ-панель для учителей -->
+            {% if user and user.role == 'teacher' %}
+            <div class="admin-bar">
+                <span class="admin-bar-title">
+                    <i class="fas fa-user-cog"></i> Панель управления
+                </span>
+                <div class="admin-bar-actions">
+                    <a href="/blog/new" class="btn btn-success">
+                        <i class="fas fa-plus-circle"></i> Разместить статью
+                    </a>
+                    <a href="/dashboard" class="btn btn-secondary">
+                        <i class="fas fa-tachometer-alt"></i> Личный кабинет
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
             <div id="postsGrid" class="posts-grid">
                 <!-- Посты будут загружаться динамически -->
                 <div class="empty-state">
@@ -925,17 +823,19 @@
     </footer>
 
     <script>
-        // Мобильное меню
+        // --- Мобильное меню ---
         const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
         const navLinks = document.querySelector('.nav-links');
         
-        mobileMenuBtn.addEventListener('click', () => {
-            navLinks.classList.toggle('active');
-            mobileMenuBtn.innerHTML = navLinks.classList.contains('active') ? 
-                '<i class="fas fa-times"></i>' : '<i class="fas fa-bars"></i>';
-        });
+        if (mobileMenuBtn && navLinks) {
+            mobileMenuBtn.addEventListener('click', () => {
+                navLinks.classList.toggle('active');
+                mobileMenuBtn.innerHTML = navLinks.classList.contains('active') ? 
+                    '<i class="fas fa-times"></i>' : '<i class="fas fa-bars"></i>';
+            });
+        }
 
-        // Изменение навбара при скролле
+        // --- Изменение навбара при скролле ---
         window.addEventListener('scroll', () => {
             const navbar = document.querySelector('.navbar');
             if (navbar) {
@@ -947,7 +847,28 @@
             }
         });
 
-        // Загрузка постов блога
+        // --- Выход из системы ---
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                fetch('/api/logout', {
+                    method: 'GET'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = '/';
+                    }
+                })
+                .catch(error => {
+                    console.error('Logout error:', error);
+                    window.location.href = '/';
+                });
+            });
+        }
+
+        // --- Загрузка постов блога ---
         async function loadBlogPosts(search = '', category = '') {
             const postsGrid = document.getElementById('postsGrid');
             postsGrid.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h3>Загрузка статей...</h3></div>';
@@ -994,20 +915,29 @@
             }
         }
 
-        // Создание карточки поста
+        // --- Создание карточки поста ---
         function createPostCard(post) {
             const postCard = document.createElement('article');
             postCard.className = 'post-card';
             postCard.dataset.id = post.id;
             
-            const date = new Date(post.published_at);
-            const formattedDate = date.toLocaleDateString('ru-RU');
+            const date = new Date(post.published_at || post.created_at);
+            const formattedDate = date.toLocaleDateString('ru-RU', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+            });
             
             let imageHtml = '';
             if (post.cover_image) {
                 imageHtml = `<img src="${post.cover_image}" alt="${post.title}">`;
             } else if (post.video_url) {
-                imageHtml = `<img src="https://img.youtube.com/vi/${extractYouTubeId(post.video_url)}/hqdefault.jpg" alt="${post.title}">`;
+                const youtubeId = extractYouTubeId(post.video_url);
+                if (youtubeId) {
+                    imageHtml = `<img src="https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg" alt="${post.title}">`;
+                } else {
+                    imageHtml = `<img src="/static/blog-placeholder.jpg" alt="${post.title}">`;
+                }
             } else {
                 imageHtml = `<img src="/static/blog-placeholder.jpg" alt="${post.title}">`;
             }
@@ -1015,6 +945,15 @@
             let videoIndicator = '';
             if (post.video_url) {
                 videoIndicator = '<div class="video-indicator"><i class="fas fa-play"></i> Видео</div>';
+            }
+            
+            // Статус поста (для учителей)
+            let statusBadge = '';
+            const isTeacher = {{ 'true' if user and user.role == 'teacher' else 'false' }};
+            if (isTeacher) {
+                const statusClass = post.is_published ? 'published' : 'draft';
+                const statusText = post.is_published ? 'Опубликовано' : 'Черновик';
+                statusBadge = `<span class="post-status-badge ${statusClass}">${statusText}</span>`;
             }
             
             postCard.innerHTML = `
@@ -1027,8 +966,8 @@
                         <span class="post-date">${formattedDate}</span>
                         <span class="post-category">${post.category || 'Общее'}</span>
                     </div>
-                    <h3 class="post-title">${post.title}</h3>
-                    <p class="post-excerpt">${post.excerpt || post.content.substring(0, 150) + '...'}</p>
+                    <h3 class="post-title">${post.title} ${statusBadge}</h3>
+                    <p class="post-excerpt">${post.excerpt || post.content.replace(/<[^>]*>/g, '').substring(0, 150) + '...'}</p>
                     <div class="post-footer">
                         <div class="post-stats">
                             <span><i class="fas fa-eye"></i> ${post.views || 0}</span>
@@ -1050,14 +989,14 @@
             return postCard;
         }
 
-        // Извлечение ID YouTube видео
+        // --- Извлечение ID YouTube видео ---
         function extractYouTubeId(url) {
             if (!url) return '';
             const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
             return match ? match[1] : '';
         }
 
-        // Загрузка категорий
+        // --- Загрузка категорий ---
         async function loadCategories() {
             try {
                 const response = await fetch('/api/blog/categories');
@@ -1067,12 +1006,15 @@
                 if (categoriesList && data.categories) {
                     categoriesList.innerHTML = '';
                     
+                    // Подсчитываем общее количество статей
+                    const totalCount = Object.values(data.categories).reduce((a, b) => a + b, 0);
+                    
                     // Добавляем "Все категории"
                     const allItem = document.createElement('li');
                     allItem.innerHTML = `
                         <a href="#" class="category-link" data-category="">
                             Все категории
-                            <span class="category-count">${Object.values(data.categories).reduce((a, b) => a + b, 0)}</span>
+                            <span class="category-count">${totalCount}</span>
                         </a>
                     `;
                     categoriesList.appendChild(allItem);
@@ -1103,7 +1045,7 @@
             }
         }
 
-        // Загрузка популярных постов
+        // --- Загрузка популярных постов ---
         async function loadPopularPosts() {
             try {
                 const response = await fetch('/api/blog/posts?popular=true&limit=5');
@@ -1112,6 +1054,11 @@
                 const popularPostsContainer = document.getElementById('popularPosts');
                 if (popularPostsContainer && data.posts) {
                     popularPostsContainer.innerHTML = '';
+                    
+                    if (data.posts.length === 0) {
+                        popularPostsContainer.innerHTML = '<p style="color: var(--text-light); font-size: 0.9rem;">Популярных статей пока нет</p>';
+                        return;
+                    }
                     
                     data.posts.forEach(post => {
                         const popularPost = document.createElement('div');
@@ -1124,7 +1071,7 @@
                             imageHtml = '<img src="/static/blog-placeholder-small.jpg" alt="' + post.title + '">';
                         }
                         
-                        const date = new Date(post.published_at);
+                        const date = new Date(post.published_at || post.created_at);
                         const formattedDate = date.toLocaleDateString('ru-RU');
                         
                         popularPost.innerHTML = `
@@ -1147,7 +1094,7 @@
             }
         }
 
-        // Загрузка тегов (упрощенная версия)
+        // --- Загрузка тегов ---
         async function loadTags() {
             try {
                 const response = await fetch('/api/blog/posts');
@@ -1165,10 +1112,14 @@
                     
                     tagsCloud.innerHTML = '';
                     
+                    if (tags.size === 0) {
+                        tagsCloud.innerHTML = '<p style="color: var(--text-light); font-size: 0.9rem;">Теги отсутствуют</p>';
+                        return;
+                    }
+                    
                     Array.from(tags).slice(0, 15).forEach(tag => {
-                        const tagElement = document.createElement('a');
+                        const tagElement = document.createElement('span');
                         tagElement.className = 'tag';
-                        tagElement.href = '#';
                         tagElement.textContent = tag;
                         
                         tagElement.addEventListener('click', (e) => {
@@ -1185,18 +1136,20 @@
             }
         }
 
-        // Поиск по блогу
+        // --- Поиск по блогу ---
         const searchInput = document.getElementById('searchInput');
         let searchTimeout;
         
-        searchInput.addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                loadBlogPosts(this.value, '');
-            }, 500);
-        });
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    loadBlogPosts(this.value, '');
+                }, 500);
+            });
+        }
 
-        // Инициализация при загрузке
+        // --- Инициализация при загрузке ---
         document.addEventListener('DOMContentLoaded', function() {
             loadBlogPosts();
             
@@ -1208,7 +1161,7 @@
             if (category) {
                 loadBlogPosts('', category);
             } else if (search) {
-                searchInput.value = search;
+                if (searchInput) searchInput.value = search;
                 loadBlogPosts(search, '');
             }
         });
