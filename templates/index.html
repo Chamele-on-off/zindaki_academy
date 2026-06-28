@@ -571,72 +571,6 @@
             line-height: 1.7;
         }
         
-        /* AI Teacher Demo Section */
-        .ai-demo-section {
-            background: var(--gradient-ai);
-            color: white;
-            padding: 8rem 2rem;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .ai-demo-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3cy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==');
-            opacity: 0.3;
-        }
-        
-        .ai-demo-container {
-            max-width: 1000px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 2;
-        }
-        
-        .ai-demo-features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-            margin: 3rem 0;
-        }
-        
-        .ai-demo-feature {
-            text-align: center;
-            padding: 1.5rem;
-            background: rgba(255,255,255,0.1);
-            border-radius: var(--rounded-lg);
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255,255,255,0.2);
-            transition: all 0.3s ease;
-        }
-        
-        .ai-demo-feature:hover {
-            transform: translateY(-5px);
-            background: rgba(255,255,255,0.15);
-        }
-        
-        .ai-demo-feature i {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-            color: white;
-        }
-        
-        .ai-demo-feature h4 {
-            font-size: 1.3rem;
-            margin-bottom: 0.5rem;
-            color: white;
-        }
-        
-        .ai-demo-feature p {
-            opacity: 0.9;
-            font-size: 0.95rem;
-        }
-        
         /* About Section */
         .about-section {
             background-color: var(--lighter);
@@ -887,7 +821,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsMjU1LJI1NSwwLjA1KSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==');
+            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==');
             opacity: 0.3;
         }
         
@@ -1069,6 +1003,72 @@
         .document-link:hover {
             color: var(--primary-dark);
             text-decoration: underline;
+        }
+        
+        /* AI Teacher Demo Section */
+        .ai-demo-section {
+            background: var(--gradient-ai);
+            color: white;
+            padding: 8rem 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .ai-demo-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==');
+            opacity: 0.3;
+        }
+        
+        .ai-demo-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .ai-demo-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+        
+        .ai-demo-feature {
+            text-align: center;
+            padding: 1.5rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: var(--rounded-lg);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .ai-demo-feature:hover {
+            transform: translateY(-5px);
+            background: rgba(255,255,255,0.15);
+        }
+        
+        .ai-demo-feature i {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: white;
+        }
+        
+        .ai-demo-feature h4 {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            color: white;
+        }
+        
+        .ai-demo-feature p {
+            opacity: 0.9;
+            font-size: 0.95rem;
         }
         
         /* CTA Section */
@@ -1579,9 +1579,9 @@
             <a href="#about">О нас</a>
             <a href="#teachers">Преподаватели</a>
             <a href="#programs">Программы</a>
-            <a href="#ai-teacher-demo">AI-репетитор</a>
             <a href="#testimonials">Отзывы</a>
             <a href="#success">Успехи</a>
+            <a href="#ai-teacher-demo">AI-репетитор</a>
             <a href="#contact">Контакты</a>
             <!-- КНОПКА БЛОГА -->
             <a href="/blog" class="nav-blog-button">
@@ -1673,6 +1673,9 @@
             <div class="cta-buttons">
                 <a href="#programs" class="btn btn-primary">Выбрать программу</a>
                 <a href="https://t.me/zindakiequipe" class="btn btn-secondary">Telegram-канал <i class="fas fa-arrow-right"></i></a>
+                <a href="/blog" class="btn btn-secondary" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3);">
+                    <i class="fas fa-newspaper"></i> Наш блог
+                </a>
                 <button id="heroAiButton" class="btn btn-ai">
                     <i class="fas fa-robot"></i> Попробовать AI-репетитора
                 </button>
@@ -1680,8 +1683,8 @@
         </div>
     </section>
 
-    <!-- Features Section -->
-    <section class="section">
+    <!-- Features Section (Наши преимущества) -->
+    <section class="section" id="features">
         <div class="container">
             <h2 class="section-title">Наши преимущества</h2>
             <div class="features-grid">
@@ -1720,57 +1723,7 @@
         </div>
     </section>
 
-    <!-- AI Teacher Demo Section -->
-    <section class="section ai-demo-section" id="ai-teacher-demo">
-        <div class="container">
-            <h2 class="section-title" style="color: white;">Попробуйте нашего AI-репетитора</h2>
-            
-            <div style="text-align: center; max-width: 800px; margin: 0 auto 3rem;">
-                <p style="font-size: 1.3rem; opacity: 0.9; line-height: 1.6;">
-                    Инновационный AI-репетитор поможет вашему ребенку освоить любой школьный предмет. 
-                    Просто начните диалог - репетитор подстроится под уровень ученика и объяснит сложные темы простыми словами.
-                    <strong>Все наши ученики получают бесплатный доступ к системе!</strong>
-                </p>
-            </div>
-            
-            <div class="ai-demo-features">
-                <div class="ai-demo-feature">
-                    <i class="fas fa-microphone"></i>
-                    <h4>Говорите свободно</h4>
-                    <p>Общайтесь голосом как с живым учителем</p>
-                </div>
-                
-                <div class="ai-demo-feature">
-                    <i class="fas fa-lightbulb"></i>
-                    <h4>Все школьные предметы</h4>
-                    <p>Математика, физика, языки, история и многое другое</p>
-                </div>
-                
-                <div class="ai-demo-feature">
-                    <i class="fas fa-clock"></i>
-                    <h4>24/7 доступность</h4>
-                    <p>Занимайтесь в любое удобное время</p>
-                </div>
-                
-                <div class="ai-demo-feature">
-                    <i class="fas fa-chart-line"></i>
-                    <h4>Адаптивное обучение</h4>
-                    <p>Система подстраивается под уровень ученика</p>
-                </div>
-            </div>
-            
-            <div style="text-align: center; margin-top: 3rem;">
-                <button id="openAiDemo" class="btn" style="background: white; color: #7E76F9; padding: 1.2rem 2.5rem; font-size: 1.2rem; border-radius: var(--rounded-full); border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.8rem; font-weight: 600; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-                    <i class="fas fa-robot"></i> Запустить демо AI-репетитора
-                </button>
-                <p style="margin-top: 1rem; opacity: 0.8; font-size: 0.9rem;">
-                    <i class="fas fa-info-circle"></i> Для голосового общения разрешите доступ к микрофону
-                </p>
-            </div>
-        </div>
-    </section>
-
-    <!-- About Section -->
+    <!-- About Section (Образование нового поколения) -->
     <section class="section about-section" id="about">
         <div class="container">
             <div class="about-container">
@@ -1891,51 +1844,7 @@
         </div>
     </section>
 
-    <!-- Testimonials Section -->
-    <section class="testimonials-section" id="testimonials">
-        <div class="container">
-            <h2 class="section-title">Отзывы наших учеников</h2>
-            <div class="testimonials-container">
-                <div class="testimonials-slider">
-                    <div class="testimonial">
-                        <div class="testimonial-content">
-                            <p class="testimonial-text">"Отличная школа! Мой ребенок занимается с огромным удовольствием. Преподаватели очень внимательные и профессиональные."</p>
-                            <div class="testimonial-author">
-                                <div class="author-info">
-                                    <h4>Анна Смирнова</h4>
-                                    <p>Мама ученика 5 класса</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="testimonial">
-                        <div class="testimonial-content">
-                            <p class="testimonial-text">"Занимаюсь английским уже полгода. Результаты потрясающие! Теперь свободно общаюсь с иностранными коллегами."</p>
-                            <div class="testimonial-author">
-                                <div class="author-info">
-                                    <h4>Дмитрий Иванов</h4>
-                                    <p>Взрослый студент</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="testimonial">
-                        <div class="testimonial-content">
-                            <p class="testimonial-text">"AI-репетитор - это настоящее чудо! Ребенок занимается с удовольствием, оценки в школе заметно улучшились."</p>
-                            <div class="testimonial-author">
-                                <div class="author-info">
-                                    <h4>Ольга Петрова</h4>
-                                    <p>Мама ученицы 8 класса</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Success Section -->
+    <!-- Success Section (Успехи наших учеников) -->
     <section class="section success-section" id="success">
         <div class="container">
             <h2 class="section-title">Успехи наших студентов</h2>
@@ -2013,6 +1922,100 @@
         </div>
     </section>
 
+    <!-- AI Teacher Demo Section (Попробуйте нашего AI-репетитора) -->
+    <section class="section ai-demo-section" id="ai-teacher-demo">
+        <div class="container">
+            <h2 class="section-title" style="color: white;">Попробуйте нашего AI-репетитора</h2>
+            
+            <div style="text-align: center; max-width: 800px; margin: 0 auto 3rem;">
+                <p style="font-size: 1.3rem; opacity: 0.9; line-height: 1.6;">
+                    Инновационный AI-репетитор поможет вашему ребенку освоить любой школьный предмет. 
+                    Просто начните диалог - репетитор подстроится под уровень ученика и объяснит сложные темы простыми словами.
+                    <strong>Все наши ученики получают бесплатный доступ к системе!</strong>
+                </p>
+            </div>
+            
+            <div class="ai-demo-features">
+                <div class="ai-demo-feature">
+                    <i class="fas fa-microphone"></i>
+                    <h4>Говорите свободно</h4>
+                    <p>Общайтесь голосом как с живым учителем</p>
+                </div>
+                
+                <div class="ai-demo-feature">
+                    <i class="fas fa-lightbulb"></i>
+                    <h4>Все школьные предметы</h4>
+                    <p>Математика, физика, языки, история и многое другое</p>
+                </div>
+                
+                <div class="ai-demo-feature">
+                    <i class="fas fa-clock"></i>
+                    <h4>24/7 доступность</h4>
+                    <p>Занимайтесь в любое удобное время</p>
+                </div>
+                
+                <div class="ai-demo-feature">
+                    <i class="fas fa-chart-line"></i>
+                    <h4>Адаптивное обучение</h4>
+                    <p>Система подстраивается под уровень ученика</p>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 3rem;">
+                <button id="openAiDemo" class="btn" style="background: white; color: #7E76F9; padding: 1.2rem 2.5rem; font-size: 1.2rem; border-radius: var(--rounded-full); border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.8rem; font-weight: 600; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+                    <i class="fas fa-robot"></i> Запустить демо AI-репетитора
+                </button>
+                <p style="margin-top: 1rem; opacity: 0.8; font-size: 0.9rem;">
+                    <i class="fas fa-info-circle"></i> Для голосового общения разрешите доступ к микрофону
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials-section" id="testimonials">
+        <div class="container">
+            <h2 class="section-title">Отзывы наших учеников</h2>
+            <div class="testimonials-container">
+                <div class="testimonials-slider">
+                    <div class="testimonial">
+                        <div class="testimonial-content">
+                            <p class="testimonial-text">"Отличная школа! Мой ребенок занимается с огромным удовольствием. Преподаватели очень внимательные и профессиональные."</p>
+                            <div class="testimonial-author">
+                                <div class="author-info">
+                                    <h4>Анна Смирнова</h4>
+                                    <p>Мама ученика 5 класса</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="testimonial">
+                        <div class="testimonial-content">
+                            <p class="testimonial-text">"Занимаюсь английским уже полгода. Результаты потрясающие! Теперь свободно общаюсь с иностранными коллегами."</p>
+                            <div class="testimonial-author">
+                                <div class="author-info">
+                                    <h4>Дмитрий Иванов</h4>
+                                    <p>Взрослый студент</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="testimonial">
+                        <div class="testimonial-content">
+                            <p class="testimonial-text">"AI-репетитор - это настоящее чудо! Ребенок занимается с удовольствием, оценки в школе заметно улучшились."</p>
+                            <div class="testimonial-author">
+                                <div class="author-info">
+                                    <h4>Ольга Петрова</h4>
+                                    <p>Мама ученицы 8 класса</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- CTA Section -->
     <section class="cta-section">
         <div class="container">
@@ -2022,6 +2025,9 @@
                 <div class="cta-buttons">
                     <a href="#contact" class="btn btn-accent">Записаться на урок</a>
                     <a href="https://t.me/zindakiequipe" class="btn btn-secondary">Telegram-канал <i class="fas fa-arrow-right"></i></a>
+                    <a href="/blog" class="btn btn-secondary" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3);">
+                        <i class="fas fa-newspaper"></i> Наш блог
+                    </a>
                     <button id="ctaAiButton" class="btn btn-ai">
                         <i class="fas fa-robot"></i> Попробовать AI-репетитора
                     </button>
@@ -2677,4 +2683,4 @@
         }
     </script>
 </body>
-</html>
+</html></html>
