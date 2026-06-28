@@ -993,7 +993,7 @@
 
         .document-link {
             display: inline-block;
-            margin-top: 1rem;
+            margin-top: 0.5rem;
             color: var(--primary);
             font-weight: 500;
             text-decoration: none;
@@ -1972,45 +1972,62 @@
         </div>
     </section>
 
-    <!-- Testimonials Section -->
+    <!-- Testimonials Section (ДИНАМИЧЕСКИЕ ОТЗЫВЫ ИЗ БД) -->
     <section class="testimonials-section" id="testimonials">
         <div class="container">
             <h2 class="section-title">Отзывы наших учеников</h2>
             <div class="testimonials-container">
                 <div class="testimonials-slider">
-                    <div class="testimonial">
-                        <div class="testimonial-content">
-                            <p class="testimonial-text">"Отличная школа! Мой ребенок занимается с огромным удовольствием. Преподаватели очень внимательные и профессиональные."</p>
-                            <div class="testimonial-author">
-                                <div class="author-info">
-                                    <h4>Анна Смирнова</h4>
-                                    <p>Мама ученика 5 класса</p>
+                    {% if testimonials and testimonials|length > 0 %}
+                        {% for testimonial in testimonials %}
+                        <div class="testimonial">
+                            <div class="testimonial-content">
+                                <p class="testimonial-text">{{ testimonial.text }}</p>
+                                <div class="testimonial-author">
+                                    <div class="author-info">
+                                        <h4>{{ testimonial.author }}</h4>
+                                        <p>{{ testimonial.role }}</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="testimonial">
-                        <div class="testimonial-content">
-                            <p class="testimonial-text">"Занимаюсь английским уже полгода. Результаты потрясающие! Теперь свободно общаюсь с иностранными коллегами."</p>
-                            <div class="testimonial-author">
-                                <div class="author-info">
-                                    <h4>Дмитрий Иванов</h4>
-                                    <p>Взрослый студент</p>
+                        {% endfor %}
+                    {% else %}
+                        <!-- Отзывы по умолчанию, если БД пуста -->
+                        <div class="testimonial">
+                            <div class="testimonial-content">
+                                <p class="testimonial-text">"Отличная школа! Мой ребенок занимается с огромным удовольствием. Преподаватели очень внимательные и профессиональные."</p>
+                                <div class="testimonial-author">
+                                    <div class="author-info">
+                                        <h4>Анна Смирнова</h4>
+                                        <p>Мама ученика 5 класса</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="testimonial">
-                        <div class="testimonial-content">
-                            <p class="testimonial-text">"AI-репетитор - это настоящее чудо! Ребенок занимается с удовольствием, оценки в школе заметно улучшились."</p>
-                            <div class="testimonial-author">
-                                <div class="author-info">
-                                    <h4>Ольга Петрова</h4>
-                                    <p>Мама ученицы 8 класса</p>
+                        <div class="testimonial">
+                            <div class="testimonial-content">
+                                <p class="testimonial-text">"Занимаюсь английским уже полгода. Результаты потрясающие! Теперь свободно общаюсь с иностранными коллегами."</p>
+                                <div class="testimonial-author">
+                                    <div class="author-info">
+                                        <h4>Дмитрий Иванов</h4>
+                                        <p>Взрослый студент</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                        <div class="testimonial">
+                            <div class="testimonial-content">
+                                <p class="testimonial-text">"AI-репетитор - это настоящее чудо! Ребенок занимается с удовольствием, оценки в школе заметно улучшились."</p>
+                                <div class="testimonial-author">
+                                    <div class="author-info">
+                                        <h4>Ольга Петрова</h4>
+                                        <p>Мама ученицы 8 класса</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -2683,4 +2700,4 @@
         }
     </script>
 </body>
-</html></html>
+</html>
