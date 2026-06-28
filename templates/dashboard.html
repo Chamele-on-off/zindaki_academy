@@ -440,6 +440,62 @@
             background-color: #c82333;
         }
         
+        /* Кнопка блога в сайдбаре */
+        .blog-sidebar-btn {
+            background: linear-gradient(135deg, #7E76F9 0%, #6A61E5 100%);
+            color: white !important;
+            margin-top: 0.5rem;
+            text-align: center;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(126, 118, 249, 0.3);
+            border-radius: var(--rounded-md);
+            padding: 0.8rem 1rem !important;
+            justify-content: center;
+        }
+        
+        .blog-sidebar-btn:hover {
+            background: linear-gradient(135deg, #6A61E5 0%, #5a52d1 100%);
+            transform: translateX(5px) !important;
+            box-shadow: 0 6px 20px rgba(126, 118, 249, 0.4);
+            color: white !important;
+        }
+        
+        .blog-sidebar-btn:after {
+            display: none !important;
+        }
+        
+        .blog-sidebar-btn i {
+            color: white !important;
+        }
+        
+        /* Кнопка новой статьи */
+        .new-post-sidebar-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+            color: white !important;
+            margin-top: 0.5rem;
+            text-align: center;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+            border-radius: var(--rounded-md);
+            padding: 0.8rem 1rem !important;
+            justify-content: center;
+        }
+        
+        .new-post-sidebar-btn:hover {
+            background: linear-gradient(135deg, #218838 0%, #1aa179 100%) !important;
+            transform: translateX(5px) !important;
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+            color: white !important;
+        }
+        
+        .new-post-sidebar-btn:after {
+            display: none !important;
+        }
+        
+        .new-post-sidebar-btn i {
+            color: white !important;
+        }
+        
         /* Виджет видеоконференций */
         .conference-widget {
             grid-column: 1 / -1;
@@ -1187,26 +1243,6 @@
             margin-right: 0.5rem;
         }
         
-        /* Кнопка блога в сайдбаре */
-        .blog-sidebar-btn {
-            background: linear-gradient(135deg, #7E76F9 0%, #6A61E5 100%);
-            color: white !important;
-            margin-top: 1rem;
-            text-align: center;
-            font-weight: 600;
-            box-shadow: 0 4px 15px rgba(126, 118, 249, 0.3);
-        }
-        
-        .blog-sidebar-btn:hover {
-            background: linear-gradient(135deg, #6A61E5 0%, #5a52d1 100%);
-            transform: translateX(5px);
-            box-shadow: 0 6px 20px rgba(126, 118, 249, 0.4);
-        }
-        
-        .blog-sidebar-btn:after {
-            display: none !important;
-        }
-        
         /* Мобильное меню */
         @media (max-width: 768px) {
             .navbar {
@@ -1317,22 +1353,22 @@
                 <li><a href="#" data-section="users"><i class="fas fa-users"></i> Ученики</a></li>
                 <li><a href="#" data-section="conference-links"><i class="fas fa-link"></i> Ссылки на конференции</a></li>
                 <li><a href="#" data-section="backup"><i class="fas fa-database"></i> Резервные копии</a></li>
+                <!-- Кнопка "Новая статья" для учителей -->
+                <li><a href="/blog/new" class="new-post-sidebar-btn" data-section="new-post">
+                    <i class="fas fa-plus-circle"></i> Новая статья
+                </a></li>
+                <!-- Кнопка "Редактор статей" для учителей (редирект на /blog/new) -->
+                <li><a href="/blog/editor" class="blog-sidebar-btn" data-section="blog-editor" style="background: linear-gradient(135deg, #FF7B9C 0%, #FF6B8B 100%);">
+                    <i class="fas fa-edit"></i> Редактор статей
+                </a></li>
                 {% endif %}
                 <li><a href="#" data-section="feedback"><i class="fas fa-comments"></i> Обратная связь</a></li>
                 <li><a href="#" data-section="profile"><i class="fas fa-user"></i> Профиль</a></li>
                 <li><a href="#" data-section="resources"><i class="fas fa-book-open"></i> Ресурсы</a></li>
-                
                 <!-- Кнопка блога в сайдбаре -->
                 <li><a href="/blog" class="blog-sidebar-btn" data-section="blog">
                     <i class="fas fa-newspaper"></i> Блог
                 </a></li>
-                
-                <!-- Для учителей: ссылка на редактор блога -->
-                {% if user.role == 'teacher' %}
-                <li><a href="/blog/editor" class="blog-sidebar-btn" style="background: linear-gradient(135deg, #FF7B9C 0%, #FF6B8B 100%);">
-                    <i class="fas fa-edit"></i> Редактор статей
-                </a></li>
-                {% endif %}
             </ul>
         </aside>
         
@@ -1995,8 +2031,10 @@
             
             sidebarLinks.forEach(link => {
                 link.addEventListener('click', function(e) {
-                    if (this.getAttribute('href') && this.getAttribute('href') !== '#') {
-                        // Если у ссылки есть реальный href (не #), разрешаем переход
+                    // Проверяем, является ли ссылка внешней (href начинается с /)
+                    const href = this.getAttribute('href');
+                    if (href && href !== '#' && !href.startsWith('#')) {
+                        // Разрешаем переход по реальным ссылкам (например, /blog/new, /blog/editor)
                         return;
                     }
                     
