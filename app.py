@@ -1623,6 +1623,13 @@ def edit_blog_post(post_id):
     
     return render_template('blog_editor.html', post=post, user=session.get('user'))
 
+@app.route('/blog/editor')
+def blog_editor_redirect():
+    """Редирект на создание новой статьи (для кнопки в сайдбаре)"""
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return redirect('/blog')
+    return redirect('/blog/new')
+
 # ===== КОНЕЦ РОУТОВ ДЛЯ БЛОГА =====
 
 # ===== API ДЛЯ БЭКАПОВ =====
@@ -1806,10 +1813,11 @@ def upload_backup_chunk():
 @app.route('/success')
 def home():
     scroll_to = request.path[1:] if request.path != '/' else None
+    testimonials = DB.get_testimonials()
     return render_template('index.html', 
                          user=session.get('user'),
                          teachers=DB.get_users(role='teacher')[:3],
-                         testimonials=DB.get_testimonials(),
+                         testimonials=testimonials,
                          scroll_to=scroll_to)
 
 # Health check endpoint
@@ -2453,6 +2461,7 @@ if __name__ == '__main__':
     print("  - Main site: http://localhost:8000")
     print("  - Dashboard: http://localhost:8000/dashboard") 
     print("  - Blog: http://localhost:8000/blog")
+    print("  - Blog Editor: http://localhost:8000/blog/new")
     print("  - Video Conference: http://localhost:8000/video-conference")
     print("  - API Health: http://localhost:8000/api/video/health")
     print("  - Health Check: http://localhost:8000/health")
