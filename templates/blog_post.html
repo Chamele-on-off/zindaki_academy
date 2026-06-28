@@ -4,34 +4,203 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ post.title }} | Zindaki Academy Блог</title>
+    <meta name="description" content="{{ post.meta_description or post.excerpt }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Используйте стили из blog.html, добавьте немного специфичных */
-        .post-content {
-            font-size: 1.1rem;
-            line-height: 1.8;
+        :root {
+            --primary: #3a5a78;
+            --primary-light: #4d7ca7;
+            --primary-dark: #2c4761;
+            --secondary: #6d4c41;
+            --accent: #c5a258;
+            --light: #f5f3f0;
+            --lighter: #ffffff;
+            --dark: #1a1a2e;
+            --darker: #0a0a0a;
+            --text: #2a2a2a;
+            --text-light: #6d6d6d;
+            --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+            --shadow-xl: 0 20px 50px rgba(0,0,0,0.15);
+            --rounded-sm: 8px;
+            --rounded-md: 12px;
+            --rounded-lg: 16px;
+            --rounded-xl: 24px;
+            --rounded-full: 9999px;
         }
         
-        .post-content img {
-            max-width: 100%;
-            height: auto;
-            border-radius: var(--rounded-lg);
-            margin: 1.5rem 0;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
         }
         
-        .post-content iframe {
-            max-width: 100%;
-            margin: 1.5rem 0;
+        body {
+            background-color: var(--light);
+            color: var(--text);
+            overflow-x: hidden;
+            line-height: 1.6;
+            font-weight: 400;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 600;
+            line-height: 1.2;
+            color: var(--darker);
+        }
+        
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+        }
+        
+        .navbar.scrolled {
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow-md);
+            background-color: rgba(26, 26, 46, 0.95);
+        }
+        
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: 'Cormorant Garamond', serif;
+        }
+        
+        .navbar.scrolled .logo {
+            color: var(--accent);
+        }
+        
+        .logo-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: var(--gradient);
+            color: white;
+            border-radius: var(--rounded-md);
+            font-size: 1.2rem;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        
+        .nav-links a {
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            color: var(--text);
+            padding: 0.5rem 0;
+        }
+        
+        .navbar.scrolled .nav-links a {
+            color: var(--light);
+        }
+        
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+        
+        .navbar.scrolled .nav-links a:hover {
+            color: var(--accent);
+        }
+        
+        .nav-links a:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--primary);
+            transition: width 0.3s ease;
+        }
+        
+        .navbar.scrolled .nav-links a:after {
+            background-color: var(--accent);
+        }
+        
+        .nav-links a:hover:after {
+            width: 100%;
+        }
+        
+        .nav-new-post-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white !important;
+            padding: 0.6rem 1.2rem !important;
+            border-radius: var(--rounded-full) !important;
+            margin-left: 0.5rem !important;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3) !important;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .nav-new-post-btn:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4) !important;
+            color: white !important;
+        }
+        
+        .nav-new-post-btn i {
+            margin-right: 0.4rem;
+        }
+        
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--primary);
+            cursor: pointer;
+            z-index: 1001;
+        }
+        
+        .navbar.scrolled .mobile-menu-btn {
+            color: var(--accent);
         }
         
         .edit-post-btn {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
+            bottom: 30px;
+            right: 30px;
             background: var(--primary);
             color: white;
-            width: 50px;
-            height: 50px;
+            width: 56px;
+            height: 56px;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -39,24 +208,975 @@
             text-decoration: none;
             box-shadow: var(--shadow-lg);
             z-index: 100;
+            transition: all 0.3s ease;
+            font-size: 1.3rem;
+        }
+        
+        .edit-post-btn:hover {
+            transform: scale(1.1);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .blog-header {
+            margin-top: 80px;
+            padding: 2rem 2rem 1rem;
+            background: var(--gradient);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .blog-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==');
+            opacity: 0.2;
+        }
+        
+        .blog-header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .blog-header .breadcrumb {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 1rem;
+        }
+        
+        .blog-header .breadcrumb a {
+            color: white;
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+        }
+        
+        .blog-header .breadcrumb a:hover {
+            opacity: 1;
+        }
+        
+        .blog-header h1 {
+            font-size: 2.8rem;
+            margin-bottom: 0.5rem;
+            color: white;
+        }
+        
+        .blog-header .post-meta {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            font-size: 0.95rem;
+            opacity: 0.9;
+            color: rgba(255,255,255,0.9);
+        }
+        
+        .blog-header .post-meta i {
+            margin-right: 0.3rem;
+        }
+        
+        .post-cover {
+            max-width: 1200px;
+            margin: -60px auto 0;
+            padding: 0 2rem;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .post-cover img {
+            width: 100%;
+            max-height: 500px;
+            object-fit: cover;
+            border-radius: var(--rounded-xl);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .post-container {
+            max-width: 1200px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 3rem;
+        }
+        
+        @media (max-width: 992px) {
+            .post-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .post-article {
+            background: var(--lighter);
+            border-radius: var(--rounded-xl);
+            padding: 2.5rem;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .post-article .post-content {
+            font-size: 1.1rem;
+            line-height: 1.9;
+            color: var(--text);
+        }
+        
+        .post-article .post-content h1,
+        .post-article .post-content h2,
+        .post-article .post-content h3,
+        .post-article .post-content h4,
+        .post-article .post-content h5,
+        .post-article .post-content h6 {
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .post-article .post-content h2 {
+            font-size: 2rem;
+        }
+        
+        .post-article .post-content h3 {
+            font-size: 1.6rem;
+        }
+        
+        .post-article .post-content p {
+            margin-bottom: 1.2rem;
+        }
+        
+        .post-article .post-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: var(--rounded-lg);
+            margin: 1.5rem 0;
+        }
+        
+        .post-article .post-content iframe {
+            max-width: 100%;
+            border-radius: var(--rounded-lg);
+            margin: 1.5rem 0;
+        }
+        
+        .post-article .post-content blockquote {
+            border-left: 4px solid var(--primary);
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            background: var(--light);
+            border-radius: 0 var(--rounded-md) var(--rounded-md) 0;
+        }
+        
+        .post-article .post-content ul,
+        .post-article .post-content ol {
+            margin: 1rem 0 1rem 1.5rem;
+        }
+        
+        .post-article .post-content li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .post-article .post-content pre {
+            background: var(--dark);
+            color: white;
+            padding: 1.5rem;
+            border-radius: var(--rounded-md);
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+        
+        .post-article .post-content code {
+            background: var(--light);
+            padding: 0.2rem 0.4rem;
+            border-radius: var(--rounded-sm);
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        
+        .post-article .post-content pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+        }
+        
+        .post-footer {
+            margin-top: 2.5rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(0,0,0,0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .post-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .post-tag {
+            background: var(--light);
+            padding: 0.3rem 0.8rem;
+            border-radius: var(--rounded-full);
+            font-size: 0.85rem;
+            color: var(--text-light);
+            transition: all 0.3s ease;
+        }
+        
+        .post-tag:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .post-share {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+        }
+        
+        .post-share span {
+            font-weight: 500;
+            color: var(--text-light);
+        }
+        
+        .post-share a {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--light);
+            transition: all 0.3s ease;
+            color: var(--text);
+        }
+        
+        .post-share a:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-3px);
+        }
+        
+        .sidebar {
+            position: sticky;
+            top: 100px;
+            height: fit-content;
+        }
+        
+        .sidebar-widget {
+            background: var(--lighter);
+            border-radius: var(--rounded-xl);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .widget-title {
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.8rem;
+            border-bottom: 2px solid var(--primary-light);
+        }
+        
+        .author-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .author-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        .author-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        .similar-posts {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .similar-post {
+            padding: 0.8rem 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .similar-post:last-child {
+            border-bottom: none;
+        }
+        
+        .similar-post h4 {
+            font-size: 0.95rem;
+            margin-bottom: 0.3rem;
+        }
+        
+        .similar-post .post-meta {
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+        
+        .comments-section {
+            max-width: 1200px;
+            margin: 0 auto 4rem;
+            padding: 0 2rem;
+        }
+        
+        .comments-wrapper {
+            background: var(--lighter);
+            border-radius: var(--rounded-xl);
+            padding: 2.5rem;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .comments-title {
+            font-size: 1.8rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--light);
+        }
+        
+        .comment {
+            padding: 1.5rem 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .comment:last-child {
+            border-bottom: none;
+        }
+        
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .comment-author {
+            font-weight: 600;
+        }
+        
+        .comment-date {
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+        
+        .comment-content {
+            color: var(--text);
+            line-height: 1.6;
+        }
+        
+        .comment-form {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 2px solid var(--light);
+        }
+        
+        .comment-form h4 {
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 1px solid #e0e0e0;
+            border-radius: var(--rounded-md);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(58, 90, 120, 0.1);
+        }
+        
+        textarea.form-control {
+            resize: vertical;
+            min-height: 120px;
+        }
+        
+        .btn {
+            padding: 0.8rem 2rem;
+            border-radius: var(--rounded-md);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            font-size: 0.95rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .blog-footer {
+            background: var(--darker);
+            color: white;
+            padding: 4rem 2rem;
+            margin-top: 4rem;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 1rem;
+            }
+            
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            .nav-links {
+                position: fixed;
+                top: 80px;
+                left: 0;
+                width: 100%;
+                background: var(--darker);
+                flex-direction: column;
+                align-items: center;
+                padding: 2rem;
+                gap: 1.5rem;
+                transform: translateY(-150%);
+                transition: transform 0.3s ease;
+            }
+            
+            .nav-links.active {
+                transform: translateY(0);
+            }
+            
+            .nav-links a {
+                color: var(--light) !important;
+            }
+            
+            .nav-links a:hover {
+                color: var(--accent) !important;
+            }
+            
+            .nav-new-post-btn {
+                margin: 0 !important;
+                width: 100%;
+                text-align: center;
+            }
+            
+            .blog-header {
+                padding: 2rem 1rem 1rem;
+                margin-top: 70px;
+            }
+            
+            .blog-header h1 {
+                font-size: 2rem;
+            }
+            
+            .post-cover {
+                margin-top: -40px;
+                padding: 0 1rem;
+            }
+            
+            .post-container {
+                padding: 0 1rem;
+                margin: 2rem auto;
+            }
+            
+            .post-article {
+                padding: 1.5rem;
+            }
+            
+            .comments-section {
+                padding: 0 1rem;
+            }
+            
+            .comments-wrapper {
+                padding: 1.5rem;
+            }
+            
+            .post-footer {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .edit-post-btn {
+                width: 48px;
+                height: 48px;
+                font-size: 1rem;
+                bottom: 20px;
+                right: 20px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .blog-header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .blog-header .post-meta {
+                gap: 1rem;
+                font-size: 0.85rem;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Навигация и шапка как в blog.html -->
-    
-    <main class="post-page">
-        {% if user and user.role == 'teacher' %}
-        <a href="/blog/edit/{{ post.id }}" class="edit-post-btn" title="Редактировать">
-            <i class="fas fa-edit"></i>
+    <!-- Навигация -->
+    <nav class="navbar">
+        <a href="/" class="logo">
+            <div class="logo-icon">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <span>Zindaki Academy</span>
         </a>
-        {% endif %}
-        
+        <div class="nav-links">
+            <a href="/">Главная</a>
+            <a href="/blog">Блог</a>
+            <a href="/#about">О нас</a>
+            <a href="/#teachers">Преподаватели</a>
+            <a href="/#programs">Программы</a>
+            <a href="/#testimonials">Отзывы</a>
+            {% if user %}
+                <a href="/dashboard">Личный кабинет</a>
+                {% if user.role == 'teacher' %}
+                <a href="/blog/new" class="nav-new-post-btn">
+                    <i class="fas fa-plus-circle"></i> Разместить статью
+                </a>
+                {% endif %}
+                <a href="#" id="logoutBtn">Выйти</a>
+            {% else %}
+                <a href="/#login">Вход</a>
+            {% endif %}
+        </div>
+        <button class="mobile-menu-btn">
+            <i class="fas fa-bars"></i>
+        </button>
+    </nav>
+
+    <!-- Шапка поста -->
+    <header class="blog-header">
+        <div class="blog-header-content">
+            <div class="breadcrumb">
+                <a href="/">Главная</a> <i class="fas fa-chevron-right" style="font-size: 0.7rem; margin: 0 0.5rem;"></i>
+                <a href="/blog">Блог</a> <i class="fas fa-chevron-right" style="font-size: 0.7rem; margin: 0 0.5rem;"></i>
+                <span>{{ post.category or 'Общее' }}</span>
+            </div>
+            <h1>{{ post.title }}</h1>
+            <div class="post-meta">
+                <span><i class="far fa-calendar-alt"></i> {{ post.published_at or post.created_at }}</span>
+                <span><i class="far fa-user"></i> {{ post.author }}</span>
+                <span><i class="far fa-eye"></i> {{ post.views or 0 }} просмотров</span>
+                <span><i class="far fa-comment"></i> {{ post.comments_count or 0 }} комментариев</span>
+                {% if post.category %}
+                <span><i class="far fa-folder"></i> {{ post.category }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <!-- Обложка поста -->
+    {% if post.cover_image %}
+    <div class="post-cover">
+        <img src="{{ post.cover_image }}" alt="{{ post.title }}">
+    </div>
+    {% endif %}
+
+    <!-- Основное содержимое -->
+    <div class="post-container">
         <article class="post-article">
-            <!-- Заголовок, метаданные, изображение, содержание -->
+            <div class="post-content">
+                {{ post.content|safe }}
+            </div>
+            
+            <div class="post-footer">
+                {% if post.tags and post.tags|length > 0 %}
+                <div class="post-tags">
+                    {% for tag in post.tags %}
+                    <span class="post-tag">#{{ tag }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <div class="post-share">
+                    <span>Поделиться:</span>
+                    <a href="https://vk.com/share.php?url={{ request.url }}" target="_blank" title="ВКонтакте">
+                        <i class="fab fa-vk"></i>
+                    </a>
+                    <a href="https://t.me/share/url?url={{ request.url }}&text={{ post.title }}" target="_blank" title="Telegram">
+                        <i class="fab fa-telegram-plane"></i>
+                    </a>
+                    <a href="https://wa.me/?text={{ post.title }} - {{ request.url }}" target="_blank" title="WhatsApp">
+                        <i class="fab fa-whatsapp"></i>
+                    </a>
+                </div>
+            </div>
+            
+            {% if user and user.role == 'teacher' %}
+            <a href="/blog/edit/{{ post.id }}" class="edit-post-btn" title="Редактировать статью">
+                <i class="fas fa-edit"></i>
+            </a>
+            {% endif %}
         </article>
+
+        <!-- Сайдбар -->
+        <aside class="sidebar">
+            <div class="sidebar-widget">
+                <h3 class="widget-title">Об авторе</h3>
+                <div class="author-info">
+                    {% if author_avatar %}
+                    <img src="{{ author_avatar }}" alt="{{ post.author }}" class="author-avatar">
+                    {% else %}
+                    <div class="author-avatar" style="background: var(--light); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--text-light);">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <div class="author-name">{{ post.author }}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-light);">Автор статьи</div>
+                    </div>
+                </div>
+            </div>
+
+            {% if similar_posts and similar_posts|length > 0 %}
+            <div class="sidebar-widget">
+                <h3 class="widget-title">Похожие статьи</h3>
+                <div class="similar-posts">
+                    {% for similar in similar_posts %}
+                    <div class="similar-post">
+                        <h4><a href="/blog/post/{{ similar.slug or similar.id }}">{{ similar.title }}</a></h4>
+                        <div class="post-meta">
+                            <span>{{ similar.published_at or similar.created_at }}</span>
+                            <span>· {{ similar.views or 0 }} просмотров</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="sidebar-widget">
+                <h3 class="widget-title">Вернуться</h3>
+                <a href="/blog" class="btn btn-primary" style="width: 100%; justify-content: center;">
+                    <i class="fas fa-arrow-left"></i> Все статьи
+                </a>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Комментарии -->
+    <section class="comments-section" id="comments">
+        <div class="comments-wrapper">
+            <h3 class="comments-title">
+                <i class="fas fa-comments"></i> Комментарии ({{ post.comments_count or 0 }})
+            </h3>
+            
+            <div id="commentsList">
+                <!-- Комментарии будут загружены через JavaScript -->
+                <div style="text-align: center; padding: 1rem; color: var(--text-light);">
+                    <i class="fas fa-spinner fa-spin"></i> Загрузка комментариев...
+                </div>
+            </div>
+            
+            <!-- Форма комментария -->
+            <div class="comment-form">
+                <h4><i class="fas fa-pen"></i> Оставить комментарий</h4>
+                <form id="commentForm">
+                    <input type="hidden" id="commentParentId" value="">
+                    
+                    <div class="form-group">
+                        <label for="commentAuthor">Ваше имя <span style="color: #dc3545;">*</span></label>
+                        <input type="text" id="commentAuthor" class="form-control" placeholder="Введите ваше имя" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="commentEmail">Email (не обязательно)</label>
+                        <input type="email" id="commentEmail" class="form-control" placeholder="your@email.com">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="commentContent">Комментарий <span style="color: #dc3545;">*</span></label>
+                        <textarea id="commentContent" class="form-control" rows="4" placeholder="Напишите ваш комментарий..." required></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> Отправить
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Подвал -->
+    <footer class="blog-footer">
+        <p>© 2024 Zindaki Academy. Все права защищены.</p>
+        <p>Блог об образовании, языках и современных методиках обучения</p>
+    </footer>
+
+    <script>
+        // --- Мобильное меню ---
+        const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+        const navLinks = document.querySelector('.nav-links');
         
-        <!-- Комментарии и похожие статьи -->
-    </main>
+        if (mobileMenuBtn && navLinks) {
+            mobileMenuBtn.addEventListener('click', () => {
+                navLinks.classList.toggle('active');
+                mobileMenuBtn.innerHTML = navLinks.classList.contains('active') ? 
+                    '<i class="fas fa-times"></i>' : '<i class="fas fa-bars"></i>';
+            });
+        }
+
+        // --- Изменение навбара при скролле ---
+        window.addEventListener('scroll', () => {
+            const navbar = document.querySelector('.navbar');
+            if (navbar) {
+                if (window.scrollY > 50) {
+                    navbar.classList.add('scrolled');
+                } else {
+                    navbar.classList.remove('scrolled');
+                }
+            }
+        });
+
+        // --- Выход из системы ---
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                fetch('/api/logout', {
+                    method: 'GET'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = '/';
+                    }
+                })
+                .catch(error => {
+                    console.error('Logout error:', error);
+                    window.location.href = '/';
+                });
+            });
+        }
+
+        // --- Загрузка комментариев ---
+        const postId = {{ post.id }};
+        
+        async function loadComments() {
+            const commentsList = document.getElementById('commentsList');
+            
+            try {
+                const response = await fetch(`/api/blog/posts/${postId}/comments`);
+                const data = await response.json();
+                
+                if (data.comments && data.comments.length > 0) {
+                    commentsList.innerHTML = '';
+                    
+                    data.comments.forEach(comment => {
+                        const commentElement = createCommentElement(comment);
+                        commentsList.appendChild(commentElement);
+                    });
+                } else {
+                    commentsList.innerHTML = `
+                        <div style="text-align: center; padding: 2rem; color: var(--text-light);">
+                            <i class="fas fa-comment" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                            <p>Пока нет комментариев. Будьте первым!</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading comments:', error);
+                commentsList.innerHTML = `
+                    <div style="text-align: center; padding: 1rem; color: #dc3545;">
+                        <i class="fas fa-exclamation-triangle"></i> Ошибка загрузки комментариев
+                    </div>
+                `;
+            }
+        }
+
+        function createCommentElement(comment) {
+            const div = document.createElement('div');
+            div.className = 'comment';
+            div.dataset.id = comment.id;
+            
+            const date = new Date(comment.created_at);
+            const formattedDate = date.toLocaleDateString('ru-RU', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            div.innerHTML = `
+                <div class="comment-header">
+                    <span class="comment-author"><i class="fas fa-user-circle"></i> ${comment.author}</span>
+                    <span class="comment-date">${formattedDate}</span>
+                </div>
+                <div class="comment-content">${comment.content}</div>
+                <button class="reply-btn" style="background: none; border: none; color: var(--primary); cursor: pointer; font-size: 0.85rem; margin-top: 0.5rem;">
+                    <i class="fas fa-reply"></i> Ответить
+                </button>
+            `;
+            
+            // Кнопка "Ответить"
+            const replyBtn = div.querySelector('.reply-btn');
+            replyBtn.addEventListener('click', () => {
+                document.getElementById('commentParentId').value = comment.id;
+                document.getElementById('commentAuthor').focus();
+                document.getElementById('commentContent').focus();
+                document.getElementById('commentContent').placeholder = `Ответ пользователю ${comment.author}...`;
+                
+                // Скролл к форме
+                document.querySelector('.comment-form').scrollIntoView({ behavior: 'smooth' });
+            });
+            
+            return div;
+        }
+
+        // --- Отправка комментария ---
+        document.getElementById('commentForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const author = document.getElementById('commentAuthor').value.trim();
+            const content = document.getElementById('commentContent').value.trim();
+            const email = document.getElementById('commentEmail').value.trim();
+            const parentId = document.getElementById('commentParentId').value;
+            
+            if (!author || !content) {
+                alert('Пожалуйста, заполните все обязательные поля');
+                return;
+            }
+            
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
+            
+            try {
+                const response = await fetch(`/api/blog/posts/${postId}/comments`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        author: author,
+                        content: content,
+                        author_email: email || null,
+                        parent_id: parentId ? parseInt(parentId) : null
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Очищаем форму
+                    document.getElementById('commentContent').value = '';
+                    document.getElementById('commentParentId').value = '';
+                    document.getElementById('commentContent').placeholder = 'Напишите ваш комментарий...';
+                    
+                    // Перезагружаем комментарии
+                    await loadComments();
+                    
+                    // Обновляем счетчик комментариев в заголовке
+                    const commentsCount = document.querySelector('.comments-title');
+                    if (commentsCount) {
+                        const newCount = parseInt(commentsCount.textContent.match(/\d+/)?.[0] || 0) + 1;
+                        commentsCount.innerHTML = `<i class="fas fa-comments"></i> Комментарии (${newCount})`;
+                    }
+                    
+                    // Показываем уведомление
+                    showToast('Комментарий успешно добавлен!', 'success');
+                } else {
+                    throw new Error(data.error || 'Ошибка отправки комментария');
+                }
+            } catch (error) {
+                console.error('Error submitting comment:', error);
+                showToast('Ошибка отправки: ' + error.message, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        });
+
+        // --- Toast уведомления ---
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 30px;
+                right: 30px;
+                padding: 1rem 1.5rem;
+                border-radius: var(--rounded-md);
+                color: white;
+                font-weight: 500;
+                box-shadow: var(--shadow-lg);
+                z-index: 3000;
+                background: ${type === 'success' ? '#28a745' : '#dc3545'};
+                transform: translateY(100px);
+                opacity: 0;
+                transition: all 0.3s ease;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.transform = 'translateY(0)';
+                toast.style.opacity = '1';
+            }, 100);
+            
+            setTimeout(() => {
+                toast.style.transform = 'translateY(100px)';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // --- Инициализация ---
+        document.addEventListener('DOMContentLoaded', function() {
+            loadComments();
+            
+            // Форматирование даты в заголовке
+            const dateElements = document.querySelectorAll('.post-meta [class*="date"]');
+            dateElements.forEach(el => {
+                const dateText = el.textContent.trim();
+                try {
+                    const date = new Date(dateText);
+                    if (!isNaN(date)) {
+                        el.textContent = date.toLocaleDateString('ru-RU', {
+                            day: '2-digit',
+                            month: 'long',
+                            year: 'numeric'
+                        });
+                    }
+                } catch (e) {}
+            });
+        });
+    </script>
 </body>
 </html>
