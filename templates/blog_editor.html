@@ -74,6 +74,8 @@
         .editor-actions {
             display: flex;
             gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
         }
         
         .btn {
@@ -319,13 +321,62 @@
             object-fit: cover;
         }
         
-        .video-url {
-            display: flex;
-            gap: 0.5rem;
+        /* Видео загрузка */
+        .video-upload {
+            border: 2px dashed #ccc;
+            border-radius: var(--rounded-md);
+            padding: 2rem 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
         
-        .video-url input {
-            flex-grow: 1;
+        .video-upload:hover {
+            border-color: var(--primary);
+            background: rgba(58, 90, 120, 0.05);
+        }
+        
+        .video-upload i {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+        
+        .video-preview {
+            display: none;
+            margin-top: 1rem;
+            position: relative;
+            background: #000;
+            border-radius: var(--rounded-md);
+            overflow: hidden;
+        }
+        
+        .video-preview video {
+            width: 100%;
+            max-height: 300px;
+            display: block;
+        }
+        
+        .video-preview .remove-video-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .video-preview .remove-video-btn:hover {
+            background: #dc3545;
+            transform: scale(1.1);
         }
         
         .tags-input {
@@ -547,6 +598,7 @@
             transform: translateY(100px);
             opacity: 0;
             transition: all 0.3s ease;
+            max-width: 400px;
         }
         
         .toast.show {
@@ -675,13 +727,31 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="videoUrl">Видео (YouTube URL)</label>
-                    <div class="video-url">
-                        <input type="url" id="videoUrl" class="form-control" placeholder="https://youtube.com/watch?v=...">
-                        <button type="button" class="btn btn-secondary" id="testVideo" title="Проверить видео">
-                            <i class="fas fa-play"></i>
+                    <label>Видео для статьи</label>
+                    <div class="video-upload" id="videoUpload">
+                        <i class="fas fa-video"></i>
+                        <p style="margin-top: 0.5rem; color: var(--text-light); font-size: 0.9rem;">
+                            Перетащите видео или кликните для выбора
+                        </p>
+                        <p style="font-size: 0.8rem; color: var(--text-light);">
+                            Поддерживаемые форматы: MP4, WebM, OGG, MOV. Максимальный размер: 500MB
+                        </p>
+                        <input type="file" id="videoFile" accept="video/*" style="display: none;">
+                    </div>
+                    
+                    <!-- Превью видео -->
+                    <div class="video-preview" id="videoPreview">
+                        <video id="videoPlayer" controls>
+                            <source id="videoSource" src="" type="video/mp4">
+                            Ваш браузер не поддерживает видео.
+                        </video>
+                        <button type="button" class="remove-video-btn" id="removeVideo">
+                            <i class="fas fa-times"></i>
                         </button>
                     </div>
+                    
+                    <!-- Ссылка на видео (для хранения) -->
+                    <input type="hidden" id="videoUrl" value="{% if post and post.video_url %}{{ post.video_url }}{% endif %}">
                 </div>
                 
                 <div class="form-group">
@@ -728,7 +798,7 @@
             
             <div class="posts-grid" id="postsList">
                 <!-- Статьи будут загружены динамически -->
-                <div style="text-align: center; padding: 2rem; color: var(--text-light);">
+                <div style="text-align: center; padding: 2rem; color: var(--text-light); grid-column: 1 / -1;">
                     <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
                     <p style="margin-top: 1rem;">Загрузка статей...</p>
                 </div>
@@ -784,7 +854,6 @@
             document.getElementById('postExcerpt').value = postData.excerpt || '';
             quill.root.innerHTML = postData.content;
             document.getElementById('postCategory').value = postData.category || 'Общее';
-            document.getElementById('videoUrl').value = postData.video_url || '';
             document.getElementById('metaDescription').value = postData.meta_description || '';
             document.getElementById('isPublished').checked = postData.is_published !== false;
             
@@ -806,6 +875,18 @@
                 document.getElementById('imagePreview').src = postData.cover_image;
                 document.getElementById('imagePreview').style.display = 'block';
                 document.getElementById('removeImage').style.display = 'inline-flex';
+            }
+            
+            // Показываем превью видео
+            if (postData.video_url) {
+                const videoPreview = document.getElementById('videoPreview');
+                const videoSource = document.getElementById('videoSource');
+                const videoPlayer = document.getElementById('videoPlayer');
+                videoSource.src = postData.video_url;
+                videoPlayer.load();
+                videoPreview.style.display = 'block';
+                document.getElementById('videoUpload').style.display = 'none';
+                document.getElementById('videoUrl').value = postData.video_url;
             }
             
             // Меняем текст кнопки
@@ -879,6 +960,173 @@
         });
         
         // ============================================
+        // УПРАВЛЕНИЕ ВИДЕО
+        // ============================================
+        
+        const videoUpload = document.getElementById('videoUpload');
+        const videoFile = document.getElementById('videoFile');
+        const videoPreview = document.getElementById('videoPreview');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const videoSource = document.getElementById('videoSource');
+        const removeVideoBtn = document.getElementById('removeVideo');
+        const videoUrlInput = document.getElementById('videoUrl');
+        let currentVideoFile = null;
+        
+        // Если есть видео при редактировании
+        if (videoUrlInput && videoUrlInput.value) {
+            videoSource.src = videoUrlInput.value;
+            videoPlayer.load();
+            videoPreview.style.display = 'block';
+            videoUpload.style.display = 'none';
+        }
+        
+        videoUpload.addEventListener('click', () => videoFile.click());
+        
+        videoUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            videoUpload.style.borderColor = 'var(--primary)';
+            videoUpload.style.backgroundColor = 'rgba(58, 90, 120, 0.1)';
+        });
+        
+        videoUpload.addEventListener('dragleave', () => {
+            videoUpload.style.borderColor = '#ccc';
+            videoUpload.style.backgroundColor = 'transparent';
+        });
+        
+        videoUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            videoUpload.style.borderColor = '#ccc';
+            videoUpload.style.backgroundColor = 'transparent';
+            if (e.dataTransfer.files.length) {
+                videoFile.files = e.dataTransfer.files;
+                handleVideoUpload();
+            }
+        });
+        
+        videoFile.addEventListener('change', handleVideoUpload);
+        
+        function handleVideoUpload() {
+            if (!videoFile.files || !videoFile.files[0]) return;
+            
+            const file = videoFile.files[0];
+            currentVideoFile = file;
+            
+            // Проверка размера (500MB)
+            if (file.size > 500 * 1024 * 1024) {
+                showToast('Видео слишком большое. Максимальный размер: 500MB', 'error');
+                videoFile.value = '';
+                return;
+            }
+            
+            // Проверка формата
+            const validFormats = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'];
+            if (!validFormats.includes(file.type)) {
+                showToast('Неподдерживаемый формат видео. Поддерживаются: MP4, WebM, OGG, MOV', 'error');
+                videoFile.value = '';
+                return;
+            }
+            
+            // Показываем превью
+            const url = URL.createObjectURL(file);
+            videoSource.src = url;
+            videoPlayer.load();
+            videoPreview.style.display = 'block';
+            videoUpload.style.display = 'none';
+            videoUrlInput.value = url;
+            
+            // Если это существующий пост (с ID), загружаем на сервер
+            const pathParts = window.location.pathname.split('/');
+            const postId = pathParts.includes('edit') ? parseInt(pathParts[pathParts.length - 1]) : null;
+            
+            if (postId) {
+                uploadVideoToServer(postId, file);
+            }
+        }
+        
+        function uploadVideoToServer(postId, file) {
+            const formData = new FormData();
+            formData.append('video', file);
+            
+            const originalHtml = videoUpload.innerHTML;
+            videoUpload.innerHTML = '<i class="fas fa-spinner fa-spin"></i><p>Загрузка видео...</p>';
+            videoUpload.style.cursor = 'default';
+            
+            fetch(`/api/blog/posts/${postId}/video`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    videoUrlInput.value = data.video_url;
+                    videoSource.src = data.video_url;
+                    videoPlayer.load();
+                    showToast('Видео успешно загружено!', 'success');
+                } else {
+                    showToast('Ошибка загрузки видео: ' + (data.error || ''), 'error');
+                    videoPreview.style.display = 'none';
+                    videoUpload.style.display = 'block';
+                    videoUrlInput.value = '';
+                }
+            })
+            .catch(error => {
+                console.error('Error uploading video:', error);
+                showToast('Ошибка загрузки видео', 'error');
+                videoPreview.style.display = 'none';
+                videoUpload.style.display = 'block';
+                videoUrlInput.value = '';
+            })
+            .finally(() => {
+                videoUpload.innerHTML = originalHtml;
+                videoUpload.style.cursor = 'pointer';
+            });
+        }
+        
+        removeVideoBtn.addEventListener('click', function() {
+            const postId = window.location.pathname.split('/').includes('edit') ? 
+                parseInt(window.location.pathname.split('/').pop()) : null;
+            
+            if (postId && videoUrlInput.value && !videoUrlInput.value.startsWith('blob:')) {
+                // Удаляем на сервере
+                if (confirm('Удалить видео?')) {
+                    fetch(`/api/blog/posts/${postId}/video`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            videoPreview.style.display = 'none';
+                            videoUpload.style.display = 'block';
+                            videoUrlInput.value = '';
+                            videoPlayer.pause();
+                            videoSource.src = '';
+                            videoPlayer.load();
+                            currentVideoFile = null;
+                            videoFile.value = '';
+                            showToast('Видео удалено', 'success');
+                        } else {
+                            showToast('Ошибка удаления видео', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting video:', error);
+                        showToast('Ошибка удаления видео', 'error');
+                    });
+                }
+            } else {
+                // Для нового поста просто очищаем
+                videoPreview.style.display = 'none';
+                videoUpload.style.display = 'block';
+                videoUrlInput.value = '';
+                videoPlayer.pause();
+                videoSource.src = '';
+                videoPlayer.load();
+                videoFile.value = '';
+                currentVideoFile = null;
+            }
+        });
+        
+        // ============================================
         // УПРАВЛЕНИЕ ТЕГАМИ
         // ============================================
         
@@ -948,19 +1196,6 @@
         });
         
         // ============================================
-        // ПРОВЕРКА ВИДЕО
-        // ============================================
-        
-        document.getElementById('testVideo').addEventListener('click', () => {
-            const url = document.getElementById('videoUrl').value.trim();
-            if (url) {
-                window.open(url, '_blank');
-            } else {
-                showToast('Пожалуйста, введите URL видео', 'error');
-            }
-        });
-        
-        // ============================================
         // СОХРАНЕНИЕ ПОСТА
         // ============================================
         
@@ -969,7 +1204,6 @@
             const excerpt = document.getElementById('postExcerpt').value.trim();
             const content = quill.root.innerHTML;
             const category = document.getElementById('postCategory').value;
-            const videoUrl = document.getElementById('videoUrl').value.trim();
             const metaDescription = document.getElementById('metaDescription').value.trim();
             const isPublished = document.getElementById('isPublished').checked;
             
@@ -991,11 +1225,16 @@
                 content: content,
                 category: category,
                 excerpt: excerpt || content.replace(/<[^>]*>/g, '').substring(0, 150) + '...',
-                video_url: videoUrl || null,
                 tags: Array.from(tags),
                 meta_description: metaDescription || excerpt || content.replace(/<[^>]*>/g, '').substring(0, 150) + '...',
                 is_published: isPublished
             };
+            
+            // Если есть видео и это не blob URL (уже загружено на сервер)
+            const videoUrl = videoUrlInput.value;
+            if (videoUrl && !videoUrl.startsWith('blob:')) {
+                postDataToSend.video_url = videoUrl;
+            }
             
             // Отключаем кнопку
             const saveBtn = document.getElementById('savePost');
@@ -1045,6 +1284,11 @@
                     // Загружаем обложку, если она есть
                     if (postId && coverImage.files && coverImage.files[0]) {
                         await uploadCoverImage(postId);
+                    }
+                    
+                    // Загружаем видео, если оно есть и это новый пост с blob URL
+                    if (postId && isNewPost && currentVideoFile) {
+                        await uploadVideoToServer(postId, currentVideoFile);
                     }
                     
                     showToast('Статья успешно сохранена!', 'success');
@@ -1137,16 +1381,17 @@
                         const date = new Date(post.published_at || post.created_at);
                         const formattedDate = date.toLocaleDateString('ru-RU');
                         
+                        let imageHtml = '';
+                        if (post.cover_image) {
+                            imageHtml = `<img src="${post.cover_image}" alt="${post.title}">`;
+                        } else {
+                            imageHtml = '<i class="fas fa-image" style="font-size: 2rem; color: #ccc;"></i>';
+                        }
+                        
                         postCard.innerHTML = `
-                            ${post.cover_image ? `
-                            <div class="post-card-image">
-                                <img src="${post.cover_image}" alt="${post.title}">
+                            <div class="post-card-image" style="display: flex; align-items: center; justify-content: center; background: var(--light);">
+                                ${imageHtml}
                             </div>
-                            ` : `
-                            <div class="post-card-image" style="display: flex; align-items: center; justify-content: center; background: var(--light); color: var(--text-light);">
-                                <i class="fas fa-image" style="font-size: 2rem;"></i>
-                            </div>
-                            `}
                             <div class="post-card-content">
                                 <h3 class="post-card-title">${post.title}</h3>
                                 <div class="post-card-meta">
