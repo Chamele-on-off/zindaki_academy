@@ -1243,6 +1243,27 @@
             margin-right: 0.5rem;
         }
         
+        .backup-actions-row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+        
+        .backup-actions-row .btn {
+            flex: 0 1 auto;
+        }
+        
+        .backup-actions-row .btn i {
+            margin-right: 0.5rem;
+        }
+        
+        .backup-section-divider {
+            margin: 2rem 0;
+            border: none;
+            border-top: 2px solid rgba(0,0,0,0.05);
+        }
+        
         /* Мобильное меню */
         @media (max-width: 768px) {
             .navbar {
@@ -1615,42 +1636,65 @@
             <section class="widget backup-widget" id="backup-section" style="display: none;">
                 <div class="widget-header">
                     <h3 class="widget-title">Управление резервными копиями</h3>
-                    <div class="widget-actions">
-                        <button class="btn btn-primary" id="createBackup">
-                            <i class="fas fa-plus"></i> Создать бэкап
-                        </button>
-                    </div>
                 </div>
                 
                 <div class="backup-container">
+                    <!-- Бэкапы блога -->
+                    <h4 style="margin-bottom: 1rem;">Бэкап блога</h4>
                     <div class="backup-warning">
                         <i class="fas fa-exclamation-triangle"></i>
-                        <strong>Внимание!</strong> Перед восстановлением рекомендуется создать резервную копию текущих данных.
+                        <strong>Внимание!</strong> Бэкап блога включает только статьи и комментарии.
                     </div>
                     
-                    <div class="backup-actions">
-                        <div class="form-group">
-                            <label>Восстановить из ZIP-архива</label>
-                            <div class="upload-area-large" id="restoreArea">
-                                <i class="fas fa-file-archive"></i>
-                                <p>Перетащите ZIP-архив сюда или кликните для выбора</p>
-                                <p class="upload-hint">Максимальный размер: 500MB</p>
-                                <input type="file" id="restoreFile" accept=".zip" style="display: none;">
-                                <div class="upload-progress">
-                                    <div class="progress-bar">
-                                        <div class="progress-fill"></div>
-                                    </div>
-                                    <span class="progress-text">0%</span>
-                                </div>
+                    <div class="backup-actions-row">
+                        <button class="btn btn-primary" id="createBlogBackup">
+                            <i class="fas fa-newspaper"></i> Создать бэкап блога
+                        </button>
+                        <button class="btn btn-secondary" id="restoreBlogBackupBtn">
+                            <i class="fas fa-upload"></i> Восстановить блог
+                        </button>
+                        <input type="file" id="restoreBlogFile" accept=".zip" style="display: none;">
+                    </div>
+                    
+                    <h5 style="margin: 1rem 0 0.5rem;">Бэкапы блога</h5>
+                    <div class="backups-list" id="blogBackupsList">
+                        <div class="no-items">Загрузка бэкапов блога...</div>
+                    </div>
+                    
+                    <hr class="backup-section-divider">
+                    
+                    <!-- Полный бэкап -->
+                    <h4 style="margin-bottom: 1rem;">Полный бэкап всех данных</h4>
+                    <div class="backup-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Внимание!</strong> Полный бэкап включает все данные: пользователей, уроки, домашние задания, блог и файлы.
+                    </div>
+                    
+                    <div class="backup-actions-row">
+                        <button class="btn btn-primary" id="createBackup">
+                            <i class="fas fa-database"></i> Создать полный бэкап
+                        </button>
+                        <button class="btn btn-secondary" id="restoreBackupBtn">
+                            <i class="fas fa-upload"></i> Восстановить базу
+                        </button>
+                        <input type="file" id="restoreFile" accept=".zip" style="display: none;">
+                    </div>
+                    
+                    <div class="upload-area-large" id="restoreArea">
+                        <i class="fas fa-file-archive"></i>
+                        <p>Перетащите ZIP-архив сюда или кликните для выбора</p>
+                        <p class="upload-hint">Максимальный размер: 500MB</p>
+                        <div class="upload-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill"></div>
                             </div>
-                            <div id="filePreview"></div>
+                            <span class="progress-text">0%</span>
                         </div>
                     </div>
                     
-                    <h4 style="margin: 2rem 0 1rem;">Доступные резервные копии</h4>
+                    <h5 style="margin: 1.5rem 0 0.5rem;">Полные бэкапы</h5>
                     <div class="backups-list" id="backupsList">
-                        <!-- Динамически загружаемые бэкапы -->
-                        <div class="no-items">Загрузка списка бэкапов...</div>
+                        <div class="no-items">Загрузка бэкапов...</div>
                     </div>
                 </div>
             </section>
@@ -2074,6 +2118,7 @@
                             loadHomeworkForUpload();
                         } else if (sectionId === 'backup-section') {
                             loadBackups();
+                            loadBlogBackups();
                         }
                     }
                 });
@@ -2116,6 +2161,7 @@
             const addFeedbackBtn = document.getElementById('addFeedback');
             const addConferenceLinkBtn = document.getElementById('addConferenceLink');
             const createBackupBtn = document.getElementById('createBackup');
+            const createBlogBackupBtn = document.getElementById('createBlogBackup');
             
             const closeModalBtns = document.querySelectorAll('.close-modal');
             const avatarContainer = document.getElementById('avatarContainer');
@@ -2148,6 +2194,12 @@
             if (createBackupBtn) {
                 createBackupBtn.addEventListener('click', () => {
                     createBackup();
+                });
+            }
+            
+            if (createBlogBackupBtn) {
+                createBlogBackupBtn.addEventListener('click', () => {
+                    createBlogBackup();
                 });
             }
             
@@ -2693,6 +2745,64 @@
                         container.innerHTML = '';
                         
                         if (data.success && data.backups && data.backups.length > 0) {
+                            const fullBackups = data.backups.filter(b => !b.filename.startsWith('blog_backup_'));
+                            if (fullBackups.length > 0) {
+                                fullBackups.forEach(backup => {
+                                    const backupItem = document.createElement('div');
+                                    backupItem.className = 'backup-item';
+                                    
+                                    const createdDate = new Date(backup.created);
+                                    const formattedDate = createdDate.toLocaleString('ru-RU');
+                                    
+                                    backupItem.innerHTML = `
+                                        <div class="backup-icon">
+                                            <i class="fas fa-database"></i>
+                                        </div>
+                                        <div class="backup-info">
+                                            <div class="backup-name">${backup.filename}</div>
+                                            <div class="backup-details">
+                                                Создан: ${formattedDate} | Размер: ${backup.size_mb} MB
+                                            </div>
+                                        </div>
+                                        <div class="backup-actions">
+                                            <a href="/api/backup/download/${backup.filename}" 
+                                               class="btn btn-secondary btn-sm" download>
+                                                <i class="fas fa-download"></i> Скачать
+                                            </a>
+                                            <button class="btn btn-danger btn-sm" onclick="deleteBackup('${backup.filename}')">
+                                                <i class="fas fa-trash"></i> Удалить
+                                            </button>
+                                        </div>
+                                    `;
+                                    container.appendChild(backupItem);
+                                });
+                            } else {
+                                container.innerHTML = '<div class="no-items">Полные бэкапы отсутствуют</div>';
+                            }
+                        } else {
+                            container.innerHTML = '<div class="no-items">Полные бэкапы отсутствуют</div>';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading backups:', error);
+                        const container = document.getElementById('backupsList');
+                        if (container) {
+                            container.innerHTML = '<div class="no-items">Ошибка загрузки бэкапов</div>';
+                        }
+                    });
+            }
+            
+            // Загрузка списка бэкапов блога
+            function loadBlogBackups() {
+                fetch('/api/backup/blog')
+                    .then(response => response.json())
+                    .then(data => {
+                        const container = document.getElementById('blogBackupsList');
+                        if (!container) return;
+                        
+                        container.innerHTML = '';
+                        
+                        if (data.success && data.backups && data.backups.length > 0) {
                             data.backups.forEach(backup => {
                                 const backupItem = document.createElement('div');
                                 backupItem.className = 'backup-item';
@@ -2701,8 +2811,8 @@
                                 const formattedDate = createdDate.toLocaleString('ru-RU');
                                 
                                 backupItem.innerHTML = `
-                                    <div class="backup-icon">
-                                        <i class="fas fa-database"></i>
+                                    <div class="backup-icon" style="background: linear-gradient(135deg, #7E76F9 0%, #6A61E5 100%);">
+                                        <i class="fas fa-newspaper"></i>
                                     </div>
                                     <div class="backup-info">
                                         <div class="backup-name">${backup.filename}</div>
@@ -2723,25 +2833,25 @@
                                 container.appendChild(backupItem);
                             });
                         } else {
-                            container.innerHTML = '<div class="no-items">Резервные копии отсутствуют</div>';
+                            container.innerHTML = '<div class="no-items">Бэкапы блога отсутствуют</div>';
                         }
                     })
                     .catch(error => {
-                        console.error('Error loading backups:', error);
-                        const container = document.getElementById('backupsList');
+                        console.error('Error loading blog backups:', error);
+                        const container = document.getElementById('blogBackupsList');
                         if (container) {
-                            container.innerHTML = '<div class="no-items">Ошибка загрузки бэкапов</div>';
+                            container.innerHTML = '<div class="no-items">Ошибка загрузки бэкапов блога</div>';
                         }
                     });
             }
             
-            // Создание бэкапа
+            // Создание полного бэкапа
             function createBackup() {
-                if (confirm('Создать резервную копию всех данных? Рекомендуется делать это перед важными изменениями.')) {
-                    const createBackupBtn = document.getElementById('createBackup');
-                    if (createBackupBtn) {
-                        createBackupBtn.disabled = true;
-                        createBackupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Создание...';
+                if (confirm('Создать полную резервную копию всех данных? Рекомендуется делать это перед важными изменениями.')) {
+                    const btn = document.getElementById('createBackup');
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Создание...';
                     }
                     
                     fetch('/api/backup', {
@@ -2750,26 +2860,100 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            alert('Резервная копия успешно создана! Ссылка для скачивания: ' + data.filename);
+                            showToast('Полный бэкап успешно создан!', 'success');
                             loadBackups();
                         } else {
-                            alert('Ошибка при создании бэкапа: ' + (data.error || ''));
+                            showToast('Ошибка: ' + (data.error || ''), 'error');
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('Произошла ошибка при создании бэкапа');
+                        showToast('Произошла ошибка при создании бэкапа', 'error');
                     })
                     .finally(() => {
-                        if (createBackupBtn) {
-                            createBackupBtn.disabled = false;
-                            createBackupBtn.innerHTML = '<i class="fas fa-plus"></i> Создать бэкап';
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="fas fa-database"></i> Создать полный бэкап';
                         }
                     });
                 }
             }
             
-            // Инициализация drag & drop для восстановления
+            // Создание бэкапа блога
+            function createBlogBackup() {
+                if (confirm('Создать резервную копию блога (статьи и комментарии)?')) {
+                    const btn = document.getElementById('createBlogBackup');
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Создание...';
+                    }
+                    
+                    fetch('/api/backup/blog', {
+                        method: 'POST'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showToast('Бэкап блога успешно создан!', 'success');
+                            loadBlogBackups();
+                        } else {
+                            showToast('Ошибка: ' + (data.error || ''), 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showToast('Произошла ошибка при создании бэкапа блога', 'error');
+                    })
+                    .finally(() => {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="fas fa-newspaper"></i> Создать бэкап блога';
+                        }
+                    });
+                }
+            }
+            
+            // Восстановление блога из бэкапа
+            function restoreBlogBackup(file) {
+                if (!confirm('ВНИМАНИЕ: Это действие перезапишет все статьи и комментарии. Создайте бэкап перед восстановлением. Продолжить?')) {
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const btn = document.getElementById('restoreBlogBackupBtn');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Восстановление...';
+                }
+                
+                fetch('/api/backup/blog/restore', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Блог успешно восстановлен! Страница будет перезагружена.', 'success');
+                        setTimeout(() => window.location.reload(), 3000);
+                    } else {
+                        showToast('Ошибка: ' + (data.error || ''), 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Произошла ошибка при восстановлении', 'error');
+                })
+                .finally(() => {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-upload"></i> Восстановить блог';
+                    }
+                });
+            }
+            
+            // Инициализация drag & drop для восстановления полного бэкапа
             const restoreArea = document.getElementById('restoreArea');
             const restoreFileInput = document.getElementById('restoreFile');
             
@@ -2797,7 +2981,7 @@
                         if (file.name.endsWith('.zip')) {
                             restoreBackup(file);
                         } else {
-                            alert('Пожалуйста, выберите ZIP архив');
+                            showToast('Пожалуйста, выберите ZIP архив', 'error');
                         }
                     }
                 });
@@ -2809,26 +2993,36 @@
                 });
             }
             
-            // Восстановление из бэкапа
+            // Инициализация восстановления блога
+            const restoreBlogBtn = document.getElementById('restoreBlogBackupBtn');
+            const restoreBlogFile = document.getElementById('restoreBlogFile');
+            
+            if (restoreBlogBtn && restoreBlogFile) {
+                restoreBlogBtn.addEventListener('click', () => restoreBlogFile.click());
+                restoreBlogFile.addEventListener('change', function() {
+                    if (this.files.length) {
+                        restoreBlogBackup(this.files[0]);
+                        this.value = '';
+                    }
+                });
+            }
+            
+            // Восстановление из полного бэкапа
             function restoreBackup(file) {
                 if (!confirm('ВНИМАНИЕ: Это действие перезапишет все текущие данные. Рекомендуется создать резервную копию перед восстановлением. Продолжить?')) {
                     return;
                 }
                 
-                const restoreArea = document.getElementById('restoreArea');
-                if (!restoreArea) return;
-                
                 const progressBar = restoreArea.querySelector('.progress-fill');
                 const progressText = restoreArea.querySelector('.progress-text');
                 const uploadProgress = restoreArea.querySelector('.upload-progress');
                 
-                // Показываем прогресс
                 if (uploadProgress) uploadProgress.style.display = 'block';
                 if (progressBar) progressBar.style.width = '0%';
                 if (progressText) progressText.textContent = '0%';
                 
                 // Для больших файлов используем chunked upload
-                const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB
+                const CHUNK_SIZE = 5 * 1024 * 1024;
                 const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
                 const fileIdentifier = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
                 
@@ -2853,44 +3047,36 @@
                     .then(data => {
                         uploadedChunks++;
                         
-                        // Обновляем прогресс
                         const progress = Math.round((uploadedChunks / totalChunks) * 100);
                         if (progressBar) progressBar.style.width = progress + '%';
                         if (progressText) progressText.textContent = progress + '%';
                         
                         if (data.success) {
                             if (uploadedChunks < totalChunks) {
-                                // Загружаем следующий chunk
                                 uploadChunk(chunkNumber + 1);
                             } else {
-                                // Все chunks загружены
                                 if (data.message && data.message.includes('successfully')) {
-                                    alert('База данных успешно восстановлена! Страница будет перезагружена через 3 секунды.');
-                                    
-                                    // Перезагружаем страницу через 3 секунды
-                                    setTimeout(() => {
-                                        window.location.reload();
-                                    }, 3000);
+                                    showToast('База данных успешно восстановлена! Страница будет перезагружена.', 'success');
+                                    setTimeout(() => window.location.reload(), 3000);
                                 }
                             }
                         } else {
-                            alert('Ошибка при загрузке: ' + (data.error || ''));
+                            showToast('Ошибка при загрузке: ' + (data.error || ''), 'error');
                             if (uploadProgress) uploadProgress.style.display = 'none';
                         }
                     })
                     .catch(error => {
                         console.error('Upload error:', error);
-                        alert('Произошла ошибка при загрузке файла');
+                        showToast('Произошла ошибка при загрузке файла', 'error');
                         if (uploadProgress) uploadProgress.style.display = 'none';
                     });
                 }
                 
-                // Начинаем загрузку первого chunk
                 uploadChunk(0);
             }
             
             // Удаление бэкапа
-            function deleteBackup(filename) {
+            window.deleteBackup = function(filename) {
                 if (confirm(`Вы уверены, что хотите удалить резервную копию ${filename}?`)) {
                     fetch('/api/backup', {
                         method: 'DELETE',
@@ -2902,18 +3088,19 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            alert('Резервная копия удалена');
+                            showToast('Резервная копия удалена', 'success');
                             loadBackups();
+                            loadBlogBackups();
                         } else {
-                            alert('Ошибка при удалении: ' + (data.error || ''));
+                            showToast('Ошибка при удалении: ' + (data.error || ''), 'error');
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('Произошла ошибка при удалении бэкапа');
+                        showToast('Произошла ошибка при удалении бэкапа', 'error');
                     });
                 }
-            }
+            };
 
             // --- Форма профиля ---
             const profileForm = document.getElementById('profileForm');
@@ -2932,7 +3119,7 @@
                     
                     if (newPassword) {
                         if (newPassword !== passwordConfirm) {
-                            alert('Пароли не совпадают!');
+                            showToast('Пароли не совпадают!', 'error');
                             return;
                         }
                         formData.password = newPassword;
@@ -2948,18 +3135,18 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            alert('Профиль успешно обновлен!');
+                            showToast('Профиль успешно обновлен!', 'success');
                             if (data.user) {
                                 sessionStorage.setItem('user', JSON.stringify(data.user));
                             }
                             window.location.reload();
                         } else {
-                            alert('Ошибка при обновлении профиля: ' + (data.error || ''));
+                            showToast('Ошибка: ' + (data.error || ''), 'error');
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('Произошла ошибка при обновлении профиля');
+                        showToast('Произошла ошибка при обновлении профиля', 'error');
                     });
                 });
             }
@@ -2971,7 +3158,7 @@
                     e.preventDefault();
                     
                     if (!hwSubjectInput || !hwSubjectInput.value) {
-                        alert('Пожалуйста, выберите предмет');
+                        showToast('Пожалуйста, выберите предмет', 'error');
                         return;
                     }
                     
@@ -2998,17 +3185,17 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            alert('Домашнее задание успешно добавлено!');
+                            showToast('Домашнее задание успешно добавлено!', 'success');
                             if (homeworkModal) homeworkModal.style.display = 'none';
                             addHomeworkForm.reset();
                             loadAssignedHomeworks();
                         } else {
-                            alert('Ошибка при добавлении задания: ' + (data.error || ''));
+                            showToast('Ошибка: ' + (data.error || ''), 'error');
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('Произошла ошибка при добавлении задания');
+                        showToast('Произошла ошибка при добавлении задания', 'error');
                     });
                 });
             }
@@ -3037,17 +3224,17 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            alert('Ученик успешно добавлен!');
+                            showToast('Ученик успешно добавлен!', 'success');
                             if (userModal) userModal.style.display = 'none';
                             addUserForm.reset();
                             loadUsers();
                         } else {
-                            alert('Ошибка при добавлении ученика: ' + (data.error || ''));
+                            showToast('Ошибка: ' + (data.error || ''), 'error');
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('Произошла ошибка при добавлении ученика');
+                        showToast('Произошла ошибка при добавлении ученика', 'error');
                     });
                 });
             }
@@ -3080,16 +3267,16 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            alert('Ученик успешно обновлен!');
+                            showToast('Ученик успешно обновлен!', 'success');
                             if (editUserModal) editUserModal.style.display = 'none';
                             loadUsers();
                         } else {
-                            alert('Ошибка при обновлении ученика: ' + (data.error || ''));
+                            showToast('Ошибка: ' + (data.error || ''), 'error');
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('Произошла ошибка при обновлении ученика');
+                        showToast('Произошла ошибка при обновлении ученика', 'error');
                     });
                 });
             }
@@ -3104,7 +3291,7 @@
                     const comment = document.getElementById('uploadComment').value;
                     
                     if (!homeworkId) {
-                        alert('Пожалуйста, выберите задание');
+                        showToast('Пожалуйста, выберите задание', 'error');
                         return;
                     }
                     
@@ -3125,19 +3312,19 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            alert('Работа успешно отправлена!');
+                            showToast('Работа успешно отправлена!', 'success');
                             uploadHomeworkForm.reset();
                             if (filesPreview) filesPreview.innerHTML = '';
                             if (uploadFiles) uploadFiles.value = '';
                             loadStudentHomeworks();
                             loadHomeworkForUpload();
                         } else {
-                            alert('Ошибка: ' + (data.error || 'Не удалось отправить работу'));
+                            showToast('Ошибка: ' + (data.error || 'Не удалось отправить работу'), 'error');
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('Произошла ошибка при отправке работы');
+                        showToast('Произошла ошибка при отправке работы', 'error');
                     });
                 });
             }
@@ -3165,17 +3352,17 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            alert('Обратная связь успешно добавлена!');
+                            showToast('Обратная связь успешно добавлена!', 'success');
                             if (feedbackModal) feedbackModal.style.display = 'none';
                             addFeedbackForm.reset();
                             loadFeedback();
                         } else {
-                            alert('Ошибка: ' + (data.error || 'Не удалось добавить обратную связь'));
+                            showToast('Ошибка: ' + (data.error || 'Не удалось добавить обратную связь'), 'error');
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('Произошла ошибка при добавлении обратной связи');
+                        showToast('Произошла ошибка при добавлении обратной связи', 'error');
                     });
                 });
             }
@@ -3201,18 +3388,18 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            alert('Ссылка успешно добавлена!');
+                            showToast('Ссылка успешно добавлена!', 'success');
                             if (conferenceLinkModal) conferenceLinkModal.style.display = 'none';
                             addConferenceLinkForm.reset();
                             loadConferenceLinksManager();
-                            location.reload(); // Перезагружаем страницу для обновления ссылок в основной секции
+                            location.reload();
                         } else {
-                            alert('Ошибка: ' + (data.error || 'Не удалось добавить ссылку'));
+                            showToast('Ошибка: ' + (data.error || 'Не удалось добавить ссылку'), 'error');
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('Произошла ошибка при добавлении ссылки');
+                        showToast('Произошла ошибка при добавлении ссылки', 'error');
                     });
                 });
             }
@@ -3243,7 +3430,7 @@
                     if (avatarFileInput && avatarFileInput.files.length > 0) {
                         formData.append('avatar', avatarFileInput.files[0]);
                     } else {
-                        alert('Пожалуйста, выберите файл');
+                        showToast('Пожалуйста, выберите файл', 'error');
                         return;
                     }
                     
@@ -3254,7 +3441,7 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            alert('Аватар успешно обновлен!');
+                            showToast('Аватар успешно обновлен!', 'success');
                             const userAvatarImg = document.getElementById('userAvatarImg');
                             if (userAvatarImg) userAvatarImg.src = data.avatar;
                             if (avatarModal) avatarModal.style.display = 'none';
@@ -3265,12 +3452,12 @@
                                 sessionStorage.setItem('user', JSON.stringify(user));
                             }
                         } else {
-                            alert('Ошибка при обновлении аватара: ' + (data.error || ''));
+                            showToast('Ошибка: ' + (data.error || ''), 'error');
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('Произошла ошибка при обновлении аватара');
+                        showToast('Произошла ошибка при обновлении аватара', 'error');
                     });
                 });
             }
@@ -3293,12 +3480,45 @@
                 });
             }
 
+            // --- Toast уведомления ---
+            function showToast(message, type) {
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    position: fixed;
+                    bottom: 30px;
+                    right: 30px;
+                    padding: 1rem 1.5rem;
+                    border-radius: var(--rounded-md);
+                    color: white;
+                    font-weight: 500;
+                    box-shadow: var(--shadow-lg);
+                    z-index: 3000;
+                    background: ${type === 'error' ? '#dc3545' : '#28a745'};
+                    transform: translateY(100px);
+                    opacity: 0;
+                    transition: all 0.3s ease;
+                    max-width: 400px;
+                `;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.transform = 'translateY(0)';
+                    toast.style.opacity = '1';
+                }, 100);
+                
+                setTimeout(() => {
+                    toast.style.transform = 'translateY(100px)';
+                    toast.style.opacity = '0';
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
+
             // Активируем первую вкладку при загрузке
             const activeLink = document.querySelector('.sidebar-menu a.active');
             if (activeLink) {
                 activeLink.click();
             } else {
-                // Если нет активной ссылки, активируем первую
                 const firstLink = document.querySelector('.sidebar-menu a');
                 if (firstLink) firstLink.click();
             }
@@ -3319,16 +3539,16 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert('Домашнее задание успешно удалено!');
+                        showToast('Домашнее задание успешно удалено!', 'success');
                         loadAssignedHomeworks();
                         loadStudentsHomework();
                     } else {
-                        alert('Ошибка при удалении задания: ' + (data.error || ''));
+                        showToast('Ошибка: ' + (data.error || ''), 'error');
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Произошла ошибка при удалении задания');
+                    showToast('Произошла ошибка при удалении задания', 'error');
                 });
             }
         }
@@ -3356,12 +3576,12 @@
                         const editUserModal = document.getElementById('editUserModal');
                         if (editUserModal) editUserModal.style.display = 'flex';
                     } else {
-                        alert('Ученик не найден');
+                        showToast('Ученик не найден', 'error');
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Произошла ошибка при загрузке данных ученика');
+                    showToast('Произошла ошибка при загрузке данных ученика', 'error');
                 });
         }
         
@@ -3373,15 +3593,15 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert('Ученик успешно удален!');
+                        showToast('Ученик успешно удален!', 'success');
                         loadUsers();
                     } else {
-                        alert('Ошибка при удалении ученика: ' + (data.error || ''));
+                        showToast('Ошибка: ' + (data.error || ''), 'error');
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Произошла ошибка при удалении ученика');
+                    showToast('Произошла ошибка при удалении ученика', 'error');
                 });
             }
         }
@@ -3394,15 +3614,15 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert('Обратная связь успешно удалена!');
+                        showToast('Обратная связь успешно удалена!', 'success');
                         loadFeedback();
                     } else {
-                        alert('Ошибка при удалении обратной связи: ' + (data.error || ''));
+                        showToast('Ошибка: ' + (data.error || ''), 'error');
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Произошла ошибка при удалении обратной связи');
+                    showToast('Произошла ошибка при удалении обратной связи', 'error');
                 });
             }
         }
@@ -3415,28 +3635,46 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert('Ссылка успешно удалена!');
+                        showToast('Ссылка успешно удалена!', 'success');
                         loadConferenceLinksManager();
-                        location.reload(); // Перезагружаем для обновления основной секции
+                        location.reload();
                     } else {
-                        alert('Ошибка при удалении ссылки: ' + (data.error || ''));
+                        showToast('Ошибка: ' + (data.error || ''), 'error');
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Произошла ошибка при удалении ссылки');
+                    showToast('Произошла ошибка при удалении ссылки', 'error');
                 });
             }
         }
         
         // Глобальные функции для работы с бэкапами
-        window.createBackup = createBackup;
-        window.deleteBackup = deleteBackup;
-        window.deleteHomework = deleteHomework;
-        window.editUser = editUser;
-        window.deleteUser = deleteUser;
-        window.deleteFeedback = deleteFeedback;
-        window.deleteConferenceLink = deleteConferenceLink;
+        window.deleteBackup = function(filename) {
+            if (confirm(`Вы уверены, что хотите удалить резервную копию ${filename}?`)) {
+                fetch('/api/backup', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ filename: filename })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Резервная копия удалена', 'success');
+                        loadBackups();
+                        loadBlogBackups();
+                    } else {
+                        showToast('Ошибка: ' + (data.error || ''), 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Произошла ошибка при удалении бэкапа', 'error');
+                });
+            }
+        };
         
         // Функции для загрузки данных
         window.loadStudentHomeworks = loadStudentHomeworks;
@@ -3447,6 +3685,8 @@
         window.loadConferenceLinksManager = loadConferenceLinksManager;
         window.loadHomeworkForUpload = loadHomeworkForUpload;
         window.loadBackups = loadBackups;
+        window.loadBlogBackups = loadBlogBackups;
+        window.showToast = showToast;
     </script>
 </body>
 </html>
