@@ -62,12 +62,18 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(BACKUP_FOLDER, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max
 
 # Расширяем разрешенные файлы для загрузки
 ALLOWED_EXTENSIONS = {'zip'}
+ALLOWED_EXTENSIONS_VIDEO = {'mp4', 'webm', 'ogg', 'mov', 'avi'}
+MAX_VIDEO_SIZE = 500 * 1024 * 1024  # 500MB
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def allowed_video_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS_VIDEO
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -760,6 +766,49 @@ class DB:
             return None
 
     @staticmethod
+    def create_blog_backup():
+        """Создает резервную копию только блога (посты + комментарии)"""
+        try:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_id = str(uuid.uuid4())[:8]
+            backup_filename = f'blog_backup_{timestamp}_{backup_id}.zip'
+            backup_path = os.path.join(BACKUP_FOLDER, backup_filename)
+            
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Копируем только файлы блога
+                for db_file in ['blog_posts', 'blog_comments']:
+                    source = f'{DB_FOLDER}/{db_file}.json'
+                    if os.path.exists(source):
+                        shutil.copy2(source, os.path.join(temp_dir, f'{db_file}.json'))
+                
+                # Создаем файл с метаинформацией
+                meta_info = {
+                    'created_at': datetime.now().isoformat(),
+                    'backup_id': backup_id,
+                    'type': 'blog_only',
+                    'files': os.listdir(temp_dir),
+                    'version': '1.0',
+                    'app': 'Zindaki Academy - Blog'
+                }
+                
+                with open(os.path.join(temp_dir, 'meta.json'), 'w') as f:
+                    json.dump(meta_info, f, indent=2)
+                
+                with zipfile.ZipFile(backup_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                    for root, dirs, files in os.walk(temp_dir):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            arcname = os.path.relpath(file_path, temp_dir)
+                            zipf.write(file_path, arcname)
+                
+                logger.info(f'Blog backup created: {backup_filename}')
+                return backup_path
+                
+        except Exception as e:
+            logger.error(f'Error creating blog backup: {e}')
+            return None
+
+    @staticmethod
     def list_backups():
         """Возвращает список доступных бэкапов"""
         backups = []
@@ -834,6 +883,40 @@ class DB:
             return False
 
     @staticmethod
+    def restore_blog_backup(backup_file_path, create_reserve_copy=True):
+        """Восстанавливает только блог из ZIP архива (не трогает остальные данные)"""
+        try:
+            if create_reserve_copy:
+                # Создаем резервную копию текущего блога перед восстановлением
+                DB.create_blog_backup()
+                logger.info('Created reserve blog backup before restore')
+            
+            with tempfile.TemporaryDirectory() as temp_dir:
+                with zipfile.ZipFile(backup_file_path, 'r') as zipf:
+                    zipf.extractall(temp_dir)
+                
+                # Проверяем наличие meta.json
+                meta_path = os.path.join(temp_dir, 'meta.json')
+                if os.path.exists(meta_path):
+                    with open(meta_path, 'r') as f:
+                        meta_info = json.load(f)
+                        if meta_info.get('type') != 'blog_only':
+                            logger.warning('Restoring backup that may contain non-blog data')
+                
+                # Восстанавливаем только файлы блога
+                for db_file in ['blog_posts', 'blog_comments']:
+                    backup_file = os.path.join(temp_dir, f'{db_file}.json')
+                    if os.path.exists(backup_file):
+                        shutil.copy2(backup_file, f'{DB_FOLDER}/{db_file}.json')
+                        logger.info(f'Restored {db_file}.json')
+                
+                return True
+                
+        except Exception as e:
+            logger.error(f'Error restoring blog backup: {e}')
+            return False
+
+    @staticmethod
     def delete_backup(filename):
         """Удаляет бэкап"""
         try:
@@ -852,6 +935,30 @@ class DB:
         """Возвращает путь к файлу бэкапа"""
         filepath = os.path.join(BACKUP_FOLDER, filename)
         return filepath if os.path.exists(filepath) else None
+
+    @staticmethod
+    def save_blog_video(post_id, video_file):
+        """Сохраняет видео для поста блога"""
+        try:
+            # Создаем папку для видео, если её нет
+            video_folder = os.path.join(UPLOAD_FOLDER, 'blog_videos')
+            os.makedirs(video_folder, exist_ok=True)
+            
+            # Генерируем уникальное имя файла
+            filename = secure_filename(f"video_{post_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{video_file.filename}")
+            filepath = os.path.join(video_folder, filename)
+            video_file.save(filepath)
+            
+            # Формируем URL
+            video_url = url_for('uploaded_file', filename=f'blog_videos/{filename}', _external=True)
+            
+            # Обновляем пост
+            DB.update_blog_post(post_id, {'video_url': video_url})
+            
+            return video_url
+        except Exception as e:
+            logger.error(f'Error saving blog video: {e}')
+            return None
 
 # Инициализация базы данных
 if not os.path.exists(f'{DB_FOLDER}/users.json'):
@@ -1504,6 +1611,70 @@ def api_upload_cover(post_id):
     
     return jsonify({'error': 'Failed to upload cover image'}), 500
 
+@app.route('/api/blog/posts/<int:post_id>/video', methods=['POST'])
+def api_upload_blog_video(post_id):
+    """Загрузка видео для поста блога"""
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    post = DB.get_blog_post(post_id)
+    if not post:
+        return jsonify({'error': 'Post not found'}), 404
+    
+    if 'video' not in request.files:
+        return jsonify({'error': 'No video file uploaded'}), 400
+    
+    file = request.files['video']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    
+    # Проверяем расширение
+    ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+    if ext not in ALLOWED_EXTENSIONS_VIDEO:
+        return jsonify({'error': f'Unsupported video format. Allowed: {", ".join(ALLOWED_EXTENSIONS_VIDEO)}'}), 400
+    
+    # Проверяем размер
+    file.seek(0, 2)
+    size = file.tell()
+    file.seek(0)
+    if size > MAX_VIDEO_SIZE:
+        return jsonify({'error': f'Video too large. Max size: {MAX_VIDEO_SIZE // (1024*1024)}MB'}), 400
+    
+    video_url = DB.save_blog_video(post_id, file)
+    if video_url:
+        return jsonify({'success': True, 'video_url': video_url})
+    else:
+        return jsonify({'error': 'Failed to upload video'}), 500
+
+@app.route('/api/blog/posts/<int:post_id>/video', methods=['DELETE'])
+def api_delete_blog_video(post_id):
+    """Удаление видео поста"""
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    post = DB.get_blog_post(post_id)
+    if not post:
+        return jsonify({'error': 'Post not found'}), 404
+    
+    video_url = post.get('video_url')
+    if video_url:
+        # Удаляем файл
+        try:
+            # Извлекаем путь из URL
+            path_part = video_url.split('/uploads/')[-1] if '/uploads/' in video_url else None
+            if path_part:
+                filepath = os.path.join(UPLOAD_FOLDER, path_part)
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+        except Exception as e:
+            logger.error(f'Error deleting video file: {e}')
+        
+        # Обновляем пост
+        DB.update_blog_post(post_id, {'video_url': None})
+        return jsonify({'success': True})
+    
+    return jsonify({'error': 'Video not found'}), 404
+
 @app.route('/api/blog/categories', methods=['GET'])
 def api_blog_categories():
     """Получение категорий блога"""
@@ -1672,6 +1843,74 @@ def api_backup():
             return jsonify({'success': True, 'message': 'Backup deleted'})
         else:
             return jsonify({'error': 'Failed to delete backup'}), 500
+
+@app.route('/api/backup/blog', methods=['GET', 'POST'])
+def api_blog_backup():
+    """API для управления бэкапами блога"""
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if request.method == 'GET':
+        # Получение списка бэкапов блога
+        backups = DB.list_backups()
+        # Фильтруем только бэкапы блога
+        blog_backups = [b for b in backups if b['filename'].startswith('blog_backup_')]
+        return jsonify({'success': True, 'backups': blog_backups})
+    
+    elif request.method == 'POST':
+        # Создание бэкапа блога
+        try:
+            backup_path = DB.create_blog_backup()
+            if backup_path:
+                filename = os.path.basename(backup_path)
+                return jsonify({
+                    'success': True,
+                    'message': 'Blog backup created successfully',
+                    'filename': filename,
+                    'download_url': f'/api/backup/download/{filename}'
+                })
+            else:
+                return jsonify({'error': 'Failed to create blog backup'}), 500
+        except Exception as e:
+            logger.error(f'API blog backup creation error: {e}')
+            return jsonify({'error': str(e)}), 500
+
+@app.route('/api/backup/blog/restore', methods=['POST'])
+def api_restore_blog_backup():
+    """Восстановление блога из бэкапа"""
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    if not allowed_file(file.filename):
+        return jsonify({'error': 'Only ZIP files are allowed'}), 400
+    
+    try:
+        temp_dir = tempfile.mkdtemp()
+        temp_filepath = os.path.join(temp_dir, file.filename)
+        file.save(temp_filepath)
+        
+        if DB.restore_blog_backup(temp_filepath):
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            return jsonify({
+                'success': True,
+                'message': 'Blog restored successfully! Page will reload in 3 seconds.'
+            })
+        else:
+            return jsonify({'error': 'Failed to restore blog backup'}), 500
+            
+    except Exception as e:
+        logger.error(f'API blog restore error: {e}')
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'temp_dir' in locals():
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
 @app.route('/api/backup/download/<filename>')
 def download_backup(filename):
@@ -2476,5 +2715,4 @@ if __name__ == '__main__':
         port=8000,
         debug=True,
         use_reloader=False,
-        log_output=False
     )
