@@ -279,22 +279,6 @@
             margin-right: 0.3rem;
         }
         
-        .post-cover {
-            max-width: 1200px;
-            margin: -60px auto 0;
-            padding: 0 2rem;
-            position: relative;
-            z-index: 2;
-        }
-        
-        .post-cover img {
-            width: 100%;
-            max-height: 500px;
-            object-fit: cover;
-            border-radius: var(--rounded-xl);
-            box-shadow: var(--shadow-xl);
-        }
-        
         .post-container {
             max-width: 1200px;
             margin: 3rem auto;
@@ -348,6 +332,12 @@
         .post-article .post-content img {
             max-width: 100%;
             height: auto;
+            border-radius: var(--rounded-lg);
+            margin: 1.5rem 0;
+        }
+        
+        .post-article .post-content video {
+            max-width: 100%;
             border-radius: var(--rounded-lg);
             margin: 1.5rem 0;
         }
@@ -571,6 +561,20 @@
             line-height: 1.6;
         }
         
+        .reply-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+            transition: color 0.3s ease;
+        }
+        
+        .reply-btn:hover {
+            color: var(--primary-dark);
+        }
+        
         .comment-form {
             margin-top: 2rem;
             padding-top: 2rem;
@@ -640,12 +644,48 @@
             box-shadow: var(--shadow-md);
         }
         
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
         .blog-footer {
             background: var(--darker);
             color: white;
             padding: 4rem 2rem;
             margin-top: 4rem;
             text-align: center;
+        }
+        
+        /* Toast уведомления */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 1rem 1.5rem;
+            border-radius: var(--rounded-md);
+            color: white;
+            font-weight: 500;
+            box-shadow: var(--shadow-lg);
+            z-index: 3000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            max-width: 400px;
+        }
+        
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .toast.success {
+            background: #28a745;
+        }
+        
+        .toast.error {
+            background: #dc3545;
         }
         
         @media (max-width: 768px) {
@@ -696,11 +736,6 @@
             
             .blog-header h1 {
                 font-size: 2rem;
-            }
-            
-            .post-cover {
-                margin-top: -40px;
-                padding: 0 1rem;
             }
             
             .post-container {
@@ -789,23 +824,16 @@
             </div>
             <h1>{{ post.title }}</h1>
             <div class="post-meta">
-                <span><i class="far fa-calendar-alt"></i> {{ post.published_at or post.created_at }}</span>
+                <span><i class="far fa-calendar-alt"></i> <span id="postDate">{{ post.published_at or post.created_at }}</span></span>
                 <span><i class="far fa-user"></i> {{ post.author }}</span>
                 <span><i class="far fa-eye"></i> {{ post.views or 0 }} просмотров</span>
-                <span><i class="far fa-comment"></i> {{ post.comments_count or 0 }} комментариев</span>
+                <span><i class="far fa-comment"></i> <span id="commentsCount">{{ post.comments_count or 0 }}</span> комментариев</span>
                 {% if post.category %}
                 <span><i class="far fa-folder"></i> {{ post.category }}</span>
                 {% endif %}
             </div>
         </div>
     </header>
-
-    <!-- Обложка поста -->
-    {% if post.cover_image %}
-    <div class="post-cover">
-        <img src="{{ post.cover_image }}" alt="{{ post.title }}">
-    </div>
-    {% endif %}
 
     <!-- Основное содержимое -->
     <div class="post-container">
@@ -893,7 +921,7 @@
     <section class="comments-section" id="comments">
         <div class="comments-wrapper">
             <h3 class="comments-title">
-                <i class="fas fa-comments"></i> Комментарии ({{ post.comments_count or 0 }})
+                <i class="fas fa-comments"></i> Комментарии (<span id="commentsCountTitle">{{ post.comments_count or 0 }}</span>)
             </h3>
             
             <div id="commentsList">
@@ -924,7 +952,7 @@
                         <textarea id="commentContent" class="form-control" rows="4" placeholder="Напишите ваш комментарий..." required></textarea>
                     </div>
                     
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary" id="submitCommentBtn">
                         <i class="fas fa-paper-plane"></i> Отправить
                     </button>
                 </form>
@@ -984,6 +1012,41 @@
             });
         }
 
+        // --- Форматирование даты ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const dateElement = document.getElementById('postDate');
+            if (dateElement) {
+                const dateText = dateElement.textContent.trim();
+                try {
+                    const date = new Date(dateText);
+                    if (!isNaN(date)) {
+                        dateElement.textContent = date.toLocaleDateString('ru-RU', {
+                            day: '2-digit',
+                            month: 'long',
+                            year: 'numeric'
+                        });
+                    }
+                } catch (e) {}
+            }
+        });
+
+        // --- Toast уведомления ---
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 100);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
         // --- Загрузка комментариев ---
         const postId = {{ post.id }};
         
@@ -1039,7 +1102,7 @@
                     <span class="comment-date">${formattedDate}</span>
                 </div>
                 <div class="comment-content">${comment.content}</div>
-                <button class="reply-btn" style="background: none; border: none; color: var(--primary); cursor: pointer; font-size: 0.85rem; margin-top: 0.5rem;">
+                <button class="reply-btn" data-comment-id="${comment.id}" data-comment-author="${comment.author}">
                     <i class="fas fa-reply"></i> Ответить
                 </button>
             `;
@@ -1052,8 +1115,12 @@
                 document.getElementById('commentContent').focus();
                 document.getElementById('commentContent').placeholder = `Ответ пользователю ${comment.author}...`;
                 
-                // Скролл к форме
+                // Подсвечиваем форму
                 document.querySelector('.comment-form').scrollIntoView({ behavior: 'smooth' });
+                document.querySelector('.comment-form').style.borderColor = 'var(--primary)';
+                setTimeout(() => {
+                    document.querySelector('.comment-form').style.borderColor = '';
+                }, 2000);
             });
             
             return div;
@@ -1069,11 +1136,11 @@
             const parentId = document.getElementById('commentParentId').value;
             
             if (!author || !content) {
-                alert('Пожалуйста, заполните все обязательные поля');
+                showToast('Пожалуйста, заполните все обязательные поля', 'error');
                 return;
             }
             
-            const submitBtn = this.querySelector('button[type="submit"]');
+            const submitBtn = document.getElementById('submitCommentBtn');
             const originalText = submitBtn.innerHTML;
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
@@ -1103,14 +1170,11 @@
                     // Перезагружаем комментарии
                     await loadComments();
                     
-                    // Обновляем счетчик комментариев в заголовке
-                    const commentsCount = document.querySelector('.comments-title');
-                    if (commentsCount) {
-                        const newCount = parseInt(commentsCount.textContent.match(/\d+/)?.[0] || 0) + 1;
-                        commentsCount.innerHTML = `<i class="fas fa-comments"></i> Комментарии (${newCount})`;
-                    }
+                    // Обновляем счетчик комментариев
+                    const newCount = parseInt(document.getElementById('commentsCountTitle').textContent || '0') + 1;
+                    document.getElementById('commentsCountTitle').textContent = newCount;
+                    document.getElementById('commentsCount').textContent = newCount;
                     
-                    // Показываем уведомление
                     showToast('Комментарий успешно добавлен!', 'success');
                 } else {
                     throw new Error(data.error || 'Ошибка отправки комментария');
@@ -1124,58 +1188,9 @@
             }
         });
 
-        // --- Toast уведомления ---
-        function showToast(message, type = 'success') {
-            const toast = document.createElement('div');
-            toast.style.cssText = `
-                position: fixed;
-                bottom: 30px;
-                right: 30px;
-                padding: 1rem 1.5rem;
-                border-radius: var(--rounded-md);
-                color: white;
-                font-weight: 500;
-                box-shadow: var(--shadow-lg);
-                z-index: 3000;
-                background: ${type === 'success' ? '#28a745' : '#dc3545'};
-                transform: translateY(100px);
-                opacity: 0;
-                transition: all 0.3s ease;
-            `;
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.style.transform = 'translateY(0)';
-                toast.style.opacity = '1';
-            }, 100);
-            
-            setTimeout(() => {
-                toast.style.transform = 'translateY(100px)';
-                toast.style.opacity = '0';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
         // --- Инициализация ---
         document.addEventListener('DOMContentLoaded', function() {
             loadComments();
-            
-            // Форматирование даты в заголовке
-            const dateElements = document.querySelectorAll('.post-meta [class*="date"]');
-            dateElements.forEach(el => {
-                const dateText = el.textContent.trim();
-                try {
-                    const date = new Date(dateText);
-                    if (!isNaN(date)) {
-                        el.textContent = date.toLocaleDateString('ru-RU', {
-                            day: '2-digit',
-                            month: 'long',
-                            year: 'numeric'
-                        });
-                    }
-                } catch (e) {}
-            });
         });
     </script>
 </body>
