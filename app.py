@@ -521,13 +521,17 @@ class DB:
     # === МЕТОДЫ ДЛЯ БЛОГА ===
     
     @staticmethod
-    def get_blog_posts(category=None, limit=None, search=None):
+    def get_blog_posts(category=None, limit=None, search=None, tag=None):
         """Получение постов блога с фильтрацией"""
         posts = DB._get_db('blog_posts')
         
         # Фильтрация по категории
         if category:
             posts = [p for p in posts if p.get('category') == category]
+        
+        # Фильтрация по тегу
+        if tag:
+            posts = [p for p in posts if tag in p.get('tags', [])]
         
         # Поиск
         if search:
@@ -537,8 +541,11 @@ class DB:
                     search_lower in p.get('content', '').lower() or
                     search_lower in p.get('excerpt', '').lower()]
         
-        # Сортируем по дате (новые сначала)
-        posts.sort(key=lambda x: x.get('published_at', ''), reverse=True)
+        # Сортируем: сначала закрепленные, затем по дате (новые сначала)
+        posts.sort(key=lambda x: (
+            -1 if x.get('is_pinned', False) else 0,
+            x.get('published_at', '') or x.get('created_at', '')
+        ), reverse=True)
         
         # Ограничение количества
         if limit:
@@ -556,7 +563,7 @@ class DB:
     def save_blog_post(title, content, author, category='Общее', 
                        excerpt=None, cover_image=None, 
                        is_published=True, video_url=None, 
-                       tags=None, meta_description=None):
+                       tags=None, meta_description=None, is_pinned=False):
         """Создание/обновление поста блога"""
         posts = DB.get_blog_posts()
         
@@ -579,6 +586,7 @@ class DB:
             'video_url': video_url,
             'tags': tags,
             'is_published': is_published,
+            'is_pinned': is_pinned,
             'views': 0,
             'likes': 0,
             'comments_count': 0,
@@ -1486,11 +1494,12 @@ def api_blog_posts():
     limit = request.args.get('limit', type=int)
     search = request.args.get('search')
     popular = request.args.get('popular', type=bool)
+    tag = request.args.get('tag')
     
     if popular:
         posts = DB.get_popular_posts(limit or 5)
     else:
-        posts = DB.get_blog_posts(category=category, limit=limit, search=search)
+        posts = DB.get_blog_posts(category=category, limit=limit, search=search, tag=tag)
     
     # Фильтруем только опубликованные для обычных пользователей
     if 'user' not in session or session['user']['role'] != 'teacher':
@@ -1537,7 +1546,8 @@ def api_create_blog_post():
         is_published=data.get('is_published', True),
         video_url=data.get('video_url'),
         tags=data.get('tags', []),
-        meta_description=data.get('meta_description')
+        meta_description=data.get('meta_description'),
+        is_pinned=data.get('is_pinned', False)
     )
     
     return jsonify({'success': True, 'post': post})
@@ -1557,7 +1567,7 @@ def api_update_blog_post(post_id):
     
     allowed_fields = ['title', 'content', 'category', 'excerpt', 
                      'cover_image', 'is_published', 'video_url', 
-                     'tags', 'meta_description']
+                     'tags', 'meta_description', 'is_pinned']
     
     for field in allowed_fields:
         if field in data:
@@ -1578,6 +1588,24 @@ def api_delete_blog_post(post_id):
         return jsonify({'success': True})
     else:
         return jsonify({'error': 'Delete failed'}), 500
+
+@app.route('/api/blog/posts/<int:post_id>/pin', methods=['PUT'])
+def api_pin_blog_post(post_id):
+    """Закрепление/открепление поста"""
+    if 'user' not in session or session['user']['role'] != 'teacher':
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    post = DB.get_blog_post(post_id)
+    if not post:
+        return jsonify({'error': 'Post not found'}), 404
+    
+    data = request.json
+    is_pinned = data.get('is_pinned', False)
+    
+    if DB.update_blog_post(post_id, {'is_pinned': is_pinned}):
+        return jsonify({'success': True, 'is_pinned': is_pinned})
+    else:
+        return jsonify({'error': 'Update failed'}), 500
 
 @app.route('/api/blog/posts/<int:post_id>/cover', methods=['POST'])
 def api_upload_cover(post_id):
