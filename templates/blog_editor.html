@@ -230,7 +230,7 @@
             padding: 0.4rem 1rem;
             background: var(--light);
             border-radius: var(--rounded-full);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             cursor: pointer;
             transition: all 0.3s ease;
             border: 2px solid transparent;
@@ -290,6 +290,17 @@
         
         input:checked + .slider:before {
             transform: translateX(26px);
+        }
+        
+        .switch-label {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+        }
+        
+        .switch-label span {
+            font-weight: 500;
         }
         
         .image-upload {
@@ -504,6 +515,9 @@
             height: 150px;
             overflow: hidden;
             background: var(--light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .post-card-image img {
@@ -574,17 +588,6 @@
             font-size: 0.85rem;
         }
         
-        .switch-label {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            cursor: pointer;
-        }
-        
-        .switch-label span {
-            font-weight: 500;
-        }
-        
         .toast {
             position: fixed;
             bottom: 30px;
@@ -612,6 +615,12 @@
         
         .toast.error {
             background: #dc3545;
+        }
+        
+        .form-hint {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-top: 0.3rem;
         }
         
         @media (max-width: 768px) {
@@ -653,6 +662,11 @@
             
             .posts-grid {
                 grid-template-columns: 1fr;
+            }
+            
+            .category-tag {
+                font-size: 0.75rem;
+                padding: 0.3rem 0.7rem;
             }
         }
     </style>
@@ -698,19 +712,24 @@
             
             <!-- Правая колонка - настройки -->
             <div class="editor-sidebar">
+                <!-- Категория -->
                 <div class="form-group">
                     <label>Категория</label>
                     <div class="category-tags" id="categoryTags">
                         <span class="category-tag active" data-category="Общее">Общее</span>
                         <span class="category-tag" data-category="Новости">Новости</span>
-                        <span class="category-tag" data-category="Обучение">Обучение</span>
-                        <span class="category-tag" data-category="Советы">Советы</span>
-                        <span class="category-tag" data-category="События">События</span>
-                        <span class="category-tag" data-category="Интервью">Интервью</span>
+                        <span class="category-tag" data-category="Английский язык">Английский язык</span>
+                        <span class="category-tag" data-category="Французский язык">Французский язык</span>
+                        <span class="category-tag" data-category="Русский язык">Русский язык</span>
+                        <span class="category-tag" data-category="Обществознание">Обществознание</span>
+                        <span class="category-tag" data-category="История">История</span>
+                        <span class="category-tag" data-category="Подготовка детей к школе">Подготовка детей к школе</span>
+                        <span class="category-tag" data-category="Логопедия">Логопедия</span>
                     </div>
                     <input type="hidden" id="postCategory" value="Общее">
                 </div>
                 
+                <!-- Обложка -->
                 <div class="form-group">
                     <label>Обложка статьи</label>
                     <div class="image-upload" id="imageUpload">
@@ -726,6 +745,7 @@
                     </button>
                 </div>
                 
+                <!-- Видео -->
                 <div class="form-group">
                     <label>Видео для статьи</label>
                     <div class="video-upload" id="videoUpload">
@@ -754,6 +774,7 @@
                     <input type="hidden" id="videoUrl" value="{% if post and post.video_url %}{{ post.video_url }}{% endif %}">
                 </div>
                 
+                <!-- Теги -->
                 <div class="form-group">
                     <label>Теги</label>
                     <div class="tags-input" id="tagsContainer">
@@ -761,12 +782,14 @@
                     </div>
                 </div>
                 
+                <!-- Мета-описание -->
                 <div class="form-group">
                     <label for="metaDescription">Мета-описание (для SEO)</label>
                     <textarea id="metaDescription" class="form-control" rows="2" 
                               placeholder="Краткое описание для поисковых систем"></textarea>
                 </div>
                 
+                <!-- Опубликовать сразу -->
                 <div class="form-group">
                     <label class="switch-label">
                         <span>Опубликовать сразу</span>
@@ -775,6 +798,20 @@
                             <span class="slider"></span>
                         </label>
                     </label>
+                </div>
+                
+                <!-- Закрепить статью -->
+                <div class="form-group">
+                    <label class="switch-label">
+                        <span>Закрепить статью</span>
+                        <label class="switch">
+                            <input type="checkbox" id="isPinned" {% if post and post.is_pinned %}checked{% endif %}>
+                            <span class="slider"></span>
+                        </label>
+                    </label>
+                    <p class="form-hint">
+                        <i class="fas fa-thumbtack"></i> Закреплённые статьи отображаются первыми в блоге
+                    </p>
                 </div>
             </div>
         </div>
@@ -826,7 +863,8 @@
             video_url: `{{ post.video_url|safe if post.video_url else '' }}`,
             tags: {{ post.tags|tojson if post.tags else '[]' }},
             meta_description: `{{ post.meta_description|safe if post.meta_description else '' }}`,
-            is_published: {{ 'true' if post.is_published else 'false' }}
+            is_published: {{ 'true' if post.is_published else 'false' }},
+            is_pinned: {{ 'true' if post.is_pinned else 'false' }}
         }{% else %}null{% endif %};
         
         // Инициализация Quill редактора
@@ -856,6 +894,7 @@
             document.getElementById('postCategory').value = postData.category || 'Общее';
             document.getElementById('metaDescription').value = postData.meta_description || '';
             document.getElementById('isPublished').checked = postData.is_published !== false;
+            document.getElementById('isPinned').checked = postData.is_pinned === true;
             
             // Устанавливаем активную категорию
             document.querySelectorAll('.category-tag').forEach(tag => {
@@ -1206,6 +1245,7 @@
             const category = document.getElementById('postCategory').value;
             const metaDescription = document.getElementById('metaDescription').value.trim();
             const isPublished = document.getElementById('isPublished').checked;
+            const isPinned = document.getElementById('isPinned').checked;
             
             // Валидация
             if (!title) {
@@ -1227,7 +1267,8 @@
                 excerpt: excerpt || content.replace(/<[^>]*>/g, '').substring(0, 150) + '...',
                 tags: Array.from(tags),
                 meta_description: metaDescription || excerpt || content.replace(/<[^>]*>/g, '').substring(0, 150) + '...',
-                is_published: isPublished
+                is_published: isPublished,
+                is_pinned: isPinned
             };
             
             // Если есть видео и это не blob URL (уже загружено на сервер)
@@ -1388,12 +1429,14 @@
                             imageHtml = '<i class="fas fa-image" style="font-size: 2rem; color: #ccc;"></i>';
                         }
                         
+                        const pinnedBadge = post.is_pinned ? '📌 ' : '';
+                        
                         postCard.innerHTML = `
-                            <div class="post-card-image" style="display: flex; align-items: center; justify-content: center; background: var(--light);">
+                            <div class="post-card-image">
                                 ${imageHtml}
                             </div>
                             <div class="post-card-content">
-                                <h3 class="post-card-title">${post.title}</h3>
+                                <h3 class="post-card-title">${pinnedBadge}${post.title}</h3>
                                 <div class="post-card-meta">
                                     <span>${formattedDate}</span>
                                     <span class="post-card-status ${post.is_published ? 'published' : 'draft'}">
@@ -1437,7 +1480,7 @@
         }
         
         // ============================================
-        // УДАЛЕНИЕ СТАТЬИ
+        // УДАЛЕНИЕ СТАТЬИ (глобальная функция для модалки)
         // ============================================
         
         window.deletePost = async function(postId) {
