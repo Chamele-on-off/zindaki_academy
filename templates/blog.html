@@ -346,6 +346,17 @@
             color: white;
         }
         
+        .btn-outline-warning {
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+        }
+        
+        .btn-outline-warning:hover {
+            background: var(--accent);
+            color: white;
+        }
+        
         .blog-container {
             max-width: 1400px;
             margin: 2rem auto;
@@ -361,7 +372,71 @@
             }
         }
         
-        /* КОМПАКТНЫЕ КАРТОЧКИ СТАТЕЙ С ОБЛОЖКОЙ СПРАВА */
+        /* === ЗАКРЕПЛЕННЫЕ СТАТЬИ (ОТДЕЛЬНЫЙ РАЗДЕЛ) === */
+        .pinned-section {
+            background: var(--lighter);
+            border-radius: var(--rounded-xl);
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-md);
+            border-left: 4px solid var(--accent);
+        }
+        
+        .pinned-section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+        
+        .pinned-section-header i {
+            font-size: 1.3rem;
+        }
+        
+        .pinned-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem 1.5rem;
+        }
+        
+        .pinned-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            background: var(--light);
+            border-radius: var(--rounded-full);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .pinned-item:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .pinned-item .pin-icon {
+            color: var(--accent);
+            font-size: 0.8rem;
+        }
+        
+        .pinned-item:hover .pin-icon {
+            color: white;
+        }
+        
+        .pinned-empty {
+            color: var(--text-light);
+            font-size: 0.95rem;
+            padding: 0.5rem 0;
+        }
+        
+        /* === КАРТОЧКИ СТАТЕЙ === */
         .posts-grid {
             display: grid;
             grid-template-columns: 1fr;
@@ -383,7 +458,6 @@
             box-shadow: var(--shadow-lg);
         }
         
-        /* Закрепленная статья — золотая рамка */
         .post-card.pinned {
             border: 2px solid var(--accent);
             position: relative;
@@ -802,6 +876,19 @@
                 justify-content: center;
             }
             
+            .pinned-section {
+                padding: 1rem;
+            }
+            
+            .pinned-list {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .pinned-item {
+                justify-content: center;
+            }
+            
             .post-card.pinned::before {
                 font-size: 0.6rem;
                 padding: 0.15rem 0.5rem;
@@ -890,6 +977,17 @@
                 </div>
             </div>
             {% endif %}
+
+            <!-- ОТДЕЛЬНЫЙ РАЗДЕЛ: ЗАКРЕПЛЕННЫЕ СТАТЬИ -->
+            <div id="pinnedSection" class="pinned-section" style="display: none;">
+                <div class="pinned-section-header">
+                    <i class="fas fa-thumbtack"></i>
+                    <span>Закрепленные статьи</span>
+                </div>
+                <div class="pinned-list" id="pinnedList">
+                    <!-- Список закрепленных статей будет загружен динамически -->
+                </div>
+            </div>
 
             <!-- Баннер фильтра по тегу -->
             <div id="tagFilterBanner" class="tag-filter-banner" style="display: none;">
@@ -1000,6 +1098,9 @@
         };
 
         // --- Загрузка постов блога ---
+        let allPosts = [];
+        let pinnedPosts = [];
+
         async function loadBlogPosts(search = '', category = '', tag = '') {
             const postsGrid = document.getElementById('postsGrid');
             postsGrid.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h3>Загрузка статей...</h3></div>';
@@ -1019,6 +1120,9 @@
                 const response = await fetch(url);
                 const data = await response.json();
                 
+                // Сохраняем все посты
+                allPosts = data.posts || [];
+                
                 // Обновляем баннер фильтра по тегу
                 const tagBanner = document.getElementById('tagFilterBanner');
                 const tagLabel = document.getElementById('currentTagLabel');
@@ -1029,10 +1133,23 @@
                     tagBanner.style.display = 'none';
                 }
                 
-                if (data.posts && data.posts.length > 0) {
+                // ОТДЕЛЬНЫЙ РАЗДЕЛ: закрепленные статьи
+                pinnedPosts = allPosts.filter(p => p.is_pinned === true);
+                renderPinnedSection();
+                
+                // Остальные статьи (не закрепленные)
+                const regularPosts = allPosts.filter(p => p.is_pinned !== true);
+                
+                if (regularPosts.length > 0) {
                     postsGrid.innerHTML = '';
-                    
-                    data.posts.forEach(post => {
+                    regularPosts.forEach(post => {
+                        const postCard = createPostCard(post);
+                        postsGrid.appendChild(postCard);
+                    });
+                } else if (pinnedPosts.length > 0 && regularPosts.length === 0) {
+                    // Если есть только закрепленные, показываем их в основном списке
+                    postsGrid.innerHTML = '';
+                    pinnedPosts.forEach(post => {
                         const postCard = createPostCard(post);
                         postsGrid.appendChild(postCard);
                     });
@@ -1055,6 +1172,33 @@
                 console.error('Error loading blog posts:', error);
                 postsGrid.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Ошибка загрузки статей</h3></div>';
             }
+        }
+
+        // --- ОТДЕЛЬНЫЙ РАЗДЕЛ: отображение закрепленных статей ---
+        function renderPinnedSection() {
+            const section = document.getElementById('pinnedSection');
+            const list = document.getElementById('pinnedList');
+            
+            if (pinnedPosts.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+            
+            section.style.display = 'block';
+            list.innerHTML = '';
+            
+            pinnedPosts.forEach(post => {
+                const item = document.createElement('div');
+                item.className = 'pinned-item';
+                item.innerHTML = `
+                    <span class="pin-icon"><i class="fas fa-thumbtack"></i></span>
+                    <span>${post.title}</span>
+                `;
+                item.addEventListener('click', () => {
+                    window.location.href = `/blog/post/${post.slug || post.id}`;
+                });
+                list.appendChild(item);
+            });
         }
 
         // --- Создание карточки поста (обложка справа, компактная) ---
@@ -1112,7 +1256,7 @@
                 }
             }
             
-            // Новая структура: обложка СПРАВА, текст слева
+            // Структура: обложка СПРАВА, текст слева
             postCard.innerHTML = `
                 <div style="display: flex; gap: 1rem; padding: 1rem 1.2rem 1rem; align-items: stretch;">
                     <!-- Левая часть: текст -->
@@ -1138,7 +1282,7 @@
                             <a href="/blog/edit/${post.id}" class="btn btn-primary btn-sm">
                                 <i class="fas fa-edit"></i>
                             </a>
-                            <button class="btn ${post.is_pinned ? 'btn-outline-danger' : 'btn-secondary'} btn-sm" onclick="togglePin(${post.id}, ${!post.is_pinned})">
+                            <button class="btn ${post.is_pinned ? 'btn-outline-danger' : 'btn-outline-warning'} btn-sm" onclick="togglePin(${post.id}, ${!post.is_pinned})">
                                 <i class="fas fa-thumbtack"></i> ${post.is_pinned ? 'Открепить' : 'Закрепить'}
                             </button>
                             <button class="btn btn-outline-danger btn-sm" onclick="deletePost(${post.id})">
@@ -1389,7 +1533,7 @@
                 
                 const data = await response.json();
                 if (data.success) {
-                    showToast(pin ? 'Статья закреплена!' : 'Статья откреплена', 'success');
+                    showToast(pin ? '📌 Статья закреплена!' : 'Статья откреплена', 'success');
                     // Перезагружаем посты
                     loadBlogPosts(currentFilter.search, currentFilter.category, currentFilter.tag);
                 } else {
