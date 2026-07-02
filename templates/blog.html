@@ -372,21 +372,22 @@
             }
         }
         
-        /* === ЗАКРЕПЛЕННЫЕ СТАТЬИ (ОТДЕЛЬНЫЙ РАЗДЕЛ) === */
+        /* === ЗАКРЕПЛЕННЫЕ СТАТЬИ (ОТДЕЛЬНЫЙ БЛОК СВЕРХУ) === */
         .pinned-section {
             background: var(--lighter);
             border-radius: var(--rounded-xl);
-            padding: 1.5rem 2rem;
+            padding: 1.2rem 2rem;
             margin-bottom: 2rem;
             box-shadow: var(--shadow-md);
             border-left: 4px solid var(--accent);
+            border: 2px solid var(--accent);
         }
         
         .pinned-section-header {
             display: flex;
             align-items: center;
             gap: 0.8rem;
-            margin-bottom: 1rem;
+            margin-bottom: 0.8rem;
             font-size: 1.1rem;
             font-weight: 600;
             color: var(--accent);
@@ -399,19 +400,20 @@
         .pinned-list {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.8rem 1.5rem;
+            gap: 0.6rem 1.2rem;
         }
         
         .pinned-item {
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.4rem 0.8rem;
+            padding: 0.3rem 0.8rem;
             background: var(--light);
             border-radius: var(--rounded-full);
             transition: all 0.3s ease;
             cursor: pointer;
             font-size: 0.9rem;
+            border: 1px solid transparent;
         }
         
         .pinned-item:hover {
@@ -419,6 +421,7 @@
             color: white;
             transform: translateY(-2px);
             box-shadow: var(--shadow-sm);
+            border-color: var(--primary);
         }
         
         .pinned-item .pin-icon {
@@ -433,7 +436,7 @@
         .pinned-empty {
             color: var(--text-light);
             font-size: 0.95rem;
-            padding: 0.5rem 0;
+            padding: 0.3rem 0;
         }
         
         /* === КАРТОЧКИ СТАТЕЙ === */
@@ -458,6 +461,7 @@
             box-shadow: var(--shadow-lg);
         }
         
+        /* Закрепленная статья в основном списке — золотая рамка */
         .post-card.pinned {
             border: 2px solid var(--accent);
             position: relative;
@@ -882,11 +886,12 @@
             
             .pinned-list {
                 flex-direction: column;
-                gap: 0.5rem;
+                gap: 0.4rem;
             }
             
             .pinned-item {
-                justify-content: center;
+                justify-content: flex-start;
+                padding: 0.4rem 0.8rem;
             }
             
             .post-card.pinned::before {
@@ -978,7 +983,7 @@
             </div>
             {% endif %}
 
-            <!-- ОТДЕЛЬНЫЙ РАЗДЕЛ: ЗАКРЕПЛЕННЫЕ СТАТЬИ -->
+            <!-- ОТДЕЛЬНЫЙ БЛОК: ЗАКРЕПЛЕННЫЕ СТАТЬИ (ДУБЛИРУЮТСЯ СВЕРХУ) -->
             <div id="pinnedSection" class="pinned-section" style="display: none;">
                 <div class="pinned-section-header">
                     <i class="fas fa-thumbtack"></i>
@@ -1133,23 +1138,15 @@
                     tagBanner.style.display = 'none';
                 }
                 
-                // ОТДЕЛЬНЫЙ РАЗДЕЛ: закрепленные статьи
+                // ОТДЕЛЬНЫЙ БЛОК: закрепленные статьи (дублируются сверху)
                 pinnedPosts = allPosts.filter(p => p.is_pinned === true);
                 renderPinnedSection();
                 
-                // Остальные статьи (не закрепленные)
-                const regularPosts = allPosts.filter(p => p.is_pinned !== true);
-                
-                if (regularPosts.length > 0) {
+                // В основном списке показываем ВСЕ статьи (включая закрепленные)
+                // Но закрепленные уже есть сверху, поэтому их можно показывать с пометкой
+                if (allPosts.length > 0) {
                     postsGrid.innerHTML = '';
-                    regularPosts.forEach(post => {
-                        const postCard = createPostCard(post);
-                        postsGrid.appendChild(postCard);
-                    });
-                } else if (pinnedPosts.length > 0 && regularPosts.length === 0) {
-                    // Если есть только закрепленные, показываем их в основном списке
-                    postsGrid.innerHTML = '';
-                    pinnedPosts.forEach(post => {
+                    allPosts.forEach(post => {
                         const postCard = createPostCard(post);
                         postsGrid.appendChild(postCard);
                     });
@@ -1174,7 +1171,7 @@
             }
         }
 
-        // --- ОТДЕЛЬНЫЙ РАЗДЕЛ: отображение закрепленных статей ---
+        // --- ОТДЕЛЬНЫЙ БЛОК: отображение закрепленных статей (ДУБЛИРУЮТСЯ СВЕРХУ) ---
         function renderPinnedSection() {
             const section = document.getElementById('pinnedSection');
             const list = document.getElementById('pinnedList');
