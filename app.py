@@ -541,9 +541,14 @@ class DB:
                     search_lower in p.get('content', '').lower() or
                     search_lower in p.get('excerpt', '').lower()]
         
-        # Сортируем: сначала закрепленные, затем по дате (новые сначала)
+        # ПРАВИЛЬНАЯ СОРТИРОВКА: сначала закрепленные, затем по дате (новые сначала)
         posts.sort(key=lambda x: (
-            -1 if x.get('is_pinned', False) else 0,
+            0 if x.get('is_pinned', False) else 1,  # 0 для закрепленных (выше), 1 для остальных
+        ))
+        
+        # Дополнительная сортировка внутри групп по дате
+        posts.sort(key=lambda x: (
+            0 if x.get('is_pinned', False) else 1,
             x.get('published_at', '') or x.get('created_at', '')
         ), reverse=True)
         
